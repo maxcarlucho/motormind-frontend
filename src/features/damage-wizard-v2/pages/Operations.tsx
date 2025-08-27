@@ -8,31 +8,59 @@ import { RecommendedOperationCard } from '../components/RecommendedOperationCard
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { useWizardV2 } from '../hooks/useWizardV2';
 import { DamageAction } from '../types';
+import { useWizardV2 as useWizardV2Context } from '../context/WizardV2Context';
+import { Damage } from '@/types/DamageAssessment';
 
 const Operations = () => {
   const navigate = useNavigate();
   const [, setParams] = useSearchParams();
   const { state, loadAssessmentData } = useWizardV2();
+  const { dispatch } = useWizardV2Context();
 
-  // Obtener daños confirmados del estado del wizard
   const confirmedDamages = state.confirmedDamages || [];
 
-  // Cargar datos del assessment solo una vez al montar el componente
+  console.log('🔍 Operations Debug:', {
+    assessmentId: state.assessmentId,
+    confirmedDamagesCount: confirmedDamages.length,
+    confirmedDamages: confirmedDamages,
+    state: state,
+  });
+
   useEffect(() => {
     if (state.assessmentId && !state.confirmedDamages?.length) {
+  
       loadAssessmentData().catch((error: Error) => {
         console.error('Error cargando datos del assessment:', error);
       });
     }
-  }, [state.assessmentId]); // Removemos loadAssessmentData de las dependencias
+  }, [state.assessmentId]);
 
-  const handleUpdateOperation = (providerDamageId: string, newOperation: DamageAction) => {
+  const handleUpdateOperation = (damageType: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
 
-    // Por ahora, solo logueamos el cambio ya que no tenemos endpoint de actualización
-    console.log('🔄 Operations: Actualización de operación:', {
-      providerDamageId,
-      newOperation,
+
+
+    // ✅ ACTUALIZAR: Modificar el estado local con la nueva operación
+    const updatedDamages = confirmedDamages.map((damage) => {
+      if (damage.type === damageType) {
+        return {
+          ...damage,
+          proposedOperation: {
+            ...damage.proposedOperation,
+            operation: newOperation,
+          },
+        };
+      }
+      return damage;
+    });
+
+    // ✅ ACTUALIZAR: Dispatch para actualizar el estado del contexto
+    dispatch({
+      type: 'CONFIRM_DAMAGES',
+      payload: {
+        ids: updatedDamages.map((d) => d._id || ''),
+        damages: updatedDamages as unknown as Damage[],
+      },
     });
   };
 
@@ -42,7 +70,6 @@ const Operations = () => {
       navigate(`?step=valuation`, { replace: true });
     } catch (error) {
       console.error('Error navegando a valuation:', error);
-      // Fallback a navegación directa en caso de error
       console.warn('Fallback: navegando a valuation después de error');
       setParams({ step: 'valuation' });
       navigate(`?step=valuation`, { replace: true });
@@ -54,7 +81,6 @@ const Operations = () => {
     navigate(`?step=damages`, { replace: true });
   };
 
-  // Mostrar mensaje si no hay daños confirmados
   if (confirmedDamages.length === 0) {
     return (
       <PageShell
@@ -79,16 +105,16 @@ const Operations = () => {
         <>
           <OperationsInfoAlert />
 
-          {/* Operations list */}
           <div className="space-y-4">
             {confirmedDamages.map((confirmedDamage) => {
-              // Encontrar el daño relacionado basándose en el nombre de la parte
+              const proposedOperation = (confirmedDamage.proposedOperation?.operation ||
+                confirmedDamage.action) as DamageAction;
 
               return (
                 <RecommendedOperationCard
-                  key={confirmedDamage.area}
+                  key={confirmedDamage._id}
                   damage={confirmedDamage}
-                  proposedOperation={confirmedDamage.action as DamageAction}
+                  proposedOperation={proposedOperation}
                   onUpdateOperation={handleUpdateOperation}
                 />
               );
