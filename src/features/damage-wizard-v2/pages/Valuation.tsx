@@ -124,7 +124,7 @@ const Valuation = () => {
           const partName = item.partName || 'Pieza sin nombre';
           const hours = item.labor?.hours || 0;
           const total = item.labor?.total || 0;
-          
+
           if (laborByPart.has(partName)) {
             const existing = laborByPart.get(partName)!;
             existing.hours += hours;
@@ -150,22 +150,21 @@ const Valuation = () => {
           _subtitleText: 'MATERIALES DE PINTURA',
         });
 
-        // Agrupar datos de materiales por pieza
+                // Agrupar datos de materiales por pieza
         const materialsByPart = new Map<string, { units: number; price: number; total: number }>();
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
           const partName = item.partName || 'Pieza sin nombre';
-          const units = 1; // Cada pieza tiene 1 unidad de material
           const price = item.materials?.unitPrice || 0;
           const total = item.materials?.total || 0;
           
           if (materialsByPart.has(partName)) {
             const existing = materialsByPart.get(partName)!;
-            existing.units += units;
+            // Las unidades NO se suman, siempre es 1 por pieza
             existing.total += total;
             // Para el precio, tomamos el promedio si hay diferentes precios
             existing.price = (existing.price + price) / 2;
           } else {
-            materialsByPart.set(partName, { units, price, total });
+            materialsByPart.set(partName, { units: 1, price, total });
           }
         });
 
