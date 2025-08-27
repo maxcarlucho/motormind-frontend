@@ -8,7 +8,6 @@ import { SectionPaper } from '../components/SectionPaper';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { ValuationTable } from '../components/ValuationTable';
 
-import valuationMock from '../mocks/valuation.json';
 import { BackendLaborOutput, BackendPaintWork } from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
 
@@ -83,10 +82,9 @@ const Valuation = () => {
     no_data: { color: 'bg-red-100 text-red-800', label: 'No Data' },
   };
 
-  // Usar datos del backend si están disponibles, sino usar mock
+  // Datos de mano de obra
   const laborData = state.valuation?.laborOutput
     ? state.valuation.laborOutput.map((item: BackendLaborOutput) => ({
-        // ✅ NUEVO: Unir pieza y operación en una sola columna
         operation: `${getOperationLabel(item.mainOperation?.operation || '')} ${item.partName || 'Pieza sin nombre'}`,
         hours: item.mainOperation?.estimatedHours || 0,
         rate: 38, // Tarifa por defecto
@@ -104,22 +102,9 @@ const Valuation = () => {
           </Badge>
         ),
       }))
-    : valuationMock.labor.map((item) => ({
-        // ✅ NUEVO: Unir pieza y operación en una sola columna para mock también
-        operation: `${getOperationLabel(item.operation)} ${item.partName}`,
-        source: (
-          <Badge
-            variant="outline"
-            className={sourceConfig[item.source as keyof typeof sourceConfig].color}
-          >
-            {sourceConfig[item.source as keyof typeof sourceConfig].label}
-          </Badge>
-        ),
-        hours: `${item.hours}h`,
-        rate: `€${item.rate}/h`,
-        total: `€${item.total}`,
-      }));
+    : [];
 
+  // Datos de pintura
   const paintData = state.valuation?.paintWorks
     ? state.valuation.paintWorks.map((item: BackendPaintWork) => ({
         partName: item.partName || 'Pieza sin nombre',
@@ -130,15 +115,9 @@ const Valuation = () => {
         materialsTotal: item.materials?.total || 0,
         total: item.totalCost || 0,
       }))
-    : valuationMock.paint.map((item) => ({
-        ...item,
-        paintHours: `${item.paintHours}h`,
-        paintLaborTotal: `€${item.paintLaborTotal}`,
-        unitPrice: `€${item.unitPrice}`,
-        materialsTotal: `€${item.materialsTotal}`,
-        total: `€${item.total}`,
-      }));
+    : [];
 
+  // Datos de recambios
   const partsData = state.valuation?.parts
     ? state.valuation.parts.map((item: Record<string, unknown>) => ({
         ref: (item.ref as string) || 'REF-001',
@@ -147,11 +126,7 @@ const Valuation = () => {
         qty: (item.qty as number) || 1,
         total: (item.total as number) || 0,
       }))
-    : valuationMock.parts.map((item) => ({
-        ...item,
-        unitPrice: `€${item.unitPrice}`,
-        total: `€${item.total}`,
-      }));
+    : [];
 
   // Debug: Log del estado de valoración
   console.log('🔍 Valuation state:', {
@@ -254,7 +229,13 @@ const Valuation = () => {
                   <p className="mt-1 text-2xl font-bold text-blue-600">
                     €
                     {(state.valuation?.compact?.totals as Record<string, number>)?.labor ||
-                      laborData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0).toFixed(2)}€
+                      laborData
+                        .reduce(
+                          (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    €
                   </p>
                 </div>
               </div>
@@ -264,7 +245,13 @@ const Valuation = () => {
                   <p className="mt-1 text-2xl font-bold text-green-600">
                     €
                     {(state.valuation?.compact?.totals as Record<string, number>)?.paintLabor ||
-                      paintData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0).toFixed(2)}€
+                      paintData
+                        .reduce(
+                          (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
+                          0,
+                        )
+                        .toFixed(2)}
+                    €
                   </p>
                 </div>
               </div>
@@ -274,8 +261,17 @@ const Valuation = () => {
                   <p className="mt-1 text-2xl font-bold text-gray-900">
                     €
                     {(state.valuation?.compact?.totals as Record<string, number>)?.grandTotal ||
-                      (laborData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0) +
-                        paintData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0)).toFixed(2)}€
+                      (
+                        laborData.reduce(
+                          (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
+                          0,
+                        ) +
+                        paintData.reduce(
+                          (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
+                          0,
+                        )
+                      ).toFixed(2)}
+                    €
                   </p>
                 </div>
               </div>
