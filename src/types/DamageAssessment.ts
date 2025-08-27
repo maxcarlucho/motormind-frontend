@@ -108,3 +108,11 @@ export const severityColors: Record<DamageSeverity, string> = {
     SEV4: 'bg-orange-100 text-orange-800 border-orange-300',
     SEV5: 'bg-red-100 text-red-800 border-red-300',
 };
+
+export const operationLabels: Record<string, string> = {
+    REPAIR: 'Reparar',
+    REPLACE: 'Sustituir',
+    //PAINT: 'Pintar',
+    //POLISH: 'Pulir',
+    ////DISASSEMBLE_AND_ASSEMBLE: 'Desmontar y montar',
+};

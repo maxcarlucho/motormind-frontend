@@ -9,6 +9,12 @@ import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { ValuationTable } from '../components/ValuationTable';
 
 import valuationMock from '../mocks/valuation.json';
+import { BackendLaborOutput } from '../types/backend.types';
+import { operationLabels } from '@/types/DamageAssessment';
+
+const getOperationLabel = (operationCode: string): string => {
+  return operationLabels[operationCode] || operationCode;
+};
 
 const Valuation = () => {
   const navigate = useNavigate();
@@ -79,26 +85,28 @@ const Valuation = () => {
 
   // Usar datos del backend si están disponibles, sino usar mock
   const laborData = state.valuation?.laborOutput
-    ? state.valuation.laborOutput.map((item: any) => ({
-        partName: item.partName || 'Pieza sin nombre',
-        operation: item.mainOperation?.operation || item.operation || 'Operación',
-        hours: item.mainOperation?.estimatedHours || item.hours || 0,
-        rate: item.rate || 38, // Tarifa por defecto
-        total: (item.mainOperation?.estimatedHours || item.hours || 0) * (item.rate || 38),
+    ? state.valuation.laborOutput.map((item: BackendLaborOutput) => ({
+        // ✅ NUEVO: Unir pieza y operación en una sola columna
+        operation: `${getOperationLabel(item.mainOperation?.operation || '')} ${item.partName || 'Pieza sin nombre'}`,
+        hours: item.mainOperation?.estimatedHours || 0,
+        rate: 38, // Tarifa por defecto
+        total: (item.mainOperation?.estimatedHours || 0) * 38,
         source: (
           <Badge
             variant="outline"
             className={
-              sourceConfig[item.source as keyof typeof sourceConfig]?.color ||
+              sourceConfig[item.mainOperation?.source as keyof typeof sourceConfig]?.color ||
               sourceConfig.no_data.color
             }
           >
-            {sourceConfig[item.source as keyof typeof sourceConfig]?.label || 'Unknown'}
+            {sourceConfig[item.mainOperation?.source as keyof typeof sourceConfig]?.label ||
+              'Unknown'}
           </Badge>
         ),
       }))
     : valuationMock.labor.map((item) => ({
-        ...item,
+        // ✅ NUEVO: Unir pieza y operación en una sola columna para mock también
+        operation: `${getOperationLabel(item.operation)} ${item.partName}`,
         source: (
           <Badge
             variant="outline"
@@ -194,14 +202,13 @@ const Valuation = () => {
           <SectionPaper title="Mano de obra (sin pintura)">
             <ValuationTable
               columns={[
-                { key: 'partName', header: 'Pieza' },
                 { key: 'operation', header: 'Operación' },
                 { key: 'hours', header: 'Horas MO' },
                 { key: 'rate', header: 'Tarifa (€/h)' },
                 { key: 'total', header: 'Total MO (€)' },
-                { key: 'source', header: 'Fuente' },
               ]}
               data={laborData}
+              emptyStateMessage="No se consideraron necesarios trabajos de mano de obra"
             />
           </SectionPaper>
 
@@ -218,6 +225,7 @@ const Valuation = () => {
                 { key: 'total', header: 'Total (€)' },
               ]}
               data={paintData}
+              emptyStateMessage="No se consideraron necesarios trabajos de pintura"
             />
           </SectionPaper>
 

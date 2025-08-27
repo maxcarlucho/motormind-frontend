@@ -101,8 +101,20 @@ export interface BackendOperationEdited {
 }
 
 export interface BackendLaborOutput {
-  // TODO: Definir estructura específica cuando se conozca
-  [key: string]: unknown;
+  partName: string;
+  partCode: string | null;
+  mainOperation: {
+    code: string;
+    description: string;
+    estimatedHours: number;
+    reason: string;
+    source: string;
+    complexity: string;
+    dataAvailable: boolean;
+    operation: string;
+    total: number | null;
+  };
+  subOperations: BackendLaborOutput[];
 }
 
 export interface BackendPart {

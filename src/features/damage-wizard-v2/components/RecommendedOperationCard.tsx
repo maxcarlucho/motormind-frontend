@@ -1,6 +1,6 @@
 import { Dropdown } from '@/components/atoms/Dropdown';
 import { DamageType, getDamageTypeLabel } from '@/types/shared/damage.types';
-import { Damage, severityColors, severityLabels } from '@/types/DamageAssessment';
+import { Damage, operationLabels, severityColors, severityLabels } from '@/types/DamageAssessment';
 import { ChevronDown } from 'lucide-react';
 import React, { useState } from 'react';
 import { DamageAction } from '../types';
@@ -11,11 +11,6 @@ interface RecommendedOperationCardProps {
   onUpdateOperation: (damageType: DamageType, newOperation: DamageAction) => void;
   relatedDamage?: Damage;
 }
-
-const operationLabels: Record<string, string> = {
-  REPAIR: 'Reparar',
-  REPLACE: 'Sustituir',
-};
 
 export const RecommendedOperationCard: React.FC<RecommendedOperationCardProps> = ({
   damage,
