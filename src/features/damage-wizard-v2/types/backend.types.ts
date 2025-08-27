@@ -123,8 +123,28 @@ export interface BackendPart {
 }
 
 export interface BackendPaintWork {
-  // TODO: Definir estructura específica cuando se conozca
-  [key: string]: unknown;
+  partName: string;
+  description: string;
+  labor: {
+    hours: number;
+    hourlyRate: number;
+    total: number;
+    operationId: string;
+  };
+  materials: {
+    units: number;
+    unitPrice: number;
+    total: number;
+    materialId: string;
+  };
+  damageContext: {
+    type: string;
+    severity: string;
+    severityMultiplier: number;
+    damageTypeMultiplier: number;
+  };
+  totalCost: number;
+  source: string;
 }
 
 export interface BackendCompact {

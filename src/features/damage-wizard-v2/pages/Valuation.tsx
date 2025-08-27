@@ -9,7 +9,7 @@ import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { ValuationTable } from '../components/ValuationTable';
 
 import valuationMock from '../mocks/valuation.json';
-import { BackendLaborOutput } from '../types/backend.types';
+import { BackendLaborOutput, BackendPaintWork } from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
 
 const getOperationLabel = (operationCode: string): string => {
@@ -121,14 +121,14 @@ const Valuation = () => {
       }));
 
   const paintData = state.valuation?.paintWorks
-    ? state.valuation.paintWorks.map((item: any) => ({
+    ? state.valuation.paintWorks.map((item: BackendPaintWork) => ({
         partName: item.partName || 'Pieza sin nombre',
-        job: item.job || 'Trabajo de pintura',
-        paintHours: item.paintHours || 0,
-        paintLaborTotal: item.paintLaborTotal || 0,
-        unitPrice: item.unitPrice || 0,
-        materialsTotal: item.materialsTotal || 0,
-        total: item.total || 0,
+        job: 'Trabajo de pintura',
+        paintHours: item.labor?.hours || 0,
+        paintLaborTotal: item.labor?.total || 0,
+        unitPrice: item.materials?.unitPrice || 0,
+        materialsTotal: item.materials?.total || 0,
+        total: item.totalCost || 0,
       }))
     : valuationMock.paint.map((item) => ({
         ...item,
@@ -140,12 +140,12 @@ const Valuation = () => {
       }));
 
   const partsData = state.valuation?.parts
-    ? state.valuation.parts.map((item: any) => ({
-        ref: item.ref || 'REF-001',
-        partName: item.partName || 'Pieza',
-        unitPrice: item.unitPrice || 0,
-        qty: item.qty || 1,
-        total: item.total || 0,
+    ? state.valuation.parts.map((item: Record<string, unknown>) => ({
+        ref: (item.ref as string) || 'REF-001',
+        partName: (item.partName as string) || 'Pieza',
+        unitPrice: (item.unitPrice as number) || 0,
+        qty: (item.qty as number) || 1,
+        total: (item.total as number) || 0,
       }))
     : valuationMock.parts.map((item) => ({
         ...item,
@@ -249,53 +249,35 @@ const Valuation = () => {
           <SectionPaper title="Resumen de costes">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-lg bg-blue-50 p-4">
-                <h3 className="text-sm font-medium text-blue-900">Mano de obra</h3>
-                <p className="mt-1 text-2xl font-bold text-blue-600">
-                  €
-                  {(state.valuation?.compact?.totals as any)?.labor ||
-                    laborData
-                      .reduce(
-                        (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
-                        0,
-                      )
-                      .toFixed(2)}
-                </p>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Mano de obra</p>
+                  <p className="mt-1 text-2xl font-bold text-blue-600">
+                    €
+                    {(state.valuation?.compact?.totals as Record<string, number>)?.labor ||
+                      laborData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0).toFixed(2)}€
+                  </p>
+                </div>
               </div>
               <div className="rounded-lg bg-green-50 p-4">
-                <h3 className="text-sm font-medium text-green-900">Pintura</h3>
-                <p className="mt-1 text-2xl font-bold text-green-600">
-                  €
-                  {(state.valuation?.compact?.totals as any)?.paintLabor ||
-                    paintData
-                      .reduce(
-                        (sum, item) =>
-                          sum +
-                          (typeof item.paintLaborTotal === 'number' ? item.paintLaborTotal : 0),
-                        0,
-                      )
-                      .toFixed(2)}
-                </p>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Pintura</p>
+                  <p className="mt-1 text-2xl font-bold text-green-600">
+                    €
+                    {(state.valuation?.compact?.totals as Record<string, number>)?.paintLabor ||
+                      paintData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0).toFixed(2)}€
+                  </p>
+                </div>
               </div>
               <div className="rounded-lg bg-purple-50 p-4">
-                <h3 className="text-sm font-medium text-purple-900">Total</h3>
-                <p className="mt-1 text-2xl font-bold text-purple-600">
-                  €
-                  {(state.valuation?.compact?.totals as any)?.grandTotal ||
-                    (
-                      laborData.reduce(
-                        (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
-                        0,
-                      ) +
-                      paintData.reduce(
-                        (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
-                        0,
-                      ) +
-                      partsData.reduce(
-                        (sum, item) => sum + (typeof item.total === 'number' ? item.total : 0),
-                        0,
-                      )
-                    ).toFixed(2)}
-                </p>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Total</p>
+                  <p className="mt-1 text-2xl font-bold text-gray-900">
+                    €
+                    {(state.valuation?.compact?.totals as Record<string, number>)?.grandTotal ||
+                      (laborData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0) +
+                        paintData.reduce((sum, item) => sum + (typeof item.total === 'number' ? item.total : 0), 0)).toFixed(2)}€
+                  </p>
+                </div>
               </div>
             </div>
           </SectionPaper>
