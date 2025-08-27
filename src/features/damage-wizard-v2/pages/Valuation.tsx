@@ -82,26 +82,52 @@ const Valuation = () => {
     no_data: { color: 'bg-red-100 text-red-800', label: 'No Data' },
   };
 
-  // Datos de mano de obra
+  // Datos de mano de obra agrupados por operación y pieza
   const laborData = state.valuation?.laborOutput
-    ? state.valuation.laborOutput.map((item: BackendLaborOutput) => ({
-        operation: `${getOperationLabel(item.mainOperation?.operation || '')} ${item.partName || 'Pieza sin nombre'}`,
-        hours: `${(item.mainOperation?.estimatedHours || 0).toFixed(2)} h`,
-        rate: 38, // Tarifa por defecto
-        total: (item.mainOperation?.estimatedHours || 0) * 38,
-        source: (
-          <Badge
-            variant="outline"
-            className={
-              sourceConfig[item.mainOperation?.source as keyof typeof sourceConfig]?.color ||
-              sourceConfig.no_data.color
-            }
-          >
-            {sourceConfig[item.mainOperation?.source as keyof typeof sourceConfig]?.label ||
-              'Unknown'}
-          </Badge>
-        ),
-      }))
+    ? (() => {
+        // Agrupar por operación y pieza
+        const laborByOperationAndPart = new Map<string, { hours: number; total: number; source: string }>();
+        
+        state.valuation.laborOutput.forEach((item: BackendLaborOutput) => {
+          const operation = item.mainOperation?.operation || '';
+          const partName = item.partName || 'Pieza sin nombre';
+          const key = `${operation}-${partName}`;
+          const hours = item.mainOperation?.estimatedHours || 0;
+          const total = (item.mainOperation?.estimatedHours || 0) * 38;
+          const source = item.mainOperation?.source || 'no_data';
+          
+          if (laborByOperationAndPart.has(key)) {
+            const existing = laborByOperationAndPart.get(key)!;
+            existing.hours += hours;
+            existing.total += total;
+          } else {
+            laborByOperationAndPart.set(key, { hours, total, source });
+          }
+        });
+        
+        // Convertir a array con datos agrupados
+        return Array.from(laborByOperationAndPart.entries()).map(([key, data]) => {
+          const [operation, partName] = key.split('-', 2);
+          return {
+            operation: `${getOperationLabel(operation)} ${partName}`,
+            hours: `${data.hours.toFixed(2)} h`,
+            rate: 38, // Tarifa por defecto
+            total: data.total,
+            source: (
+              <Badge
+                variant="outline"
+                className={
+                  sourceConfig[data.source as keyof typeof sourceConfig]?.color ||
+                  sourceConfig.no_data.color
+                }
+              >
+                {sourceConfig[data.source as keyof typeof sourceConfig]?.label ||
+                  'Unknown'}
+              </Badge>
+            ),
+          };
+        });
+      })()
     : [];
 
   // Datos de pintura separados en mano de obra y materiales
@@ -150,13 +176,13 @@ const Valuation = () => {
           _subtitleText: 'MATERIALES DE PINTURA',
         });
 
-                // Agrupar datos de materiales por pieza
+        // Agrupar datos de materiales por pieza
         const materialsByPart = new Map<string, { units: number; price: number; total: number }>();
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
           const partName = item.partName || 'Pieza sin nombre';
           const price = item.materials?.unitPrice || 0;
           const total = item.materials?.total || 0;
-          
+
           if (materialsByPart.has(partName)) {
             const existing = materialsByPart.get(partName)!;
             // Las unidades NO se suman, siempre es 1 por pieza
