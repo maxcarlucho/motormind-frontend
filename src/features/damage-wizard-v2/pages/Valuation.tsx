@@ -86,7 +86,7 @@ const Valuation = () => {
   const laborData = state.valuation?.laborOutput
     ? state.valuation.laborOutput.map((item: BackendLaborOutput) => ({
         operation: `${getOperationLabel(item.mainOperation?.operation || '')} ${item.partName || 'Pieza sin nombre'}`,
-        hours: item.mainOperation?.estimatedHours || 0,
+        hours: `${(item.mainOperation?.estimatedHours || 0).toFixed(2)} h`,
         rate: 38, // Tarifa por defecto
         total: (item.mainOperation?.estimatedHours || 0) * 38,
         source: (
@@ -104,17 +104,51 @@ const Valuation = () => {
       }))
     : [];
 
-  // Datos de pintura
+  // Datos de pintura separados en mano de obra y materiales
   const paintData = state.valuation?.paintWorks
-    ? state.valuation.paintWorks.map((item: BackendPaintWork) => ({
-        partName: item.partName || 'Pieza sin nombre',
-        job: 'Trabajo de pintura',
-        paintHours: item.labor?.hours || 0,
-        paintLaborTotal: item.labor?.total || 0,
-        unitPrice: item.materials?.unitPrice || 0,
-        materialsTotal: item.materials?.total || 0,
-        total: item.totalCost || 0,
-      }))
+    ? (() => {
+        const paintDataArray: (Record<string, unknown> & { _isSubtitle?: boolean; _subtitleText?: string })[] = [];
+        
+        // Agregar subtítulo de mano de obra
+        paintDataArray.push({
+          _isSubtitle: true,
+          _subtitleText: 'MANO DE OBRA DE PINTURA'
+        });
+        
+        // Agregar datos de mano de obra
+        state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
+          paintDataArray.push({
+            partName: item.partName || 'Pieza sin nombre',
+            job: 'Trabajo de pintura',
+            paintHours: `${(item.labor?.hours || 0).toFixed(2)} h`,
+            paintLaborTotal: item.labor?.total || 0,
+            unitPrice: item.materials?.unitPrice || 0,
+            materialsTotal: item.materials?.total || 0,
+            total: item.totalCost || 0,
+          });
+        });
+        
+        // Agregar subtítulo de materiales
+        paintDataArray.push({
+          _isSubtitle: true,
+          _subtitleText: 'MATERIALES DE PINTURA'
+        });
+        
+        // Agregar datos de materiales
+        state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
+          paintDataArray.push({
+            partName: item.partName || 'Pieza sin nombre',
+            job: 'Materiales',
+            paintHours: '1,00',
+            paintLaborTotal: 0,
+            unitPrice: item.materials?.unitPrice || 0,
+            materialsTotal: item.materials?.total || 0,
+            total: item.materials?.total || 0,
+          });
+        });
+        
+        return paintDataArray;
+      })()
     : [];
 
   // Datos de recambios
@@ -173,14 +207,13 @@ const Valuation = () => {
       subtitle="Revisa los costes calculados para cada operación"
       content={
         <div className="space-y-6">
-          {/* Table 1: Mano de obra (sin pintura) */}
-          <SectionPaper title="Mano de obra (sin pintura)">
+          <SectionPaper title="Mano de obra">
             <ValuationTable
               columns={[
-                { key: 'operation', header: 'Operación' },
-                { key: 'hours', header: 'Horas MO' },
-                { key: 'rate', header: 'Tarifa (€/h)' },
-                { key: 'total', header: 'Total MO (€)' },
+                { key: 'operation', header: 'Descripción' },
+                { key: 'hours', header: 'Uds.' },
+                { key: 'rate', header: 'Precio (€)' },
+                { key: 'total', header: 'Total (€)' },
               ]}
               data={laborData}
               emptyStateMessage="No se consideraron necesarios trabajos de mano de obra"
@@ -188,7 +221,7 @@ const Valuation = () => {
           </SectionPaper>
 
           {/* Table 2: Pintura */}
-          <SectionPaper title="Pintura - Mano de obra y materiales">
+          <SectionPaper title="Pintura">
             <ValuationTable
               columns={[
                 { key: 'partName', header: 'Pieza' },

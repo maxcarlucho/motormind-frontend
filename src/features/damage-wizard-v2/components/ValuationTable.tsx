@@ -10,9 +10,11 @@ import {
 
 type Column = { key: string; header: string };
 
+type TableRow = Record<string, unknown> & { _isSubtitle?: boolean; _subtitleText?: string };
+
 type ValuationTableProps = {
   columns: Column[];
-  data: Record<string, unknown>[];
+  data: TableRow[];
   emptyStateMessage?: string;
 };
 
@@ -45,18 +47,18 @@ const formatTableCellValue = (value: unknown): string | React.ReactNode => {
     if (value.includes('h')) {
       return value;
     }
-    
+
     // Si el string ya tiene formato de número con decimales, no convertirlo
     if (/^\d+\.\d{2}$/.test(value)) {
       return value;
     }
-    
+
     // Intentar parsear como número solo si no está ya formateado
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
       return numValue.toFixed(2);
     }
-    
+
     // Si no es un número, devolver el string tal como está
     return value;
   }
@@ -90,13 +92,27 @@ export const ValuationTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((row, index) => (
-          <TableRow key={index}>
-            {columns.map((column) => (
-              <TableCell key={column.key}>{formatTableCellValue(row[column.key])}</TableCell>
-            ))}
-          </TableRow>
-        ))}
+        {data.map((row, index) => {
+          // Si es un subtítulo, renderizar una fila especial
+          if (row._isSubtitle && row._subtitleText) {
+            return (
+              <TableRow key={`subtitle-${index}`} className="bg-gray-50">
+                <TableCell colSpan={columns.length} className="font-semibold text-gray-700 py-3">
+                  {row._subtitleText}
+                </TableCell>
+              </TableRow>
+            );
+          }
+
+          // Fila normal de datos
+          return (
+            <TableRow key={index}>
+              {columns.map((column) => (
+                <TableCell key={column.key}>{formatTableCellValue(row[column.key])}</TableCell>
+              ))}
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
