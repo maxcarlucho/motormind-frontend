@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
-import { BackendDamage, BackendDamageAssessment, BackendDamagesResponse } from '../types/backend.types';
+import { BackendDamageAssessment, BackendDamagesResponse } from '../types/backend.types';
 import { FrontendOperation } from '../types';
+import { Damage } from '@/types/DamageAssessment';
 
 // ============================================================================
 // TIPOS - Estado del Wizard V2
@@ -30,7 +31,8 @@ export interface WizardV2State {
   // Datos procesados por el backend
   detectedDamages?: BackendDamagesResponse; // Respuesta completa del backend con imágenes incluidas
   confirmedDamageIds?: string[];
-  confirmedDamages?: BackendDamage[]; // Datos completos de los daños confirmados
+  confirmedDamages?: Damage[]; // Datos completos de los daños confirmados
+  userCreatedDamages?: Damage[]; // ✅ NUEVO: Daños creados por usuario
   operations?: FrontendOperation[]; // Operaciones del frontend
   valuation?: BackendDamageAssessment; // Tipo específico del backend, se adaptará
 
@@ -65,7 +67,8 @@ type WizardV2Action =
   | { type: 'START_INTAKE'; payload: { plate: string; claimDescription: string; images: string[] } }
   | { type: 'INTAKE_SUCCESS'; payload: { assessmentId: string; status: WizardV2Status } }
   | { type: 'SET_DETECTED_DAMAGES'; payload: BackendDamagesResponse }
-  | { type: 'CONFIRM_DAMAGES'; payload: { ids: string[]; damages: BackendDamage[] } }
+  | { type: 'CONFIRM_DAMAGES'; payload: { ids: string[]; damages: Damage[] } }
+  | { type: 'ADD_USER_CREATED_DAMAGE'; payload: Damage } // ✅ NUEVO: Agregar daño creado por usuario
   | { type: 'SET_OPERATIONS'; payload: FrontendOperation[] }
   | { type: 'SET_VALUATION'; payload: BackendDamageAssessment }
   | { type: 'FINALIZE_SUCCESS' }
@@ -139,6 +142,7 @@ function wizardV2Reducer(state: WizardV2State, action: WizardV2Action): WizardV2
       return {
         ...state,
         detectedDamages: action.payload,
+        userCreatedDamages: action.payload.userCreatedDamages || [], // ✅ NUEVO: Extraer daños creados por usuario
         status: 'detected',
         loading: false,
         canGoNext: false, // Se habilita cuando se confirmen daños
@@ -153,6 +157,14 @@ function wizardV2Reducer(state: WizardV2State, action: WizardV2Action): WizardV2
         canGoNext: action.payload.ids.length > 0,
       };
 
+      return newState;
+    }
+
+    case 'ADD_USER_CREATED_DAMAGE': {
+      const newState = {
+        ...state,
+        userCreatedDamages: [...(state.userCreatedDamages || []), action.payload],
+      };
       return newState;
     }
 

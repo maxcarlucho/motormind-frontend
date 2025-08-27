@@ -1,39 +1,20 @@
 import { Dropdown } from '@/components/atoms/Dropdown';
 import { DamageType, getDamageTypeLabel } from '@/types/shared/damage.types';
+import { Damage, severityColors, severityLabels } from '@/types/DamageAssessment';
 import { ChevronDown } from 'lucide-react';
 import React, { useState } from 'react';
 import { DamageAction } from '../types';
-import { BackendDamage } from '../types/backend.types';
 
 interface RecommendedOperationCardProps {
-  damage: BackendDamage;
+  damage: Damage;
   proposedOperation: DamageAction;
   onUpdateOperation: (damageType: DamageType, newOperation: DamageAction) => void;
-  relatedDamage?: BackendDamage;
+  relatedDamage?: Damage;
 }
-
-const severityLabels: Record<string, string> = {
-  SEV1: 'Muy Leve',
-  SEV2: 'Leve',
-  SEV3: 'Moderado',
-  SEV4: 'Grave',
-  SEV5: 'Muy Grave',
-};
-
-const severityColors: Record<string, string> = {
-  SEV1: 'bg-green-100 text-green-800',
-  SEV2: 'bg-blue-100 text-blue-800',
-  SEV3: 'bg-yellow-100 text-yellow-800',
-  SEV4: 'bg-orange-100 text-orange-800',
-  SEV5: 'bg-red-100 text-red-800',
-};
 
 const operationLabels: Record<string, string> = {
   REPAIR: 'Reparar',
-  REPLACE: 'Reemplazar',
-  PAINT: 'Pintar',
-  POLISH: 'Pulir',
-  REPAIR_AND_PAINT: 'Reparar y Pintar',
+  REPLACE: 'Sustituir',
 };
 
 export const RecommendedOperationCard: React.FC<RecommendedOperationCardProps> = ({
@@ -73,7 +54,7 @@ export const RecommendedOperationCard: React.FC<RecommendedOperationCardProps> =
               <span
                 className={`ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${severityColors[damage.severity]}`}
               >
-                {severityLabels[damage.severity] || damage.severity}
+                {severityLabels[damage.severity]}
               </span>
             </div>
           )}
@@ -81,7 +62,6 @@ export const RecommendedOperationCard: React.FC<RecommendedOperationCardProps> =
       </div>
 
       <div className="space-y-4">
-        {/* Operación actual */}
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Operación recomendada
@@ -89,7 +69,7 @@ export const RecommendedOperationCard: React.FC<RecommendedOperationCardProps> =
           <Dropdown.Root open={isOpen} onOpenChange={setIsOpen}>
             <Dropdown.Trigger asChild>
               <button className="flex min-w-[200px] items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                <span>{damage.action}</span>
+                <span>{operationLabels[damage.proposedOperation?.operation || 'REPAIR']}</span>
                 <ChevronDown className="h-4 w-4 text-gray-400" />
               </button>
             </Dropdown.Trigger>

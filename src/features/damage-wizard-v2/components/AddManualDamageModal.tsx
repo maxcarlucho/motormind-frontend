@@ -19,6 +19,7 @@ import {
 import { DamageType, DamageSeverity, getDamageTypeLabel } from '@/types/shared/damage.types';
 import { Upload, Loader2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
+import { severityLabels } from '@/types/DamageAssessment';
 
 interface AddManualDamageModalProps {
   isOpen: boolean;
@@ -33,14 +34,6 @@ interface AddManualDamageModalProps {
   }) => Promise<void>;
   isAdding: boolean;
 }
-
-const severityLabelMap: Record<DamageSeverity, string> = {
-  [DamageSeverity.SEV1]: 'Muy Leve (Pulido)',
-  [DamageSeverity.SEV2]: 'Leve (Reparación rápida)',
-  [DamageSeverity.SEV3]: 'Medio (Rayón)',
-  [DamageSeverity.SEV4]: 'Grave (Chapa y pintura)',
-  [DamageSeverity.SEV5]: 'Muy Grave (Reemplazo)',
-};
 
 export const AddManualDamageModal = ({
   isOpen,
@@ -218,7 +211,7 @@ export const AddManualDamageModal = ({
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(DamageType).map((type) => (
+                  {[DamageType.SCRATCH, DamageType.DENT, DamageType.BREAK].map((type) => (
                     <SelectItem key={type} value={type}>
                       {getDamageTypeLabel(type)}
                     </SelectItem>
@@ -248,7 +241,7 @@ export const AddManualDamageModal = ({
                 <SelectContent>
                   {Object.values(DamageSeverity).map((severity) => (
                     <SelectItem key={severity} value={severity}>
-                      {severityLabelMap[severity]}
+                      {severityLabels[severity]}
                     </SelectItem>
                   ))}
                 </SelectContent>

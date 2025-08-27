@@ -28,7 +28,6 @@ const Operations = () => {
 
   useEffect(() => {
     if (state.assessmentId && !state.confirmedDamages?.length) {
-  
       loadAssessmentData().catch((error: Error) => {
         console.error('Error cargando datos del assessment:', error);
       });
@@ -37,8 +36,6 @@ const Operations = () => {
 
   const handleUpdateOperation = (damageType: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
-
-
 
     // ✅ ACTUALIZAR: Modificar el estado local con la nueva operación
     const updatedDamages = confirmedDamages.map((damage) => {

@@ -44,15 +44,15 @@ export const adaptDetectedDamages = (backendDamages: BackendDamage[]): Damage[] 
  */
 export const adaptSeverity = (backendSeverity: string): 'leve' | 'medio' | 'grave' => {
   switch (backendSeverity) {
-    case 'SEV1': 
-    case 'SEV2': 
+    case 'SEV1':
+    case 'SEV2':
       return 'leve';
-    case 'SEV3': 
+    case 'SEV3':
       return 'medio';
-    case 'SEV4': 
-    case 'SEV5': 
+    case 'SEV4':
+    case 'SEV5':
       return 'grave';
-    default: 
+    default:
       return 'medio';
   }
 };
@@ -166,7 +166,6 @@ export const adaptDamagesResponse = (response: BackendDamagesResponse) => {
     tchekAggregates: response.tchekAggregates,
   };
 };
-
 /**
  * Adapta respuesta completa de operaciones
  */
@@ -219,12 +218,13 @@ export const prepareIntakePayload = (data: {
  */
 export const prepareConfirmDamagesPayload = (
   confirmedDamageIds: string[],
-  edits?: Array<{ damageId: string; changes: any }>
-): any => {
-  // Por ahora, enviamos los IDs tal como están
-  // El backend necesitará ser compatible con estos IDs adaptados
-  // O necesitamos un mapeo reverso a los datos originales
-  console.log('🔄 Preparing confirm damages payload:', { confirmedDamageIds, edits });
+  edits?: Array<{ damageId: string; changes: Record<string, unknown> }>
+): { confirmedDamageIds: string[]; edits: Array<{ damageId: string; changes: Record<string, unknown> }> } => {
+  // ✅ NUEVO: Usar IDs directos del backend (sin mapeo complejo)
+  console.log('🔄 Preparing confirm damages payload:', {
+    confirmedDamageIds,
+    edits: edits || []
+  });
 
   return {
     confirmedDamageIds,
@@ -318,3 +318,4 @@ export const parseBackendNumber = (value: any, fallback = 0): number => {
 export const parseBackendString = (value: any, fallback = ''): string => {
   return typeof value === 'string' ? value : fallback;
 };
+

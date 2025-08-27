@@ -3,9 +3,9 @@
  * Mantenemos paridad con los tipos del backend para consistencia
  */
 
-// ✅ CENTRALIZADO: Importar enums desde tipos compartidos
-import { DamageSeverity, DamageType, DamageAction } from '@/types/shared/damage.types';
-export { DamageSeverity, DamageType, DamageAction };
+import { Damage } from "@/types/DamageAssessment";
+export type BackendDamage = Damage;
+export type DamageAction = "REPAIR" | "REPLACE" | "PAINT" | "POLISH" | "DISASSEMBLE_AND_ASSEMBLE";
 
 export enum PaintMaterialType {
   PRIMER = 'PRIMER',
@@ -16,7 +16,6 @@ export enum PaintMaterialType {
   ADHESION_PROMOTER = 'ADHESION_PROMOTER',
 }
 
-// Interfaces del backend
 export interface DocumentLink {
   label: string;
   url: string;
@@ -40,39 +39,6 @@ export interface PaintWork {
   description: string;
   quantity: number;
   price: number;
-}
-
-// Tipos para evidencias de daño (fotos con ROI) - Paridad con backend
-export type DamagePictureROI =
-  | { type: 'bbox'; x: number; y: number; w: number; h: number }   // normalized [0..1]
-  | { type: 'polygon'; points: Array<{ x: number; y: number }> };  // normalized
-
-export interface DamageEvidence {
-  captureId: string;               // id de la foto en TechEck
-  originalUrl: string;             // URL de la foto completa
-  roi?: DamagePictureROI;          // ROI opcional
-  thumbUrl?: string;               // opcional (servidor puede generar thumbnail/crop)
-}
-
-export interface BackendDamage {
-  _id?: string;
-  area: string;
-  subarea?: string;
-  description: string;
-  type: DamageType;
-  severity: DamageSeverity;
-  confidence?: number; // ✅ NUEVO: confidence de Tchek (0-100)
-  resources: DocumentLink[];
-  isConfirmed: boolean | null;
-  action?: DamageAction;
-  spareParts?: SparePart[];
-  additionalActions?: AdditionalAction[];
-  paintWorks?: PaintWork[];
-  notes?: string;
-  evidences?: DamageEvidence[];
-  providerDamageId?: string;
-  partLabel?: string;
-  // ✅ NUEVO: evidencias de fotos con ROI
 }
 
 export interface BackendCar {
@@ -165,7 +131,7 @@ export interface BackendDamageAssessment {
   prices?: string;
   workshopId: string;
   createdBy: string;
-  damages: BackendDamage[];
+  damages: Damage[];
   createdAt: Date | string;
   updatedAt: Date | string;
   state: 'PENDING_REVIEW' | 'DAMAGES_CONFIRMED';
@@ -173,14 +139,13 @@ export interface BackendDamageAssessment {
   insuranceCompany: string;
   claimNumber?: string;
 
-  // New staged flow fields
   workflow?: BackendWorkflow;
   provider?: string;
   providerInspectionId?: string;
   providerReportRaw?: unknown;
-  externalDetectedDamages?: BackendDamage[];
   externalDamageAggregates?: BackendTchekAggregate[];
-  confirmedDamages?: BackendDamage[];
+  confirmedDamages?: Damage[];
+  userCreatedDamages?: Damage[];
   gtMotiveMappings?: BackendGtMotiveMapping[];
   operationsEdited?: BackendOperationEdited[];
   laborOutput?: BackendLaborOutput[];
@@ -189,9 +154,9 @@ export interface BackendDamageAssessment {
   compact?: BackendCompact;
 }
 
-// Respuesta del endpoint GET /damage-assessments/:id/damages
 export interface BackendDamagesResponse {
-  detectedDamages: BackendDamage[];
+  detectedDamages: Damage[];
+  userCreatedDamages: Damage[];
   tchekAggregates: BackendTchekAggregate[] | Record<string, unknown>;
   images: string[];
   car: BackendCar | null;

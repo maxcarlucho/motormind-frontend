@@ -322,9 +322,11 @@ const DamageAssessmentReport = () => {
                             <span>{action.description}</span>
                           </td>
                           <td className="border border-[#e5e7eb] px-2 py-2 text-xs sm:px-4 sm:text-sm">
-                            {damage.action === 'REPLACE'
+                            {/* ✅ NUEVO: Usar la nueva estructura de operaciones */}
+                            {(damage.proposedOperation?.operation || damage.action) === 'REPLACE'
                               ? 'SUST-'
-                              : damage.action === 'REPAIR_AND_PAINT'
+                              : (damage.proposedOperation?.operation || damage.action) ===
+                                  'REPAIR_AND_PAINT'
                                 ? 'REP-'
                                 : 'PINT-'}
                             {String(damageIndex + 1).padStart(2, '0')}

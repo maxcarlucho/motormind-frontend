@@ -1,14 +1,9 @@
 import axios, { AxiosInstance } from 'axios';
 import { apiUrl } from '@/constants/env';
+import { BackendDamagesResponse } from '@/features/damage-wizard-v2/types/backend.types';
 
-// Tipos ligeros para no enredar el tipado inicial del flujo por etapas
-export interface DetectedDamagesResponse {
-    detectedDamages: Array<Record<string, unknown>>;
-    tchekAggregates: Record<string, unknown> | Array<unknown>;
-    images: string[];
-    car: Record<string, unknown> | null;
-    workflow: Record<string, unknown> | null;
-}
+// ✅ UNIFICADO: Usar BackendDamagesResponse directamente
+export type DetectedDamagesResponse = BackendDamagesResponse;
 
 export interface IntakeResponse {
     id: string;
@@ -51,6 +46,18 @@ class DamageAssessmentApiService {
         return data;
     }
 
+    async createConfirmedDamage(assessmentId: string, damageData: {
+        area?: string;
+        subarea?: string;
+        type: string;
+        severity: string;
+        description?: string;
+        imageUrl?: string;
+    }) {
+        const { data } = await this.api.post(`/damage-assessments/${assessmentId}/damages/confirmed`, damageData);
+        return data;
+    }
+
     async generateOperations(assessmentId: string) {
         const { data } = await this.api.post(`/damage-assessments/${assessmentId}/operations/generate`, {});
         return data;
@@ -58,6 +65,10 @@ class DamageAssessmentApiService {
 
     async generateValuation(assessmentId: string) {
         const { data } = await this.api.post(`/damage-assessments/${assessmentId}/valuation/generate`, {});
+        return data;
+    }
+    async generateValuationNew(assessmentId: string) {
+        const { data } = await this.api.post(`/damage-assessments/${assessmentId}/valuation/generate-new`, {});
         return data;
     }
 

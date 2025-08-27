@@ -3,11 +3,7 @@ import { useSearchParams, useParams, Navigate } from 'react-router-dom';
 import { WizardV2Provider, useWizardV2 } from './context/WizardV2Context';
 import { StepperNavigationProvider } from './nav';
 import { WorkflowStatus, WizardStepKey } from './types';
-import {
-  BackendDamage,
-  BackendDamageAssessment,
-  BackendDamagesResponse,
-} from './types/backend.types';
+import { BackendDamageAssessment, BackendDamagesResponse } from './types/backend.types';
 import damageAssessmentApi from '@/service/damageAssessmentApi.service';
 
 import Intake from './pages/Intake';
@@ -15,6 +11,7 @@ import Damages from './pages/Damages';
 import Operations from './pages/Operations';
 import Valuation from './pages/Valuation';
 import Finalize from './pages/Finalize';
+import { Damage } from '@/types/DamageAssessment';
 
 const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
 
@@ -147,10 +144,11 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
         });
       }
 
-      // Cargar externalDetectedDamages si están disponibles
-      if (assessmentData.externalDetectedDamages) {
+      // Cargar damages si están disponibles
+      if (assessmentData.damages) {
         const damagesResponse: BackendDamagesResponse = {
-          detectedDamages: assessmentData.externalDetectedDamages,
+          detectedDamages: assessmentData.damages,
+          userCreatedDamages: assessmentData.userCreatedDamages || [],
           tchekAggregates: assessmentData.externalDamageAggregates || [],
           images: assessmentData.images || [],
           car: assessmentData.car || null,
@@ -159,13 +157,12 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
         dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
       }
 
-      // Cargar confirmedDamages si están disponibles
       if (assessmentData.confirmedDamages && assessmentData.confirmedDamages.length > 0) {
         dispatch({
           type: 'CONFIRM_DAMAGES',
           payload: {
             ids: assessmentData.confirmedDamages.map(
-              (d: BackendDamage) => d._id || `${d.area}-${d.subarea}`,
+              (d: Damage) => d._id || `${d.area}-${d.subarea}`,
             ),
             damages: assessmentData.confirmedDamages,
           },

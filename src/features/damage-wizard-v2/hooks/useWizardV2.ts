@@ -6,13 +6,13 @@
 import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useWizardV2 as useWizardV2Context } from '../context/WizardV2Context';
-import damageAssessmentApi, { DetectedDamagesResponse } from '@/service/damageAssessmentApi.service';
+import damageAssessmentApi from '@/service/damageAssessmentApi.service';
 import {
   adaptDamagesResponse,
   prepareIntakePayload,
   prepareConfirmDamagesPayload,
 } from '../api/adapter';
-import { BackendDamagesResponse, BackendDamage, BackendTchekAggregate } from '../types/backend.types';
+import { BackendDamage } from '../types/backend.types';
 import { FrontendOperation } from '../types';
 import {
   POLLING_INTERVAL,
@@ -46,6 +46,14 @@ export interface UseWizardV2Return {
   startIntake: (data: IntakeData) => Promise<string>;
   pollForDamages: (assessmentId: string) => Promise<void>;
   confirmDamages: (confirmedIds: string[]) => Promise<void>;
+  createManualDamage: (damageData: {
+    area?: string;
+    subarea?: string;
+    type: string;
+    severity: string;
+    description?: string;
+    imageUrl?: string;
+  }) => Promise<void>;
   saveOperations: (operations: FrontendOperation[]) => Promise<void>;
   generateValuation: () => Promise<void>;
   finalizeAssessment: () => Promise<void>;
@@ -75,16 +83,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
   const { state, dispatch, setLoading, setError, resetWizard } = context;
   const assessmentId = params.id || state.assessmentId;
 
-  // Función temporal para convertir respuesta del API a formato esperado
-  const convertApiResponse = (response: DetectedDamagesResponse): BackendDamagesResponse => {
-    return {
-      detectedDamages: response.detectedDamages as any[], // Conversión temporal
-      tchekAggregates: response.tchekAggregates as BackendTchekAggregate[] | Record<string, unknown>,
-      images: response.images,
-      car: response.car as any,
-      workflow: response.workflow as any,
-    };
-  };
+  // ✅ ELIMINADO: convertApiResponse ya no es necesario - tipos unificados
 
   // ============================================================================
   // NAVEGACIÓN
@@ -165,12 +164,11 @@ export const useWizardV2 = (): UseWizardV2Return => {
         logger.debug(`Polling attempt ${attempts}/${MAX_POLLING_ATTEMPTS}`);
 
         const response = await damageAssessmentApi.getDetectedDamages(assessmentId);
-        const convertedResponse = convertApiResponse(response);
-        const adaptedResponse = adaptDamagesResponse(convertedResponse);
+        const adaptedResponse = adaptDamagesResponse(response);
 
         if (adaptedResponse.workflow?.status !== 'processing') {
           // Detección completa - guardar respuesta completa
-          dispatch({ type: 'SET_DETECTED_DAMAGES', payload: convertedResponse });
+          dispatch({ type: 'SET_DETECTED_DAMAGES', payload: response });
           logger.info('Damage detection completed', {
             damagesCount: adaptedResponse.damages.length,
             status: adaptedResponse.workflow?.status
@@ -256,9 +254,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
       } else {
         // Si ya está detectado, cargar daños directamente
         const damagesResponse = await damageAssessmentApi.getDetectedDamages(response.id);
-        const convertedResponse = convertApiResponse(damagesResponse);
-        // Guardar la respuesta completa para que el frontend pueda acceder a las imágenes
-        dispatch({ type: 'SET_DETECTED_DAMAGES', payload: convertedResponse });
+        dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
       }
 
       logger.info(SUCCESS_MESSAGES.INTAKE_CREATED);
@@ -287,6 +283,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
 
       logger.info('Confirming damages', { confirmedCount: confirmedIds.length });
 
+      // ✅ NUEVO: Usar IDs directos del backend (sin mapeo complejo)
       const payload = prepareConfirmDamagesPayload(confirmedIds);
       const response = await damageAssessmentApi.confirmDamages(assessmentId, payload.confirmedDamageIds, payload.edits);
 
@@ -306,6 +303,61 @@ export const useWizardV2 = (): UseWizardV2Return => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
       logger.error('Damage confirmation failed:', errorMessage);
+      setError(errorMessage);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [assessmentId, setLoading, setError, dispatch]);
+
+  const createManualDamage = useCallback(async (damageData: {
+    area?: string;
+    subarea?: string;
+    type: string;
+    severity: string;
+    description?: string;
+    imageUrl?: string;
+  }): Promise<void> => {
+    if (!assessmentId) {
+      throw new Error(ERROR_MESSAGES.ASSESSMENT_NOT_FOUND);
+    }
+
+    try {
+      setLoading(true);
+      setError(undefined);
+
+      logger.info('Creating manual damage', { damageData });
+
+      const response = await damageAssessmentApi.createConfirmedDamage(assessmentId, damageData);
+
+      // Actualizar el estado con los daños confirmados actualizados
+      if (response.confirmedDamages) {
+        dispatch({
+          type: 'CONFIRM_DAMAGES',
+          payload: {
+            ids: response.confirmedDamages.map((d: BackendDamage) => d._id || `${d.area}-${d.subarea}`),
+            damages: response.confirmedDamages
+          }
+        });
+      }
+
+      // ✅ NUEVO: Actualizar userCreatedDamages si existe en la respuesta
+      if (response.userCreatedDamages) {
+        // Agregar solo el nuevo daño creado
+        const newDamage = response.userCreatedDamages[response.userCreatedDamages.length - 1];
+        if (newDamage) {
+          dispatch({
+            type: 'ADD_USER_CREATED_DAMAGE',
+            payload: newDamage
+          });
+        }
+      }
+
+      logger.info('Manual damage created successfully');
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
+      logger.error('Manual damage creation failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -351,7 +403,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
 
       logger.info('Generating valuation');
 
-      const response = await damageAssessmentApi.generateValuation(assessmentId);
+      const response = await damageAssessmentApi.generateValuationNew(assessmentId);
 
       // El backend devuelve directamente el DamageAssessment actualizado
       // No necesitamos adaptación, solo dispatch directo
@@ -384,6 +436,14 @@ export const useWizardV2 = (): UseWizardV2Return => {
       // Usar el endpoint que devuelve el assessment completo
       const response = await damageAssessmentApi.getAssessment(assessmentId);
 
+      console.log('🔍 loadAssessmentData Debug:', {
+        assessmentId,
+        responseKeys: Object.keys(response),
+        confirmedDamages: response.confirmedDamages,
+        confirmedDamagesLength: response.confirmedDamages?.length,
+        response: response
+      });
+
       // Si hay confirmedDamages, actualizar el contexto
       if (response.confirmedDamages && response.confirmedDamages.length > 0) {
         const payload = {
@@ -391,10 +451,14 @@ export const useWizardV2 = (): UseWizardV2Return => {
           damages: response.confirmedDamages
         };
 
+        console.log('🔄 loadAssessmentData: Actualizando confirmedDamages:', payload);
+
         dispatch({
           type: 'CONFIRM_DAMAGES',
           payload
         });
+      } else {
+        console.log('⚠️ loadAssessmentData: No hay confirmedDamages en la respuesta');
       }
 
       logger.info('Assessment data loaded');
@@ -469,6 +533,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
     startIntake,
     pollForDamages,
     confirmDamages,
+    createManualDamage,
     saveOperations,
     generateValuation,
     finalizeAssessment,
@@ -479,5 +544,5 @@ export const useWizardV2 = (): UseWizardV2Return => {
     canNavigateToStep,
   };
 };
-
 export default useWizardV2;
+
