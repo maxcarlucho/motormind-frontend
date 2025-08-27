@@ -19,8 +19,9 @@ type ValuationTableProps = {
 /**
  * Formatea un valor para mostrar en la tabla
  * - Si es un número, lo formatea con máximo 2 decimales
- * - Si es un string que contiene un número, lo formatea
- * - Si es otro tipo, lo devuelve tal como está
+ * - Si es un string que NO contiene números, lo devuelve tal como está
+ * - Si es un string que contiene números, verifica si ya está formateado
+ * - Mantiene ReactNodes tal como están
  */
 const formatTableCellValue = (value: unknown): string | React.ReactNode => {
   // Si es un ReactNode (como un Badge), devolverlo tal como está
@@ -33,18 +34,31 @@ const formatTableCellValue = (value: unknown): string | React.ReactNode => {
     return '';
   }
 
-  // Si es un string, intentar parsearlo como número
+  // Si es un número, formatearlo con 2 decimales
+  if (typeof value === 'number') {
+    return value.toFixed(2);
+  }
+
+  // Si es un string, verificar si ya está formateado
   if (typeof value === 'string') {
+    // Si el string ya contiene "h" (horas), no hacer conversiones
+    if (value.includes('h')) {
+      return value;
+    }
+    
+    // Si el string ya tiene formato de número con decimales, no convertirlo
+    if (/^\d+\.\d{2}$/.test(value)) {
+      return value;
+    }
+    
+    // Intentar parsear como número solo si no está ya formateado
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
       return numValue.toFixed(2);
     }
+    
+    // Si no es un número, devolver el string tal como está
     return value;
-  }
-
-  // Si es un número, formatearlo con 2 decimales
-  if (typeof value === 'number') {
-    return value.toFixed(2);
   }
 
   // Para otros tipos, convertir a string
@@ -79,9 +93,7 @@ export const ValuationTable = ({
         {data.map((row, index) => (
           <TableRow key={index}>
             {columns.map((column) => (
-              <TableCell key={column.key}>
-                {formatTableCellValue(row[column.key])}
-              </TableCell>
+              <TableCell key={column.key}>{formatTableCellValue(row[column.key])}</TableCell>
             ))}
           </TableRow>
         ))}
