@@ -118,13 +118,29 @@ const Valuation = () => {
           _subtitleText: 'MANO DE OBRA DE PINTURA',
         });
 
-        // Agregar datos de mano de obra
+        // Agrupar datos de mano de obra por pieza
+        const laborByPart = new Map<string, { hours: number; total: number }>();
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
+          const partName = item.partName || 'Pieza sin nombre';
+          const hours = item.labor?.hours || 0;
+          const total = item.labor?.total || 0;
+          
+          if (laborByPart.has(partName)) {
+            const existing = laborByPart.get(partName)!;
+            existing.hours += hours;
+            existing.total += total;
+          } else {
+            laborByPart.set(partName, { hours, total });
+          }
+        });
+
+        // Agregar datos agrupados de mano de obra
+        laborByPart.forEach((data, partName) => {
           paintDataArray.push({
-            description: `Pintar ${item.partName || 'Pieza sin nombre'}`,
-            units: `${(item.labor?.hours || 0).toFixed(2)} h`,
+            description: `Pintar ${partName}`,
+            units: `${data.hours.toFixed(2)} h`,
             price: 38, // Tarifa por hora de pintura
-            total: item.labor?.total || 0,
+            total: data.total,
           });
         });
 
@@ -134,13 +150,32 @@ const Valuation = () => {
           _subtitleText: 'MATERIALES DE PINTURA',
         });
 
-        // Agregar datos de materiales
+        // Agrupar datos de materiales por pieza
+        const materialsByPart = new Map<string, { units: number; price: number; total: number }>();
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
+          const partName = item.partName || 'Pieza sin nombre';
+          const units = 1; // Cada pieza tiene 1 unidad de material
+          const price = item.materials?.unitPrice || 0;
+          const total = item.materials?.total || 0;
+          
+          if (materialsByPart.has(partName)) {
+            const existing = materialsByPart.get(partName)!;
+            existing.units += units;
+            existing.total += total;
+            // Para el precio, tomamos el promedio si hay diferentes precios
+            existing.price = (existing.price + price) / 2;
+          } else {
+            materialsByPart.set(partName, { units, price, total });
+          }
+        });
+
+        // Agregar datos agrupados de materiales
+        materialsByPart.forEach((data, partName) => {
           paintDataArray.push({
-            description: `Pintar ${item.partName || 'Pieza sin nombre'}`,
-            units: '1,00',
-            price: item.materials?.unitPrice || 0,
-            total: item.materials?.total || 0,
+            description: `Pintar ${partName}`,
+            units: `${data.units.toFixed(2)}`,
+            price: data.price,
+            total: data.total,
           });
         });
 
