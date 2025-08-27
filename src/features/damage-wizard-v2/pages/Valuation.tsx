@@ -107,46 +107,43 @@ const Valuation = () => {
   // Datos de pintura separados en mano de obra y materiales
   const paintData = state.valuation?.paintWorks
     ? (() => {
-        const paintDataArray: (Record<string, unknown> & { _isSubtitle?: boolean; _subtitleText?: string })[] = [];
-        
+        const paintDataArray: (Record<string, unknown> & {
+          _isSubtitle?: boolean;
+          _subtitleText?: string;
+        })[] = [];
+
         // Agregar subtítulo de mano de obra
         paintDataArray.push({
           _isSubtitle: true,
-          _subtitleText: 'MANO DE OBRA DE PINTURA'
+          _subtitleText: 'MANO DE OBRA DE PINTURA',
         });
-        
+
         // Agregar datos de mano de obra
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
           paintDataArray.push({
-            partName: item.partName || 'Pieza sin nombre',
-            job: 'Trabajo de pintura',
-            paintHours: `${(item.labor?.hours || 0).toFixed(2)} h`,
-            paintLaborTotal: item.labor?.total || 0,
-            unitPrice: item.materials?.unitPrice || 0,
-            materialsTotal: item.materials?.total || 0,
-            total: item.totalCost || 0,
+            description: `Pintar ${item.partName || 'Pieza sin nombre'}`,
+            units: `${(item.labor?.hours || 0).toFixed(2)} h`,
+            price: 38, // Tarifa por hora de pintura
+            total: item.labor?.total || 0,
           });
         });
-        
+
         // Agregar subtítulo de materiales
         paintDataArray.push({
           _isSubtitle: true,
-          _subtitleText: 'MATERIALES DE PINTURA'
+          _subtitleText: 'MATERIALES DE PINTURA',
         });
-        
+
         // Agregar datos de materiales
         state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
           paintDataArray.push({
-            partName: item.partName || 'Pieza sin nombre',
-            job: 'Materiales',
-            paintHours: '1,00',
-            paintLaborTotal: 0,
-            unitPrice: item.materials?.unitPrice || 0,
-            materialsTotal: item.materials?.total || 0,
+            description: `Pintar ${item.partName || 'Pieza sin nombre'}`,
+            units: '1,00',
+            price: item.materials?.unitPrice || 0,
             total: item.materials?.total || 0,
           });
         });
-        
+
         return paintDataArray;
       })()
     : [];
@@ -224,13 +221,10 @@ const Valuation = () => {
           <SectionPaper title="Pintura">
             <ValuationTable
               columns={[
-                { key: 'partName', header: 'Pieza' },
-                { key: 'job', header: 'Trabajo' },
-                { key: 'paintHours', header: 'Horas Pintura' },
-                { key: 'paintLaborTotal', header: 'MO Pintura (€)' },
-                { key: 'unitPrice', header: 'Precio Material' },
-                { key: 'materialsTotal', header: 'Total Materiales (€)' },
-                { key: 'total', header: 'Total (€)' },
+                { key: 'description', header: 'Descripción' },
+                { key: 'units', header: 'Uds.' },
+                { key: 'price', header: 'Precio(€)' },
+                { key: 'total', header: 'Total(€)' },
               ]}
               data={paintData}
               emptyStateMessage="No se consideraron necesarios trabajos de pintura"
