@@ -461,6 +461,29 @@ export const useWizardV2 = (): UseWizardV2Return => {
         console.log('⚠️ loadAssessmentData: No hay confirmedDamages en la respuesta');
       }
 
+      // Si el assessment está valuado o completado, cargar los datos de valoración
+      if (response.workflow?.status === 'valuated' || response.workflow?.status === 'completed') {
+        console.log('🔄 loadAssessmentData: Assessment valuado/completado, cargando datos de valoración');
+        
+        // Verificar si hay datos de valoración
+        if (response.laborOutput || response.paintWorks || response.parts || response.compact) {
+          console.log('🔄 loadAssessmentData: Datos de valoración encontrados:', {
+            laborOutput: response.laborOutput?.length || 0,
+            paintWorks: response.paintWorks?.length || 0,
+            parts: response.parts?.length || 0,
+            hasCompact: !!response.compact
+          });
+
+          // Actualizar el contexto con los datos de valoración
+          dispatch({
+            type: 'SET_VALUATION',
+            payload: response
+          });
+        } else {
+          console.log('⚠️ loadAssessmentData: Assessment valuado pero sin datos de valoración');
+        }
+      }
+
       logger.info('Assessment data loaded');
 
     } catch (error) {

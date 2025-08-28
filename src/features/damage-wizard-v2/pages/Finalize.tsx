@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { CheckCircle, ArrowLeft, Download, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
-import { useWizardV2 } from '../context/WizardV2Context';
+import { useWizardV2 } from '../hooks/useWizardV2';
 import { PageShell } from '../components/PageShell';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { ValuationTable } from '../components/ValuationTable';
@@ -18,10 +18,31 @@ const getOperationLabel = (operationCode: string): string => {
 
 const Finalize = () => {
   const navigate = useNavigate();
-  const { state } = useWizardV2();
+  const { state, loadAssessmentData } = useWizardV2();
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Cargar datos del assessment al montar el componente
+  useEffect(() => {
+    console.log('🔄 Finalize useEffect: Cargando datos del assessment');
+    if (state.assessmentId) {
+      loadAssessmentData().catch((error: unknown) => {
+        console.error('Error cargando datos del assessment:', error);
+      });
+    }
+  }, [state.assessmentId, loadAssessmentData]);
+
+  // Debug: Log del estado para entender qué está pasando
+  console.log('🔍 Finalize - Debug state:', {
+    hasValuation: !!state.valuation,
+    valuationWorkflowStatus: state.valuation?.workflow?.status,
+    assessmentId: state.assessmentId,
+    plate: state.plate,
+    laborOutput: state.valuation?.laborOutput?.length || 0,
+    paintWorks: state.valuation?.paintWorks?.length || 0,
+    parts: state.valuation?.parts?.length || 0,
+  });
 
   // Verificar si el assessment está en estado válido para finalizar
   const canFinalize =
@@ -160,7 +181,7 @@ const Finalize = () => {
 
       // Clonar el elemento para aplicar estilos compatibles
       const clonedElement = input.cloneNode(true) as HTMLElement;
-      
+
       // Aplicar estilos compatibles con html2canvas
       const style = document.createElement('style');
       style.textContent = `
@@ -184,7 +205,7 @@ const Finalize = () => {
       `;
       clonedElement.appendChild(style);
       clonedElement.classList.add('pdf-compatible');
-      
+
       // Agregar temporalmente al DOM
       document.body.appendChild(clonedElement);
       clonedElement.style.position = 'absolute';
