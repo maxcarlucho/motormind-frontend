@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
 import { BackendDamageAssessment, BackendDamagesResponse } from '../types/backend.types';
-import { FrontendOperation } from '../types';
+import { FrontendOperation, DamageAction } from '../types';
 import { Damage } from '@/types/DamageAssessment';
 
 // ============================================================================
@@ -35,6 +35,9 @@ export interface WizardV2State {
   userCreatedDamages?: Damage[]; // ✅ NUEVO: Daños creados por usuario
   operations?: FrontendOperation[]; // Operaciones del frontend
   valuation?: BackendDamageAssessment; // Tipo específico del backend, se adaptará
+
+  // ✅ NUEVO: Tracking de operaciones modificadas
+  modifiedOperations?: Record<string, DamageAction>; // damageId -> newOperation
 
   // Metadatos y flags
   flags?: {
@@ -72,7 +75,9 @@ type WizardV2Action =
   | { type: 'SET_OPERATIONS'; payload: FrontendOperation[] }
   | { type: 'SET_VALUATION'; payload: BackendDamageAssessment }
   | { type: 'FINALIZE_SUCCESS' }
-  | { type: 'RESET_WIZARD' };
+  | { type: 'RESET_WIZARD' }
+  | { type: 'UPDATE_OPERATION'; payload: { damageId: string; operation: DamageAction } } // ✅ NUEVO: Trackear operación modificada
+  | { type: 'CLEAR_MODIFIED_OPERATIONS' }; // ✅ NUEVO: Limpiar operaciones modificadas
 
 // ============================================================================
 // REDUCER
@@ -194,6 +199,21 @@ function wizardV2Reducer(state: WizardV2State, action: WizardV2Action): WizardV2
 
     case 'RESET_WIZARD':
       return initialState;
+
+    case 'UPDATE_OPERATION':
+      return {
+        ...state,
+        modifiedOperations: {
+          ...state.modifiedOperations,
+          [action.payload.damageId]: action.payload.operation,
+        },
+      };
+
+    case 'CLEAR_MODIFIED_OPERATIONS':
+      return {
+        ...state,
+        modifiedOperations: undefined,
+      };
 
     default:
       return state;
