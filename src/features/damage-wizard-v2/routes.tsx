@@ -1,24 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useParams, Navigate } from 'react-router-dom';
+import { useEffect, useMemo } from 'react';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { WizardV2Provider, useWizardV2 } from './context/WizardV2Context';
 import { StepperNavigationProvider } from './nav';
-import { WorkflowStatus, WizardStepKey } from './types';
-import { BackendDamageAssessment, BackendDamagesResponse } from './types/backend.types';
-import damageAssessmentApi from '@/service/damageAssessmentApi.service';
+import { BackendDamagesResponse, BackendDamageAssessment } from './types/backend.types';
+import { WizardStepKey, WorkflowStatus } from './types';
+import { extractStepFromUrl, getTargetStepFromWorkflow } from './utils/wizardNavigation';
+import { useAssessmentData, useAuthGuard } from './hooks/useWizardData';
+import { LoadingState, ErrorState, NotFoundState } from './components/WizardStates';
 
-import Intake from './pages/Intake';
+import { Damage } from '@/types/DamageAssessment';
 import Damages from './pages/Damages';
+import Finalize from './pages/Finalize';
+import Intake from './pages/Intake';
 import Operations from './pages/Operations';
 import Valuation from './pages/Valuation';
-import Finalize from './pages/Finalize';
-import { Damage } from '@/types/DamageAssessment';
 
 const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
-
-// Función para extraer el step de los search params
-const extractStepFromUrlLocal = (searchParams: URLSearchParams): string => {
-  return searchParams.get('step') || 'damages';
-};
 
 // ============================================================================
 // COMPONENTE PRINCIPAL DEL ROUTER
@@ -26,85 +23,18 @@ const extractStepFromUrlLocal = (searchParams: URLSearchParams): string => {
 
 export const WizardV2Entry = () => {
   const { id } = useParams<{ id: string }>();
-  const [assessmentData, setAssessmentData] = useState<BackendDamageAssessment | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(true);
+  const { data: assessmentData, isLoading, error } = useAssessmentData(id);
+  const { isAuthorized } = useAuthGuard();
 
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  const loadAssessmentData = async () => {
-    if (!id) {
-      setError('ID no proporcionado');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await damageAssessmentApi.getAssessment(id);
-      if (!mounted) return;
-      setAssessmentData(response);
-    } catch (error: unknown) {
-      if (!mounted) return;
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      setError(errorMessage);
-      console.error('Error loading assessment data:', error);
-    } finally {
-      if (mounted) {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    loadAssessmentData();
-  }, [id]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-32 w-32 animate-spin rounded-full border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Cargando peritaje...</p>
-        </div>
-      </div>
-    );
+  // Verificar permisos
+  if (!isAuthorized) {
+    return <Navigate to="/login" replace />;
   }
 
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 text-6xl text-red-600">⚠️</div>
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Error al cargar el peritaje</h2>
-          <p className="mb-4 text-gray-600">{error}</p>
-          <button
-            onClick={loadAssessmentData}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Reintentar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!assessmentData) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 text-6xl text-gray-600">❓</div>
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Peritaje no encontrado</h2>
-          <p className="text-gray-600">No se pudo cargar la información del peritaje.</p>
-        </div>
-      </div>
-    );
-  }
+  // Estados de carga y error
+  if (isLoading) return <LoadingState />;
+  if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
+  if (!assessmentData) return <NotFoundState />;
 
   return (
     <WizardV2Provider>
@@ -122,60 +52,71 @@ interface WizardV2RouterProps {
 }
 
 const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
-  const [searchParams] = useSearchParams();
-  const step = extractStepFromUrlLocal(searchParams) as WizardStepKey;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const step = extractStepFromUrl(searchParams) as WizardStepKey;
   const { dispatch } = useWizardV2();
 
-  // Cargar los datos del assessment en el contexto SOLO la primera vez
+  // Cargar datos en el contexto
   useEffect(() => {
-    if (assessmentData && assessmentData._id) {
-      // Establecer el assessmentId si está disponible
-      dispatch({ type: 'SET_ASSESSMENT_ID', payload: assessmentData._id });
+    if (!assessmentData?._id) return;
 
-      // Cargar datos del intake si están disponibles (solo si no están ya cargados)
-      if (assessmentData.car?.plate || assessmentData.description || assessmentData.images) {
-        dispatch({
-          type: 'START_INTAKE',
-          payload: {
-            plate: assessmentData.car?.plate || '',
-            claimDescription: assessmentData.description || '',
-            images: assessmentData.images || [],
-          },
-        });
-      }
+    // Establecer assessmentId
+    dispatch({ type: 'SET_ASSESSMENT_ID', payload: assessmentData._id });
 
-      // Cargar damages si están disponibles
-      if (assessmentData.damages) {
-        const damagesResponse: BackendDamagesResponse = {
-          detectedDamages: assessmentData.damages,
-          userCreatedDamages: assessmentData.userCreatedDamages || [],
-          tchekAggregates: assessmentData.externalDamageAggregates || [],
+    // Cargar datos del intake
+    if (assessmentData.car?.plate || assessmentData.description || assessmentData.images) {
+      dispatch({
+        type: 'START_INTAKE',
+        payload: {
+          plate: assessmentData.car?.plate || '',
+          claimDescription: assessmentData.description || '',
           images: assessmentData.images || [],
-          car: assessmentData.car || null,
-          workflow: assessmentData.workflow || null,
-        };
-        dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
-      }
-
-      if (assessmentData.confirmedDamages && assessmentData.confirmedDamages.length > 0) {
-        dispatch({
-          type: 'CONFIRM_DAMAGES',
-          payload: {
-            ids: assessmentData.confirmedDamages.map(
-              (d: Damage) => d._id || `${d.area}-${d.subarea}`,
-            ),
-            damages: assessmentData.confirmedDamages,
-          },
-        });
-      }
-
-      const workflowStatus = assessmentData.workflow?.status;
-      if (workflowStatus) {
-        dispatch({ type: 'SET_STATUS', payload: workflowStatus as WorkflowStatus });
-      }
+        },
+      });
     }
-  }, [assessmentData._id]); // SOLO se ejecuta cuando cambia el assessmentId, NO el step
 
+    // Cargar damages
+    if (assessmentData.damages) {
+      const damagesResponse: BackendDamagesResponse = {
+        detectedDamages: assessmentData.damages,
+        userCreatedDamages: assessmentData.userCreatedDamages || [],
+        tchekAggregates: assessmentData.externalDamageAggregates || [],
+        images: assessmentData.images || [],
+        car: assessmentData.car || null,
+        workflow: assessmentData.workflow || null,
+      };
+      dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
+    }
+
+    // Cargar daños confirmados
+    if (assessmentData.confirmedDamages?.length) {
+      dispatch({
+        type: 'CONFIRM_DAMAGES',
+        payload: {
+          ids: assessmentData.confirmedDamages.map(
+            (d: Damage) => d._id || `${d.area}-${d.subarea}`,
+          ),
+          damages: assessmentData.confirmedDamages,
+        },
+      });
+    }
+
+    // Establecer estado del workflow
+    if (assessmentData.workflow?.status) {
+      dispatch({ type: 'SET_STATUS', payload: assessmentData.workflow.status as WorkflowStatus });
+    }
+  }, [assessmentData._id, dispatch]);
+
+  // Redirección automática según workflow
+  useEffect(() => {
+    if (!searchParams.get('step')) {
+      const workflowStatus = (assessmentData.workflow?.status as WorkflowStatus) || 'processing';
+      const targetStep = getTargetStepFromWorkflow(workflowStatus);
+      setSearchParams({ step: targetStep }, { replace: true });
+    }
+  }, [assessmentData.workflow?.status, searchParams, setSearchParams]);
+
+  // Renderizar componente según step
   const Component = useMemo(() => {
     switch (step) {
       case 'intake':
@@ -207,16 +148,22 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
 };
 
 // ============================================================================
-// ENTRADA PARA CREAR NUEVO ASSESSMENT (sin ID)
+// ENTRADA PARA CREAR NUEVO ASSESSMENT
 // ============================================================================
 
 export const WizardV2NewEntry = () => {
+  const { isAuthorized } = useAuthGuard();
+
+  // Verificar permisos
+  if (!isAuthorized) {
+    return <Navigate to="/login" replace />;
+  }
+
   // Verificar si el wizard está habilitado
   if (!WIZARD_V2_ENABLED) {
     return <Navigate to="/damage-assessments/create" />;
   }
 
-  // Para crear un nuevo assessment, simplemente mostramos el primer paso
   return (
     <WizardV2Provider>
       <StepperNavigationProvider

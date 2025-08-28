@@ -97,7 +97,7 @@ export const ValuationTable = ({
           if (row._isSubtitle && row._subtitleText) {
             return (
               <TableRow key={`subtitle-${index}`} className="bg-gray-50">
-                <TableCell colSpan={columns.length} className="font-semibold text-gray-700 py-3">
+                <TableCell colSpan={columns.length} className="py-3 font-semibold text-gray-700">
                   {row._subtitleText}
                 </TableCell>
               </TableRow>

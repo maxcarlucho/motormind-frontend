@@ -86,8 +86,11 @@ const Valuation = () => {
   const laborData = state.valuation?.laborOutput
     ? (() => {
         // Agrupar por operación y pieza
-        const laborByOperationAndPart = new Map<string, { hours: number; total: number; source: string }>();
-        
+        const laborByOperationAndPart = new Map<
+          string,
+          { hours: number; total: number; source: string }
+        >();
+
         state.valuation.laborOutput.forEach((item: BackendLaborOutput) => {
           const operation = item.mainOperation?.operation || '';
           const partName = item.partName || 'Pieza sin nombre';
@@ -95,7 +98,7 @@ const Valuation = () => {
           const hours = item.mainOperation?.estimatedHours || 0;
           const total = (item.mainOperation?.estimatedHours || 0) * 38;
           const source = item.mainOperation?.source || 'no_data';
-          
+
           if (laborByOperationAndPart.has(key)) {
             const existing = laborByOperationAndPart.get(key)!;
             existing.hours += hours;
@@ -104,7 +107,7 @@ const Valuation = () => {
             laborByOperationAndPart.set(key, { hours, total, source });
           }
         });
-        
+
         // Convertir a array con datos agrupados
         return Array.from(laborByOperationAndPart.entries()).map(([key, data]) => {
           const [operation, partName] = key.split('-', 2);
@@ -121,8 +124,7 @@ const Valuation = () => {
                   sourceConfig.no_data.color
                 }
               >
-                {sourceConfig[data.source as keyof typeof sourceConfig]?.label ||
-                  'Unknown'}
+                {sourceConfig[data.source as keyof typeof sourceConfig]?.label || 'Unknown'}
               </Badge>
             ),
           };
