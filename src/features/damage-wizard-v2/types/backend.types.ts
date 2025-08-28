@@ -166,7 +166,6 @@ export interface BackendDamageAssessment {
   damages: Damage[];
   createdAt: Date | string;
   updatedAt: Date | string;
-  state: 'PENDING_REVIEW' | 'DAMAGES_CONFIRMED';
   notes?: string;
   insuranceCompany: string;
   claimNumber?: string;

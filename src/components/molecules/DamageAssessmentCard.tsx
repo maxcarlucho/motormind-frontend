@@ -1,23 +1,18 @@
 import { CarIcon, MoreVertical } from 'lucide-react';
-import { DamageAssessment } from '@/types/DamageAssessment';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BackendDamageAssessment } from '@/features/damage-wizard-v2/types/backend.types';
 
 interface DamageAssessmentCardProps {
-  assessment: DamageAssessment;
+  assessment: BackendDamageAssessment;
 }
 
-const stateMap = {
-  PENDING_REVIEW: 'Pendiente de Validación',
-  DAMAGES_CONFIRMED: 'Daños Confirmados',
-};
-
 export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ assessment }) => {
-  const { car, createdAt, _id, state, damages } = assessment;
+  const { car, createdAt, _id, workflow, damages } = assessment;
 
   const damagesToShow =
-    state === 'DAMAGES_CONFIRMED' ? damages.filter((d) => d.isConfirmed) : damages;
+    workflow?.status === 'damages_confirmed' ? assessment.confirmedDamages : damages;
 
   return (
     <Link to={`/damage-assessments/${_id}`} className="block">
@@ -37,12 +32,12 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
           <div className="flex items-center gap-2">
             <span
               className={`rounded-md px-2 py-1 text-xs font-medium ${
-                state === 'PENDING_REVIEW'
+                workflow?.status === 'processing'
                   ? 'bg-purple-100 text-purple-700'
                   : 'bg-green-100 text-green-700'
               }`}
             >
-              {stateMap[state]}
+              {workflow?.status}
             </span>
 
             <button
@@ -65,7 +60,7 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
 
           <div>
             <p className="text-sm text-gray-500">Daños detectados:</p>
-            {damagesToShow.length > 0 ? (
+            {damagesToShow && damagesToShow.length > 0 ? (
               <ul className="mt-1 ml-5 list-disc space-y-1 text-sm text-gray-800">
                 {damagesToShow.slice(0, 2).map((damage) => (
                   <li key={damage._id}>{damage.description}</li>
@@ -74,7 +69,7 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
             ) : (
               <p className="mt-1 ml-5 text-sm text-gray-500">No se detectaron daños.</p>
             )}
-            {damagesToShow.length > 2 && (
+            {damagesToShow && damagesToShow.length > 2 && (
               <p className="mt-1 ml-5 text-xs text-blue-500">y {damagesToShow.length - 2} más...</p>
             )}
           </div>

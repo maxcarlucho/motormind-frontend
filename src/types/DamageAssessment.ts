@@ -86,10 +86,10 @@ export interface DamageAssessment {
     workshopId: string;
     createdAt: string;
     updatedAt: string;
-    state: 'PENDING_REVIEW' | 'DAMAGES_CONFIRMED';
     notes?: string;
     insuranceCompany: string;
     claimNumber?: string;
+
 }
 
 export const severityLabels: Record<DamageSeverity, string> = {

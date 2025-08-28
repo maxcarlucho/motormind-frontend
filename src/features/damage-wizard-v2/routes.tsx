@@ -110,9 +110,16 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
 
   // Redirección automática según workflow
   useEffect(() => {
-    if (!searchParams.get('step')) {
+    const currentStep = searchParams.get('step');
+    console.log('🔄 Redirección automática - currentStep:', currentStep);
+
+    if (!currentStep) {
       const workflowStatus = (assessmentData.workflow?.status as WorkflowStatus) || 'processing';
+      console.log('🔄 Redirección automática - workflowStatus:', workflowStatus);
+
       const targetStep = getTargetStepFromWorkflow(workflowStatus);
+      console.log('🔄 Redirección automática - targetStep:', targetStep);
+
       setSearchParams({ step: targetStep }, { replace: true });
     }
   }, [assessmentData.workflow?.status, searchParams, setSearchParams]);

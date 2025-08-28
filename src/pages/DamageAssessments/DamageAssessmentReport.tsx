@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useDamageAssessmentDetailPage } from '@/hooks/useDamageAssessmentDetail.hook';
 import { useAuth } from '@/context/Auth.context';
 import { UserRole } from '@/types/User';
 import { Navigate } from 'react-router-dom';
@@ -15,6 +14,7 @@ import {
   groupPaintMaterials,
   calculatePaintMaterialsSubtotal,
 } from '@/utils/paintMaterialGrouping';
+import { useDamageAssessmentDetail } from '@/context/DamageAssessment.context';
 
 const DamageAssessmentReport = () => {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -24,8 +24,7 @@ const DamageAssessmentReport = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const { workshop } = useWorkshop();
-  const { damageAssessment, isLoading, error, isCurrentAssessmentLoaded, damages } =
-    useDamageAssessmentDetailPage();
+  const { damageAssessment, isLoading, error } = useDamageAssessmentDetail();
 
   // Cargar el damage assessment al montar el componente
   useEffect(() => {
@@ -93,7 +92,7 @@ const DamageAssessmentReport = () => {
     );
   }
 
-  if (error || !isCurrentAssessmentLoaded || !damageAssessment || !damageAssessment.car) {
+  if (error || !damageAssessment || !damageAssessment.car) {
     return (
       <div className="text-destructive flex min-h-screen items-center justify-center">
         Error al cargar el informe
@@ -102,7 +101,7 @@ const DamageAssessmentReport = () => {
   }
 
   // Usar todos los daños disponibles (ya no se usa confirmación)
-  const damagesToShow = damages;
+  const damagesToShow = damageAssessment.damages;
 
   // Agrupar materiales de pintura por tipo
   const groupedPaintMaterials = groupPaintMaterials(damagesToShow);

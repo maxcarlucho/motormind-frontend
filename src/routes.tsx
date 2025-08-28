@@ -192,7 +192,7 @@ const router = createBrowserRouter([
     path: '/damage-assessments/create',
     element: (
       <ErrorBoundary>
-        <CreateDamageAssessment />
+        <WizardV2NewEntry />
       </ErrorBoundary>
     ),
   },
@@ -201,7 +201,7 @@ const router = createBrowserRouter([
     path: '/damage-assessments/:damageAssessmentId',
     element: (
       <ErrorBoundary>
-        <DamageAssessmentDetail />
+        <WizardV2Entry />
       </ErrorBoundary>
     ),
   },

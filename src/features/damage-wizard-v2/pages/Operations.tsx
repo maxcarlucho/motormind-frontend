@@ -1,10 +1,11 @@
 import { Button } from '@/components/atoms/Button';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { NoConfirmedDamagesMessage } from '../components/NoConfirmedDamagesMessage';
 import { OperationsInfoAlert } from '../components/OperationsInfoAlert';
 import { PageShell } from '../components/PageShell';
 import { RecommendedOperationCard } from '../components/RecommendedOperationCard';
+import { DamageOperationsGroup } from '../components/DamageOperationsGroup';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { useWizardV2 } from '../hooks/useWizardV2';
 import { DamageAction } from '../types';
@@ -34,12 +35,12 @@ const Operations = () => {
     }
   }, [state.assessmentId]);
 
-  const handleUpdateOperation = (damageType: string, newOperation: DamageAction) => {
+  const handleUpdateOperation = (damageId: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
 
-    // ✅ ACTUALIZAR: Modificar el estado local con la nueva operación
+    // ✅ CORREGIDO: Usar _id único en lugar de type
     const updatedDamages = confirmedDamages.map((damage) => {
-      if (damage.type === damageType) {
+      if (damage._id === damageId) {
         return {
           ...damage,
           proposedOperation: {
@@ -60,6 +61,31 @@ const Operations = () => {
       },
     });
   };
+
+  // ✅ NUEVO: Agrupar daños por pieza
+  const groupedDamages = useMemo(() => {
+    const groups: Record<string, { title: string; items: Damage[] }> = {};
+
+    confirmedDamages.forEach((damage) => {
+      // Crear clave de grupo basada en área y subárea
+      const groupKey = `${damage.area}-${damage.subarea || ''}`;
+      const groupTitle = damage.partLabel || `${damage.area} - ${damage.subarea || 'Parte'}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          title: groupTitle,
+          items: [],
+        };
+      }
+
+      groups[groupKey].items.push(damage);
+    });
+
+    // Ordenar grupos por título
+    return Object.entries(groups)
+      .sort(([, a], [, b]) => a.title.localeCompare(b.title))
+      .map(([key, group]) => ({ key, ...group }));
+  }, [confirmedDamages]);
 
   const goValuation = async () => {
     try {
@@ -102,18 +128,39 @@ const Operations = () => {
         <>
           <OperationsInfoAlert />
 
-          <div className="space-y-4">
-            {confirmedDamages.map((confirmedDamage) => {
-              const proposedOperation = (confirmedDamage.proposedOperation?.operation ||
-                confirmedDamage.action) as DamageAction;
+          <div className="space-y-8">
+            {groupedDamages.map((group) => {
+              // ✅ NUEVO: Verificar si hay sustitución activa en el grupo
+              const isSubstitutionActive = group.items.some(
+                (damage) => damage.proposedOperation?.operation === 'REPLACE',
+              );
 
               return (
-                <RecommendedOperationCard
-                  key={confirmedDamage._id}
-                  damage={confirmedDamage}
-                  proposedOperation={proposedOperation}
-                  onUpdateOperation={handleUpdateOperation}
-                />
+                <DamageOperationsGroup
+                  key={group.key}
+                  title={group.title}
+                  count={group.items.length}
+                  isSubstitutionActive={isSubstitutionActive}
+                >
+                  {group.items.map((confirmedDamage) => {
+                    const proposedOperation = (confirmedDamage.proposedOperation?.operation ||
+                      confirmedDamage.action) as DamageAction;
+
+                    // ✅ NUEVO: Determinar si la card está deshabilitada
+                    const isDisabled = isSubstitutionActive && proposedOperation !== 'REPLACE';
+
+                    return (
+                      <RecommendedOperationCard
+                        key={confirmedDamage._id}
+                        damage={confirmedDamage}
+                        proposedOperation={proposedOperation}
+                        onUpdateOperation={handleUpdateOperation}
+                        disabled={isDisabled}
+                        hideTitle={true} // ✅ NUEVO: Ocultar título ya que está en el header del grupo
+                      />
+                    );
+                  })}
+                </DamageOperationsGroup>
               );
             })}
           </div>

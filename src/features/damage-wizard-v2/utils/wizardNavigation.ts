@@ -1,4 +1,4 @@
-import { URLSearchParams } from 'react-router-dom';
+// URLSearchParams es nativo del navegador, no necesita import
 import { WizardStepKey, WorkflowStatus } from '../types';
 
 /**
@@ -12,17 +12,36 @@ export const extractStepFromUrl = (searchParams: URLSearchParams): string => {
  * Determina el step objetivo basado en el estado del workflow
  */
 export const getTargetStepFromWorkflow = (workflowStatus: WorkflowStatus): WizardStepKey => {
+
+    let targetStep: WizardStepKey;
+
     switch (workflowStatus) {
         case 'processing':
-            return 'damages';
+            targetStep = 'damages';
+            break;
+        case 'detected':
+            targetStep = 'damages';
+            break;
         case 'damages_confirmed':
-            return 'operations';
+            targetStep = 'operations';
+            break;
         case 'operations_defined':
-            return 'valuation';
+            targetStep = 'valuation';
+            break;
         case 'valuated':
+            targetStep = 'finalize';
+            break;
         case 'completed':
-            return 'finalize';
+            targetStep = 'finalize';
+            break;
+        case 'error':
+            targetStep = 'damages';
+            break;
         default:
-            return 'damages';
+            console.warn('⚠️ Estado de workflow desconocido:', workflowStatus);
+            targetStep = 'damages';
     }
+
+    console.log('🎯 getTargetStepFromWorkflow - targetStep:', targetStep);
+    return targetStep;
 };
