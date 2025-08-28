@@ -22,8 +22,9 @@ const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
 // ============================================================================
 
 export const WizardV2Entry = () => {
-  const { id } = useParams<{ id: string }>();
-  const { data: assessmentData, isLoading, error } = useAssessmentData(id);
+  const { id, damageAssessmentId } = useParams<{ id: string; damageAssessmentId: string }>();
+  const assessmentId = id || damageAssessmentId;
+  const { data: assessmentData, isLoading, error } = useAssessmentData(assessmentId);
   const { isAuthorized } = useAuthGuard();
 
   // Verificar permisos
