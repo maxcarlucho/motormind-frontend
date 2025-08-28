@@ -158,10 +158,50 @@ const Finalize = () => {
 
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      const canvas = await html2canvas(input, {
+      // Clonar el elemento para aplicar estilos compatibles
+      const clonedElement = input.cloneNode(true) as HTMLElement;
+      
+      // Aplicar estilos compatibles con html2canvas
+      const style = document.createElement('style');
+      style.textContent = `
+        .pdf-compatible {
+          color: #000000 !important;
+          background-color: #ffffff !important;
+          border-color: #cccccc !important;
+        }
+        .pdf-compatible * {
+          color: inherit !important;
+          background-color: inherit !important;
+          border-color: inherit !important;
+        }
+        .pdf-compatible .bg-green-100 { background-color: #dcfce7 !important; }
+        .pdf-compatible .text-green-600 { color: #16a34a !important; }
+        .pdf-compatible .bg-gray-50 { background-color: #f9fafb !important; }
+        .pdf-compatible .text-gray-600 { color: #4b5563 !important; }
+        .pdf-compatible .text-gray-900 { color: #111827 !important; }
+        .pdf-compatible .border-gray-200 { border-color: #e5e7eb !important; }
+        .pdf-compatible .bg-gray-100 { background-color: #f3f4f6 !important; }
+      `;
+      clonedElement.appendChild(style);
+      clonedElement.classList.add('pdf-compatible');
+      
+      // Agregar temporalmente al DOM
+      document.body.appendChild(clonedElement);
+      clonedElement.style.position = 'absolute';
+      clonedElement.style.left = '-9999px';
+      clonedElement.style.top = '0';
+
+      const canvas = await html2canvas(clonedElement, {
         scale: 2,
         useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        allowTaint: true,
+        foreignObjectRendering: false,
       });
+
+      // Limpiar
+      document.body.removeChild(clonedElement);
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
