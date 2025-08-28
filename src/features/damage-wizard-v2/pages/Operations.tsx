@@ -162,6 +162,9 @@ const Operations = () => {
         }
         title="Operaciones de reparación"
         subtitle="Define las operaciones necesarias para cada daño confirmado"
+        loading={state.loading}
+        loadingTitle="Cargando operaciones"
+        loadingDescription="Estamos cargando las operaciones de reparación"
         content={<NoConfirmedDamagesMessage onGoBack={handleGoBack} />}
       />
     );
@@ -174,6 +177,9 @@ const Operations = () => {
       }
       title="Operaciones de reparación"
       subtitle="Define las operaciones necesarias para cada daño confirmado"
+      loading={state.loading}
+      loadingTitle="Guardando operaciones"
+      loadingDescription="Estamos guardando las operaciones de reparación definidas"
       content={
         <>
           <OperationsInfoAlert />

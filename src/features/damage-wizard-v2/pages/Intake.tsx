@@ -14,7 +14,6 @@ import { SectionPaper } from '../components/SectionPaper';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { DragZone } from '../components/DragZone';
 import { ImagePreview } from '../components/ImagePreview';
-import { ProgressCard } from '../components/ProgressCard';
 
 const Intake = () => {
   const navigate = useNavigate();
@@ -42,7 +41,6 @@ const Intake = () => {
   }, [state.claimDescription, claim]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   // Determinar si es un assessment existente o nuevo
   const isExistingAssessment = !!state.assessmentId && state.assessmentId !== 'new';
@@ -58,18 +56,6 @@ const Intake = () => {
   const createAssessment = async () => {
     try {
       setIsProcessing(true);
-      setProgress(0);
-
-      // Simular progreso inicial
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + Math.random() * 15;
-        });
-      }, 500);
 
       // 1. Buscar/crear el coche primero (como en el flujo original)
       console.log('🔍 Buscando/creando coche por matrícula:', plate);
@@ -92,10 +78,6 @@ const Intake = () => {
         images: imageUrls,
       });
 
-      // Completar progreso
-      setProgress(100);
-      clearInterval(progressInterval);
-
       // Navegar con el ID real del assessment
       navigate(`/damage-assessments/${assessmentId}/wizard-v2?step=damages`, { replace: true });
     } catch (error) {
@@ -104,7 +86,6 @@ const Intake = () => {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       alert(`Error: ${errorMessage}`);
       setIsProcessing(false);
-      setProgress(0);
     }
   };
 
@@ -115,13 +96,10 @@ const Intake = () => {
     return (
       <PageShell
         header={<WizardStepperWithNav currentStep="damages" completedSteps={['intake']} />}
-        content={
-          <ProgressCard
-            title="Detectando daños"
-            description="Estamos procesando las imágenes... esto puede tardar unos minutos."
-            progress={progress}
-          />
-        }
+        loading={true}
+        loadingTitle="Detectando daños"
+        loadingDescription="Estamos procesando las imágenes... esto puede tardar unos minutos."
+        content={<div />}
       />
     );
   }
@@ -131,6 +109,9 @@ const Intake = () => {
       header={<WizardStepperWithNav currentStep="intake" completedSteps={[]} />}
       title="Datos iniciales del vehículo"
       subtitle="Ingresá la matrícula y una breve descripción del siniestro. Podés subir fotos ahora o más tarde."
+      loading={state.loading}
+      loadingTitle="Creando peritaje"
+      loadingDescription="Estamos creando tu peritaje con los datos proporcionados"
       content={
         <>
           {isReadOnly && <ReadOnlyBanner />}

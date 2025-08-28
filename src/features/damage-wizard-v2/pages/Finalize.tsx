@@ -267,6 +267,9 @@ const Finalize = () => {
           completedSteps={['intake', 'damages', 'operations', 'valuation']}
         />
       }
+      loading={state.loading}
+      loadingTitle="Cargando peritaje"
+      loadingDescription="Estamos cargando la información completa del peritaje"
       content={
         <div className="space-y-6">
           {/* Header con estado */}

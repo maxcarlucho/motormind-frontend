@@ -4,7 +4,6 @@ import { AddManualDamageModal } from '../components/AddManualDamageModal';
 import { ConfirmDamagesActions } from '../components/ConfirmDamagesActions';
 import { DamageCard } from '../components/DamageCard';
 import { PageShell } from '../components/PageShell';
-import { ProgressCard } from '../components/ProgressCard';
 import { ReadOnlyBanner } from '../components/ReadOnlyBanner';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { useReadOnlyMode } from '../hooks/useReadOnlyMode';
@@ -103,13 +102,10 @@ const Damages = () => {
     return (
       <PageShell
         header={<WizardStepperWithNav currentStep="damages" completedSteps={['intake']} />}
-        content={
-          <ProgressCard
-            title="Detectando daños"
-            description="Estamos procesando las imágenes... esto puede tardar unos minutos."
-            progress={100}
-          />
-        }
+        loading={true}
+        loadingTitle="Detectando daños"
+        loadingDescription="Estamos procesando las imágenes... esto puede tardar unos minutos."
+        content={<div />}
       />
     );
   }

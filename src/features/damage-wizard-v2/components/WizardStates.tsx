@@ -1,12 +1,14 @@
-import Spinner from '@/components/atoms/Spinner';
+import { ProgressCard } from './ProgressCard';
 
 /**
  * Componente para mostrar estado de carga
  */
 export const LoadingState = () => (
-  <div className="flex min-h-screen items-center justify-center">
-    <Spinner label="Cargando peritaje..." />
-  </div>
+  <ProgressCard
+    title="Cargando peritaje"
+    description="Estamos preparando la información del peritaje para ti"
+    asOverlay={false}
+  />
 );
 
 /**
