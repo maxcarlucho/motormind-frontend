@@ -1,5 +1,5 @@
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
 import { useWizardV2 } from '../hooks/useWizardV2';
@@ -17,10 +17,22 @@ const getOperationLabel = (operationCode: string): string => {
 
 const Valuation = () => {
   const navigate = useNavigate();
-  const [, setParams] = useSearchParams();
+
   const { state, generateValuation, finalizeAssessment } = useWizardV2();
   const [isGenerating, setIsGenerating] = useState(false);
   const hasGeneratedValuation = useRef(false);
+
+  const handleGenerateValuation = useCallback(async () => {
+    try {
+      setIsGenerating(true);
+      await generateValuation();
+    } catch (error) {
+      console.error('Error generating valuation:', error);
+      hasGeneratedValuation.current = false;
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generateValuation]);
 
   useEffect(() => {
     if (state.valuation) {
@@ -31,29 +43,14 @@ const Valuation = () => {
       hasGeneratedValuation.current = true;
       handleGenerateValuation();
     }
-  }, [state.assessmentId]);
-
-  const handleGenerateValuation = async () => {
-    try {
-      setIsGenerating(true);
-      await generateValuation();
-    } catch (error) {
-      console.error('Error generating valuation:', error);
-      hasGeneratedValuation.current = false;
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  }, [state.assessmentId, state.valuation, isGenerating, handleGenerateValuation]);
 
   const handleFinalize = async () => {
     try {
       await finalizeAssessment();
-      setParams({ step: 'finalize' });
       navigate(`?step=finalize`, { replace: true });
     } catch (error) {
       console.error('Error finalizing assessment:', error);
-
-      setParams({ step: 'finalize' });
       navigate(`?step=finalize`, { replace: true });
     }
   };
@@ -342,13 +339,7 @@ const Valuation = () => {
       }
       footer={
         <div className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setParams({ step: 'operations' });
-              navigate(`?step=operations`, { replace: true });
-            }}
-          >
+          <Button variant="outline" onClick={() => navigate(`?step=operations`, { replace: true })}>
             Volver a Operaciones
           </Button>
           <Button onClick={handleFinalize} className="px-6">

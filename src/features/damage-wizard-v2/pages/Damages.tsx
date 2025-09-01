@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AddManualDamageModal } from '../components/AddManualDamageModal';
 import { ConfirmDamagesActions } from '../components/ConfirmDamagesActions';
 import { DamageCard } from '../components/DamageCard';
@@ -11,7 +11,7 @@ import { useWizardV2 } from '../hooks/useWizardV2';
 
 const Damages = () => {
   const navigate = useNavigate();
-  const [, setParams] = useSearchParams();
+
   const { state, confirmDamages, createManualDamage } = useWizardV2();
   const { mode, continueFromHere } = useWizardStepNav();
   const isReadOnly = mode === 'view';
@@ -63,12 +63,9 @@ const Damages = () => {
 
     try {
       await confirmDamages(selectedDamages);
-
-      setParams({ step: 'operations' });
       navigate(`?step=operations`, { replace: true });
     } catch (error) {
       console.error('Error confirming damages:', error);
-      setParams({ step: 'operations' });
       navigate(`?step=operations`, { replace: true });
     }
   };

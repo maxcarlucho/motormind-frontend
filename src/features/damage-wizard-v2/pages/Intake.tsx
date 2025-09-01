@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Car, Upload } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -17,7 +17,7 @@ import { ImagePreview } from '../components/ImagePreview';
 
 const Intake = () => {
   const navigate = useNavigate();
-  const [,] = useSearchParams();
+
   const { state, startIntake } = useWizardV2();
   const { mode, continueFromHere } = useWizardStepNav();
   const isReadOnly = mode === 'view';

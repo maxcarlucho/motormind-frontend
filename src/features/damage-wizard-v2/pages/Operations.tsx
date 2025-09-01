@@ -1,6 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 import { useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { NoConfirmedDamagesMessage } from '../components/NoConfirmedDamagesMessage';
 import { OperationsInfoAlert } from '../components/OperationsInfoAlert';
 import { PageShell } from '../components/PageShell';
@@ -15,7 +15,7 @@ import apiService from '@/service/api.service';
 
 const Operations = () => {
   const navigate = useNavigate();
-  const [, setParams] = useSearchParams();
+
   const { state } = useWizardV2();
   const { dispatch } = useWizardV2Context();
 
@@ -107,19 +107,15 @@ const Operations = () => {
         dispatch({ type: 'CLEAR_MODIFIED_OPERATIONS' });
       }
 
-      // ✅ NUEVO: Navegar a valuation
-      setParams({ step: 'valuation' });
       navigate(`?step=valuation`, { replace: true });
     } catch (error) {
       console.error('Error navegando a valuation:', error);
 
-      setParams({ step: 'valuation' });
       navigate(`?step=valuation`, { replace: true });
     }
   };
 
   const handleGoBack = () => {
-    setParams({ step: 'damages' });
     navigate(`?step=damages`, { replace: true });
   };
 
