@@ -21,20 +21,74 @@ const Finalize = () => {
   const { state, loadAssessmentData } = useWizardV2();
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
+  const hasLoadedRef = useRef(false);
 
   // Cargar datos del assessment al montar el componente
   useEffect(() => {
-    console.log('🔄 Finalize useEffect: Cargando datos del assessment');
-    if (state.assessmentId) {
-      loadAssessmentData().catch((error: unknown) => {
-        console.error('Error cargando datos del assessment:', error);
-      });
+    console.log('🔄 Finalize useEffect: Verificando carga de datos', {
+      assessmentId: state.assessmentId,
+      hasLoaded: hasLoadedRef.current,
+      hasValuation: !!state.valuation,
+    });
+
+    // Si ya tenemos los datos de valoración, no cargar de nuevo
+    if (state.valuation) {
+      console.log('✅ Finalize: Datos ya disponibles, saltando carga');
+      setIsInitialLoading(false);
+      return;
     }
-  }, [state.assessmentId, loadAssessmentData]);
+
+    if (state.assessmentId && !hasLoadedRef.current) {
+      console.log('🔄 Finalize: Iniciando carga de datos del assessment');
+      hasLoadedRef.current = true;
+      setIsInitialLoading(true);
+      loadAssessmentData()
+        .then(() => {
+          console.log('✅ Finalize: Datos cargados exitosamente');
+          setIsInitialLoading(false);
+        })
+        .catch((error: unknown) => {
+          console.error('❌ Error cargando datos del assessment:', error);
+          setIsInitialLoading(false);
+          hasLoadedRef.current = false; // Permitir reintentos en caso de error
+        });
+    } else if (!state.assessmentId) {
+      setIsInitialLoading(false);
+    }
+  }, [state.assessmentId]); // ❗ REMOVEMOS loadAssessmentData de las dependencias
+
+  // Verificar si el assessment está en estado válido para finalizar
+  const canFinalize =
+    state.valuation &&
+    (state.valuation.workflow?.status === 'valuated' ||
+      state.valuation.workflow?.status === 'completed');
+
+  // Determinar si estamos en estado de carga
+  // Mostrar loading si:
+  // 1. Carga inicial activa, O
+  // 2. state.loading está activo, O
+  // 3. Tenemos assessmentId pero no valuation (datos aún no llegaron)
+  const isLoadingData = Boolean(
+    isInitialLoading || state.loading || (state.assessmentId && !state.valuation),
+  );
+
+  // Determinar si tenemos datos suficientes para mostrar el contenido
+  const hasDataToShow =
+    !isLoadingData &&
+    state.valuation &&
+    ((state.valuation.laborOutput && state.valuation.laborOutput.length > 0) ||
+      (state.valuation.paintWorks && state.valuation.paintWorks.length > 0) ||
+      (state.valuation.parts && state.valuation.parts.length > 0) ||
+      canFinalize);
 
   // Debug: Log del estado para entender qué está pasando
   console.log('🔍 Finalize - Debug state:', {
+    isInitialLoading,
+    stateLoading: state.loading,
+    isLoadingData,
+    hasDataToShow,
     hasValuation: !!state.valuation,
     valuationWorkflowStatus: state.valuation?.workflow?.status,
     assessmentId: state.assessmentId,
@@ -42,13 +96,8 @@ const Finalize = () => {
     laborOutput: state.valuation?.laborOutput?.length || 0,
     paintWorks: state.valuation?.paintWorks?.length || 0,
     parts: state.valuation?.parts?.length || 0,
+    canFinalize,
   });
-
-  // Verificar si el assessment está en estado válido para finalizar
-  const canFinalize =
-    state.valuation &&
-    (state.valuation.workflow?.status === 'valuated' ||
-      state.valuation.workflow?.status === 'completed');
 
   // Datos de mano de obra (NO pintura)
   const laborData = state.valuation?.laborOutput
@@ -267,7 +316,7 @@ const Finalize = () => {
           completedSteps={['intake', 'damages', 'operations', 'valuation']}
         />
       }
-      loading={state.loading}
+      loading={isLoadingData}
       loadingTitle="Cargando peritaje"
       loadingDescription="Estamos cargando la información completa del peritaje"
       content={
