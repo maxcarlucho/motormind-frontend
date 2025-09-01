@@ -4,6 +4,8 @@
  */
 
 import { Damage } from "@/types/DamageAssessment";
+import { WorkflowStatus } from './index';
+
 export type BackendDamage = Damage;
 export type DamageAction = "REPAIR" | "REPLACE" | "PAINT" | "POLISH" | "DISASSEMBLE_AND_ASSEMBLE";
 
@@ -61,7 +63,7 @@ export interface BackendCar {
 }
 
 export interface BackendWorkflow {
-  status: 'processing' | 'detected' | 'damages_confirmed' | 'operations_defined' | 'valuated' | 'completed' | 'error';
+  status: WorkflowStatus;
   history?: Array<{
     status: string;
     at: string | Date;

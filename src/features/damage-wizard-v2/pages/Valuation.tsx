@@ -11,10 +11,6 @@ import { ValuationTable } from '../components/ValuationTable';
 import { BackendLaborOutput, BackendPaintWork } from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
 
-const getOperationLabel = (operationCode: string): string => {
-  return operationLabels[operationCode] || operationCode;
-};
-
 const Valuation = () => {
   const navigate = useNavigate();
 
@@ -93,7 +89,7 @@ const Valuation = () => {
         return Array.from(laborByOperationAndPart.entries()).map(([key, data]) => {
           const [operation, partName] = key.split('-', 2);
           return {
-            operation: `${getOperationLabel(operation)} ${partName}`,
+            operation: `${operationLabels[operation] || operation} ${partName}`,
             hours: `${data.hours.toFixed(2)} h`,
             rate: 38, // Tarifa por defecto
             total: data.total,

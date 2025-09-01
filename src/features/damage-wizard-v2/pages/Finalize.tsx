@@ -19,10 +19,6 @@ import { FinalizeLaborTable } from '../components/FinalizeLaborTable';
 import { FinalizePaintTable } from '../components/FinalizePaintTable';
 import { FinalizePartsTable } from '../components/FinalizePartsTable';
 
-const getOperationLabel = (operationCode: string): string => {
-  return operationLabels[operationCode] || operationCode;
-};
-
 const canFinalizeAssessment = (valuation: BackendDamageAssessment | undefined): boolean => {
   return Boolean(
     valuation &&
@@ -39,7 +35,7 @@ const processLaborData = (laborOutput?: BackendLaborOutput[]) => {
       return operation === 'REPLACE' || operation === 'REPAIR';
     })
     .map((item: BackendLaborOutput) => ({
-      operation: `${getOperationLabel(item.mainOperation?.operation || 'REPAIR')} - ${item.partName}`,
+      operation: `${operationLabels[item.mainOperation?.operation || 'REPAIR'] || item.mainOperation?.operation || 'REPAIR'} - ${item.partName}`,
       hours: `${item.mainOperation?.estimatedHours || 0}h`,
       rate: 42,
       total: (item.mainOperation?.estimatedHours || 0) * 42,
