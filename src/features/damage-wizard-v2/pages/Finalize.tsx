@@ -145,6 +145,15 @@ const processPartsData = (parts?: Record<string, unknown>[]) => {
   }));
 };
 
+// STEPPER FIJO - Definido fuera del componente para evitar re-renders
+const FIXED_STEPPER = (
+  <WizardStepperWithNav
+    currentStep="finalize"
+    completedSteps={['intake', 'damages', 'operations', 'valuation']}
+    loading={false} // Nunca loading para evitar flicker
+  />
+);
+
 const Finalize = () => {
   const navigate = useNavigate();
   const { state, loadAssessmentData } = useWizardV2();
@@ -189,23 +198,19 @@ const Finalize = () => {
     };
   }, [state.assessmentId]);
 
-  // Estados derivados
+  // Estados derivados - Simplificados para evitar flicker
   const canFinalize = canFinalizeAssessment(state.valuation);
-  const isLoadingData = isDataLoading(
-    isInitialLoading,
-    state.loading,
-    state.assessmentId,
-    state.valuation,
+  
+  // Solo mostrar loading si realmente no tenemos datos Y tenemos un assessmentId válido
+  // Si no hay assessmentId, no mostrar loading (evita el primer render con loading)
+  const isLoadingData = Boolean(
+    state.assessmentId && 
+    state.assessmentId.length > 0 && 
+    !state.valuation && 
+    !state.error
   );
 
-  // Debug temporal para entender el problema
-  console.log('🔍 Finalize render debug:', {
-    assessmentId: state.assessmentId,
-    hasValuation: !!state.valuation,
-    isInitialLoading,
-    stateLoading: state.loading,
-    isLoadingData,
-  });
+
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -313,18 +318,9 @@ const Finalize = () => {
     navigate('/damage-assessments');
   };
 
-  // Render del stepper - siempre visible
-  const wizardStepper = (
-    <WizardStepperWithNav
-      currentStep="finalize"
-      completedSteps={['intake', 'damages', 'operations', 'valuation']}
-      loading={isLoadingData}
-    />
-  );
-
   return (
     <PageShell
-      header={wizardStepper}
+      header={FIXED_STEPPER}
       loading={isLoadingData}
       loadingTitle="Cargando peritaje"
       loadingDescription="Estamos cargando la información completa del peritaje"
