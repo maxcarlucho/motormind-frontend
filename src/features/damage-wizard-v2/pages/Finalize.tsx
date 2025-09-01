@@ -9,11 +9,51 @@ import { ValuationTable } from '../components/ValuationTable';
 import { useSnackbar } from 'notistack';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { BackendLaborOutput, BackendPaintWork } from '../types/backend.types';
+import {
+  BackendLaborOutput,
+  BackendPaintWork,
+  BackendDamageAssessment,
+} from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
 
 const getOperationLabel = (operationCode: string): string => {
   return operationLabels[operationCode] || operationCode;
+};
+
+// Helper para verificar si el assessment puede finalizar
+const canFinalizeAssessment = (valuation: BackendDamageAssessment | undefined): boolean => {
+  return Boolean(
+    valuation &&
+      (valuation.workflow?.status === 'valuated' || valuation.workflow?.status === 'completed'),
+  );
+};
+
+// Helper para determinar si está cargando datos
+const isDataLoading = (
+  isInitialLoading: boolean,
+  stateLoading: boolean,
+  assessmentId?: string,
+  valuation?: BackendDamageAssessment,
+): boolean => {
+  return Boolean(isInitialLoading || stateLoading || (assessmentId && !valuation));
+};
+
+// Helper para procesar datos de mano de obra (sin pintura)
+const processLaborData = (laborOutput?: BackendLaborOutput[]) => {
+  if (!laborOutput) return [];
+
+  return laborOutput
+    .filter((item: BackendLaborOutput) => {
+      // Solo operaciones de Sustituir/Reparar (sin pintar)
+      const operation = item.mainOperation?.operation;
+      return operation === 'REPLACE' || operation === 'REPAIR';
+    })
+    .map((item: BackendLaborOutput) => ({
+      operation: `${getOperationLabel(item.mainOperation?.operation || 'REPAIR')} - ${item.partName}`,
+      hours: `${item.mainOperation?.estimatedHours || 0}h`,
+      rate: 42, // Rate fijo por ahora
+      total: (item.mainOperation?.estimatedHours || 0) * 42,
+    }));
 };
 
 const Finalize = () => {
@@ -27,93 +67,50 @@ const Finalize = () => {
 
   // Cargar datos del assessment al montar el componente
   useEffect(() => {
-    console.log('🔄 Finalize useEffect: Verificando carga de datos', {
-      assessmentId: state.assessmentId,
-      hasLoaded: hasLoadedRef.current,
-      hasValuation: !!state.valuation,
-    });
+    let isCancelled = false;
 
     // Si ya tenemos los datos de valoración, no cargar de nuevo
     if (state.valuation) {
-      console.log('✅ Finalize: Datos ya disponibles, saltando carga');
       setIsInitialLoading(false);
       return;
     }
 
     if (state.assessmentId && !hasLoadedRef.current) {
-      console.log('🔄 Finalize: Iniciando carga de datos del assessment');
       hasLoadedRef.current = true;
       setIsInitialLoading(true);
       loadAssessmentData()
         .then(() => {
-          console.log('✅ Finalize: Datos cargados exitosamente');
-          setIsInitialLoading(false);
+          if (!isCancelled) {
+            setIsInitialLoading(false);
+          }
         })
         .catch((error: unknown) => {
-          console.error('❌ Error cargando datos del assessment:', error);
-          setIsInitialLoading(false);
-          hasLoadedRef.current = false; // Permitir reintentos en caso de error
+          if (!isCancelled) {
+            console.error('Error cargando datos del assessment:', error);
+            setIsInitialLoading(false);
+            hasLoadedRef.current = false; // Permitir reintentos en caso de error
+          }
         });
     } else if (!state.assessmentId) {
       setIsInitialLoading(false);
     }
-  }, [state.assessmentId]); // ❗ REMOVEMOS loadAssessmentData de las dependencias
 
-  // Verificar si el assessment está en estado válido para finalizar
-  const canFinalize =
-    state.valuation &&
-    (state.valuation.workflow?.status === 'valuated' ||
-      state.valuation.workflow?.status === 'completed');
+    return () => {
+      isCancelled = true;
+    };
+  }, [state.assessmentId]);
 
-  // Determinar si estamos en estado de carga
-  // Mostrar loading si:
-  // 1. Carga inicial activa, O
-  // 2. state.loading está activo, O
-  // 3. Tenemos assessmentId pero no valuation (datos aún no llegaron)
-  const isLoadingData = Boolean(
-    isInitialLoading || state.loading || (state.assessmentId && !state.valuation),
+  // Estados derivados
+  const canFinalize = canFinalizeAssessment(state.valuation);
+  const isLoadingData = isDataLoading(
+    isInitialLoading,
+    state.loading,
+    state.assessmentId,
+    state.valuation,
   );
 
-  // Determinar si tenemos datos suficientes para mostrar el contenido
-  const hasDataToShow =
-    !isLoadingData &&
-    state.valuation &&
-    ((state.valuation.laborOutput && state.valuation.laborOutput.length > 0) ||
-      (state.valuation.paintWorks && state.valuation.paintWorks.length > 0) ||
-      (state.valuation.parts && state.valuation.parts.length > 0) ||
-      canFinalize);
-
-  // Debug: Log del estado para entender qué está pasando
-  console.log('🔍 Finalize - Debug state:', {
-    isInitialLoading,
-    stateLoading: state.loading,
-    isLoadingData,
-    hasDataToShow,
-    hasValuation: !!state.valuation,
-    valuationWorkflowStatus: state.valuation?.workflow?.status,
-    assessmentId: state.assessmentId,
-    plate: state.plate,
-    laborOutput: state.valuation?.laborOutput?.length || 0,
-    paintWorks: state.valuation?.paintWorks?.length || 0,
-    parts: state.valuation?.parts?.length || 0,
-    canFinalize,
-  });
-
-  // Datos de mano de obra (NO pintura)
-  const laborData = state.valuation?.laborOutput
-    ? state.valuation.laborOutput
-        .filter((item: BackendLaborOutput) => {
-          // Solo operaciones de Sustituir/Reparar (sin pintar)
-          const operation = item.mainOperation?.operation;
-          return operation === 'REPLACE' || operation === 'REPAIR';
-        })
-        .map((item: BackendLaborOutput) => ({
-          operation: `${getOperationLabel(item.mainOperation?.operation || 'REPAIR')} - ${item.partName}`,
-          hours: `${item.mainOperation?.estimatedHours || 0}h`,
-          rate: 42, // Rate fijo por ahora
-          total: (item.mainOperation?.estimatedHours || 0) * 42,
-        }))
-    : [];
+  // Procesar datos para las tablas
+  const laborData = processLaborData(state.valuation?.laborOutput);
 
   // Datos de pintura (MO + Materiales)
   const paintData = state.valuation?.paintWorks
