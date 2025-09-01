@@ -5,7 +5,6 @@ import { Button } from '@/components/atoms/Button';
 import { useWizardV2 } from '../hooks/useWizardV2';
 import { PageShell } from '../components/PageShell';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
-import { ValuationTable } from '../components/ValuationTable';
 import { useSnackbar } from 'notistack';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -15,6 +14,10 @@ import {
   BackendDamageAssessment,
 } from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
+import { ValuationCostsSummary } from '../components/ValuationCostsSummary';
+import { FinalizeLaborTable } from '../components/FinalizeLaborTable';
+import { FinalizePaintTable } from '../components/FinalizePaintTable';
+import { FinalizePartsTable } from '../components/FinalizePartsTable';
 
 const getOperationLabel = (operationCode: string): string => {
   return operationLabels[operationCode] || operationCode;
@@ -54,6 +57,92 @@ const processLaborData = (laborOutput?: BackendLaborOutput[]) => {
       rate: 42, // Rate fijo por ahora
       total: (item.mainOperation?.estimatedHours || 0) * 42,
     }));
+};
+
+// Helper para procesar datos de pintura
+const processPaintData = (paintWorks?: BackendPaintWork[]) => {
+  if (!paintWorks) return [];
+
+  const paintDataArray: Array<{
+    type: 'labor' | 'material';
+    description: string;
+    hours?: string;
+    rate?: number;
+    quantity?: string;
+    unitCost?: number;
+    total: number;
+  }> = [];
+
+  // Agrupar datos de mano de obra por pieza
+  const laborByPart = new Map<string, { hours: number; rate: number; total: number }>();
+  paintWorks.forEach((item: BackendPaintWork) => {
+    const partName = item.partName || 'Pieza sin nombre';
+    const hours = item.labor?.hours || 0;
+    const rate = item.labor?.hourlyRate || 0;
+    const total = item.labor?.total || 0;
+
+    if (laborByPart.has(partName)) {
+      const existing = laborByPart.get(partName)!;
+      existing.hours += hours;
+      existing.total += total;
+      existing.rate = (existing.rate + rate) / 2;
+    } else {
+      laborByPart.set(partName, { hours, rate, total });
+    }
+  });
+
+  // Agregar datos agrupados de mano de obra de pintura
+  laborByPart.forEach((data, partName) => {
+    paintDataArray.push({
+      type: 'labor',
+      description: `Pintar ${partName}`,
+      hours: `${data.hours.toFixed(2)}h`,
+      rate: data.rate,
+      total: data.total,
+    });
+  });
+
+  // Agrupar datos de materiales por pieza
+  const materialsByPart = new Map<string, { units: number; unitCost: number; total: number }>();
+  paintWorks.forEach((item: BackendPaintWork) => {
+    const partName = item.partName || 'Pieza sin nombre';
+    const unitCost = item.materials?.unitPrice || 0;
+    const total = item.materials?.total || 0;
+
+    if (materialsByPart.has(partName)) {
+      const existing = materialsByPart.get(partName)!;
+      existing.total += total;
+      existing.unitCost = (existing.unitCost + unitCost) / 2;
+    } else {
+      materialsByPart.set(partName, { units: 1, unitCost, total });
+    }
+  });
+
+  // Agregar datos agrupados de materiales
+  materialsByPart.forEach((data, partName) => {
+    paintDataArray.push({
+      type: 'material',
+      description: `Materiales para ${partName}`,
+      quantity: `${data.units.toFixed(2)}`,
+      unitCost: data.unitCost,
+      total: data.total,
+    });
+  });
+
+  return paintDataArray;
+};
+
+// Helper para procesar datos de recambios
+const processPartsData = (parts?: Record<string, unknown>[]) => {
+  if (!parts) return [];
+
+  return parts.map((item: Record<string, unknown>) => ({
+    ref: (item.ref as string) || 'REF-001',
+    partName: (item.partName as string) || 'Pieza',
+    unitPrice: (item.unitPrice as number) || 0,
+    qty: (item.qty as number) || 1,
+    total: (item.total as number) || 0,
+  }));
 };
 
 const Finalize = () => {
@@ -112,108 +201,18 @@ const Finalize = () => {
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
 
-  // Datos de pintura (MO + Materiales)
-  const paintData = state.valuation?.paintWorks
-    ? (() => {
-        const paintDataArray: Array<{
-          description?: string;
-          units?: string;
-          price?: number;
-          total?: number;
-          _isSubtitle?: boolean;
-          _subtitleText?: string;
-        }> = [];
-
-        // Agrupar datos de mano de obra de pintura por pieza
-        const laborByPart = new Map<string, { hours: number; rate: number; total: number }>();
-        state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
-          const partName = item.partName || 'Pieza sin nombre';
-          const hours = item.labor?.hours || 0;
-          const rate = item.labor?.hourlyRate || 0;
-          const total = item.labor?.total || 0;
-
-          if (laborByPart.has(partName)) {
-            const existing = laborByPart.get(partName)!;
-            existing.hours += hours;
-            existing.total += total;
-            // Para el rate, tomamos el promedio si hay diferentes rates
-            existing.rate = (existing.rate + rate) / 2;
-          } else {
-            laborByPart.set(partName, { hours, rate, total });
-          }
-        });
-
-        // Agregar datos agrupados de mano de obra de pintura
-        laborByPart.forEach((data, partName) => {
-          paintDataArray.push({
-            description: `Pintar ${partName}`,
-            units: `${data.hours.toFixed(2)}h`,
-            price: data.rate,
-            total: data.total,
-          });
-        });
-
-        // Agregar subtítulo para materiales
-        if (paintDataArray.length > 0) {
-          paintDataArray.push({
-            _isSubtitle: true,
-            _subtitleText: 'Materiales de pintura',
-          });
-        }
-
-        // Agrupar datos de materiales por pieza
-        const materialsByPart = new Map<string, { units: number; price: number; total: number }>();
-        state.valuation.paintWorks.forEach((item: BackendPaintWork) => {
-          const partName = item.partName || 'Pieza sin nombre';
-          const price = item.materials?.unitPrice || 0;
-          const total = item.materials?.total || 0;
-
-          if (materialsByPart.has(partName)) {
-            const existing = materialsByPart.get(partName)!;
-            // Las unidades NO se suman, siempre es 1 por pieza
-            existing.total += total;
-            // Para el precio, tomamos el promedio si hay diferentes precios
-            existing.price = (existing.price + price) / 2;
-          } else {
-            materialsByPart.set(partName, { units: 1, price, total });
-          }
-        });
-
-        // Agregar datos agrupados de materiales
-        materialsByPart.forEach((data, partName) => {
-          paintDataArray.push({
-            description: `Pintar ${partName}`,
-            units: `${data.units.toFixed(2)}`,
-            price: data.price,
-            total: data.total,
-          });
-        });
-
-        return paintDataArray;
-      })()
-    : [];
-
-  // Datos de recambios
-  const partsData = state.valuation?.parts
-    ? state.valuation.parts.map((item: Record<string, unknown>) => ({
-        ref: (item.ref as string) || 'REF-001',
-        partName: (item.partName as string) || 'Pieza',
-        unitPrice: (item.unitPrice as number) || 0,
-        qty: (item.qty as number) || 1,
-        total: (item.total as number) || 0,
-      }))
-    : [];
+  const paintData = processPaintData(state.valuation?.paintWorks);
+  const partsData = processPartsData(state.valuation?.parts);
 
   // Calcular totales
   const laborTotal = laborData.reduce((sum, item) => sum + item.total, 0);
   const paintLaborTotal = paintData
-    .filter((item) => !item._isSubtitle)
-    .reduce((sum, item) => sum + (item.total || 0), 0);
+    .filter((item) => item.type === 'labor')
+    .reduce((sum, item) => sum + item.total, 0);
   const paintMaterialsTotal = paintData
-    .filter((item) => !item._isSubtitle && item.description?.includes('Pintar'))
-    .reduce((sum, item) => sum + (item.total || 0), 0);
+    .filter((item) => item.type === 'material')
+    .reduce((sum, item) => sum + item.total, 0);
   const partsTotal = partsData.reduce((sum, item) => sum + item.total, 0);
-  const grandTotal = laborTotal + paintLaborTotal + paintMaterialsTotal + partsTotal;
 
   const handleDownloadPdf = async () => {
     const input = contentRef.current;
@@ -382,112 +381,23 @@ const Finalize = () => {
                 DESGLOSE DETALLADO DE LA VALORACIÓN
               </h3>
 
-              {/* Mano de Obra (NO pintura) */}
-              {laborData.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="mb-3 font-semibold text-[#111827]">MANO DE OBRA</h4>
-                  <ValuationTable
-                    columns={[
-                      { key: 'operation', header: 'OPERACIÓN' },
-                      { key: 'hours', header: 'TIEMPO' },
-                      { key: 'rate', header: 'PRECIO/H' },
-                      { key: 'total', header: 'IMPORTE' },
-                    ]}
-                    data={laborData}
-                  />
-                  <div className="mt-3 bg-[#f9fafb] p-3 text-right">
-                    <span className="font-medium">
-                      Subtotal Mano de Obra: €{laborTotal.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Pintura */}
-              {paintData.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="mb-3 font-semibold text-[#111827]">PINTURA</h4>
-                  <ValuationTable
-                    columns={[
-                      { key: 'description', header: 'DESCRIPCIÓN' },
-                      { key: 'units', header: 'CANT.' },
-                      { key: 'price', header: 'PRECIO UNIT.' },
-                      { key: 'total', header: 'IMPORTE' },
-                    ]}
-                    data={paintData}
-                  />
-                  <div className="mt-3 bg-[#f9fafb] p-3 text-right">
-                    <span className="font-medium">
-                      Subtotal Pintura: €{(paintLaborTotal + paintMaterialsTotal).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Recambios */}
-              {partsData.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="mb-3 font-semibold text-[#111827]">RECAMBIOS</h4>
-                  <ValuationTable
-                    columns={[
-                      { key: 'ref', header: 'REF.' },
-                      { key: 'partName', header: 'DESCRIPCIÓN' },
-                      { key: 'unitPrice', header: 'PRECIO' },
-                      { key: 'qty', header: 'CANT.' },
-                      { key: 'total', header: 'IMPORTE' },
-                    ]}
-                    data={partsData}
-                  />
-                  <div className="mt-3 bg-[#f9fafb] p-3 text-right">
-                    <span className="font-medium">
-                      Subtotal Recambios: €{partsTotal.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              )}
+                            {/* Tablas de valoración */}
+              <FinalizeLaborTable data={laborData} />
+              
+              <FinalizePaintTable data={paintData} />
+              
+              <FinalizePartsTable data={partsData} />
 
               {/* Resumen de costes */}
-              <div>
-                <h4 className="mb-3 font-semibold text-[#111827]">RESUMEN DE COSTES TOTALES</h4>
-                <div className="rounded-lg bg-[#f9fafb] p-4 sm:p-6">
-                  <div className="ml-auto max-w-md space-y-2 text-sm">
-                    {laborData.length > 0 && (
-                      <div className="flex justify-between">
-                        <span>Subtotal Mano de Obra:</span>
-                        <span className="font-medium">€{laborTotal.toFixed(2)}</span>
-                      </div>
-                    )}
-                    {paintData.length > 0 && (
-                      <div className="flex justify-between">
-                        <span>Subtotal Pintura:</span>
-                        <span className="font-medium">
-                          €{(paintLaborTotal + paintMaterialsTotal).toFixed(2)}
-                        </span>
-                      </div>
-                    )}
-                    {partsData.length > 0 && (
-                      <div className="flex justify-between">
-                        <span>Subtotal Recambios:</span>
-                        <span className="font-medium">€{partsTotal.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <hr className="my-2 border-[#e5e7eb]" />
-                    <div className="flex justify-between font-medium">
-                      <span>BASE IMPONIBLE:</span>
-                      <span>€{grandTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>IVA (21%):</span>
-                      <span className="font-medium">€{(grandTotal * 0.21).toFixed(2)}</span>
-                    </div>
-                    <hr className="my-2 border-[#e5e7eb]" />
-                    <div className="flex justify-between text-base font-bold sm:text-lg">
-                      <span>TOTAL VALORACIÓN:</span>
-                      <span>€{(grandTotal * 1.21).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ValuationCostsSummary
+                laborTotal={laborTotal}
+                paintLaborTotal={paintLaborTotal}
+                paintMaterialsTotal={paintMaterialsTotal}
+                partsTotal={partsTotal}
+                showLaborSubtotal={laborData.length > 0}
+                showPaintSubtotal={paintData.length > 0}
+                showPartsSubtotal={partsData.length > 0}
+              />
             </div>
           </div>
 
