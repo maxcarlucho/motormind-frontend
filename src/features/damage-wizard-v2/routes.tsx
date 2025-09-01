@@ -32,8 +32,20 @@ export const WizardV2Entry = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Estados de carga y error
-  if (isLoading) return <LoadingState />;
+  // Estados de carga y error - CON STEPPER
+  if (isLoading) {
+    return (
+      <WizardV2Provider>
+        <StepperNavigationProvider
+          assessmentId={assessmentId || ''}
+          workflowStatus="processing"
+          currentStep="finalize"
+        >
+          <LoadingState />
+        </StepperNavigationProvider>
+      </WizardV2Provider>
+    );
+  }
   if (error) return <ErrorState error={error} onRetry={() => window.location.reload()} />;
   if (!assessmentData) return <NotFoundState />;
 

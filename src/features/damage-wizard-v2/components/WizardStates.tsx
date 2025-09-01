@@ -1,13 +1,23 @@
 import { ProgressCard } from './ProgressCard';
+import { PageShell } from './PageShell';
+import { WizardStepperWithNav } from './WizardStepperWithNav';
 
 /**
- * Componente para mostrar estado de carga
+ * Componente para mostrar estado de carga CON STEPPER
  */
 export const LoadingState = () => (
-  <ProgressCard
-    title="Cargando peritaje"
-    description="Estamos preparando la información del peritaje para ti"
-    asOverlay={false}
+  <PageShell
+    header={
+      <WizardStepperWithNav
+        currentStep="finalize"
+        completedSteps={['intake', 'damages', 'operations', 'valuation']}
+        loading={true}
+      />
+    }
+    loading={true}
+    loadingTitle="Cargando peritaje"
+    loadingDescription="Estamos preparando la información del peritaje para ti"
+    content={<div />}
   />
 );
 

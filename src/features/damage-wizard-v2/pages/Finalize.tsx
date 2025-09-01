@@ -145,12 +145,11 @@ const processPartsData = (parts?: Record<string, unknown>[]) => {
   }));
 };
 
-// STEPPER FIJO - Definido fuera del componente para evitar re-renders
+// STEPPER FIJO - Siempre disponible, sin loading
 const FIXED_STEPPER = (
   <WizardStepperWithNav
     currentStep="finalize"
     completedSteps={['intake', 'damages', 'operations', 'valuation']}
-    loading={false} // Nunca loading para evitar flicker
   />
 );
 
@@ -159,58 +158,14 @@ const Finalize = () => {
   const { state, loadAssessmentData } = useWizardV2();
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const hasLoadedRef = useRef(false);
-
-  // Cargar datos del assessment al montar el componente
-  useEffect(() => {
-    let isCancelled = false;
-
-    // Si ya tenemos los datos de valoración, no cargar de nuevo
-    if (state.valuation) {
-      setIsInitialLoading(false);
-      return;
-    }
-
-    if (state.assessmentId && !hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      setIsInitialLoading(true);
-      loadAssessmentData()
-        .then(() => {
-          if (!isCancelled) {
-            setIsInitialLoading(false);
-          }
-        })
-        .catch((error: unknown) => {
-          if (!isCancelled) {
-            console.error('Error cargando datos del assessment:', error);
-            setIsInitialLoading(false);
-            hasLoadedRef.current = false; // Permitir reintentos en caso de error
-          }
-        });
-    } else if (!state.assessmentId) {
-      setIsInitialLoading(false);
-    }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [state.assessmentId]);
 
   // Estados derivados - Simplificados para evitar flicker
   const canFinalize = canFinalizeAssessment(state.valuation);
-  
-  // Solo mostrar loading si realmente no tenemos datos Y tenemos un assessmentId válido
-  // Si no hay assessmentId, no mostrar loading (evita el primer render con loading)
-  const isLoadingData = Boolean(
-    state.assessmentId && 
-    state.assessmentId.length > 0 && 
-    !state.valuation && 
-    !state.error
-  );
 
-
+  // ELIMINAR LOADING INTERNO - El loading se maneja en el router nivel superior
+  // Si llegamos aquí, es porque ya se cargaron los datos principales
+  const isLoadingData = false;
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -321,9 +276,6 @@ const Finalize = () => {
   return (
     <PageShell
       header={FIXED_STEPPER}
-      loading={isLoadingData}
-      loadingTitle="Cargando peritaje"
-      loadingDescription="Estamos cargando la información completa del peritaje"
       content={
         <div className="space-y-6">
           {/* Header con estado */}
