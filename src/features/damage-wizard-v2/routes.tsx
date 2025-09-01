@@ -17,9 +17,7 @@ import Valuation from './pages/Valuation';
 
 const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
 
-// ============================================================================
-// COMPONENTE PRINCIPAL DEL ROUTER
-// ============================================================================
+
 
 export const WizardV2Entry = () => {
   const { id, damageAssessmentId } = useParams<{ id: string; damageAssessmentId: string }>();
@@ -27,16 +25,12 @@ export const WizardV2Entry = () => {
   const assessmentId = id || damageAssessmentId;
   const { data: assessmentData, isLoading, error } = useAssessmentData(assessmentId);
   const { isAuthorized } = useAuthGuard();
-  
-  // Obtener step actual de la URL
+
   const currentStep = (searchParams.get('step') as WizardStepKey) || 'intake';
 
-  // Verificar permisos
   if (!isAuthorized) {
     return <Navigate to="/login" replace />;
   }
-
-  // Estados de carga y error - CON STEPPER
   if (isLoading) {
     return (
       <WizardV2Provider>
@@ -60,9 +54,7 @@ export const WizardV2Entry = () => {
   );
 };
 
-// ============================================================================
-// ROUTER INTERNO
-// ============================================================================
+
 
 interface WizardV2RouterProps {
   assessmentData: BackendDamageAssessment;
@@ -73,14 +65,13 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
   const step = extractStepFromUrl(searchParams) as WizardStepKey;
   const { dispatch } = useWizardV2();
 
-  // Cargar datos en el contexto
   useEffect(() => {
     if (!assessmentData?._id) return;
 
-    // Establecer assessmentId
+
     dispatch({ type: 'SET_ASSESSMENT_ID', payload: assessmentData._id });
 
-    // Cargar datos del intake
+
     if (assessmentData.car?.plate || assessmentData.description || assessmentData.images) {
       dispatch({
         type: 'START_INTAKE',
@@ -92,7 +83,7 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       });
     }
 
-    // Cargar damages
+
     if (assessmentData.damages) {
       const damagesResponse: BackendDamagesResponse = {
         detectedDamages: assessmentData.damages,
@@ -105,7 +96,7 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
     }
 
-    // Cargar daños confirmados
+
     if (assessmentData.confirmedDamages?.length) {
       dispatch({
         type: 'CONFIRM_DAMAGES',
@@ -118,29 +109,23 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       });
     }
 
-    // Establecer estado del workflow
+
     if (assessmentData.workflow?.status) {
       dispatch({ type: 'SET_STATUS', payload: assessmentData.workflow.status as WorkflowStatus });
     }
   }, [assessmentData._id, dispatch]);
 
-  // Redirección automática según workflow
   useEffect(() => {
     const currentStep = searchParams.get('step');
-    console.log('🔄 Redirección automática - currentStep:', currentStep);
 
     if (!currentStep) {
       const workflowStatus = (assessmentData.workflow?.status as WorkflowStatus) || 'processing';
-      console.log('🔄 Redirección automática - workflowStatus:', workflowStatus);
-
       const targetStep = getTargetStepFromWorkflow(workflowStatus);
-      console.log('🔄 Redirección automática - targetStep:', targetStep);
-
       setSearchParams({ step: targetStep }, { replace: true });
     }
   }, [assessmentData.workflow?.status, searchParams, setSearchParams]);
 
-  // Renderizar componente según step
+
   const Component = useMemo(() => {
     switch (step) {
       case 'intake':
@@ -171,19 +156,14 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
   );
 };
 
-// ============================================================================
-// ENTRADA PARA CREAR NUEVO ASSESSMENT
-// ============================================================================
+
 
 export const WizardV2NewEntry = () => {
   const { isAuthorized } = useAuthGuard();
 
-  // Verificar permisos
   if (!isAuthorized) {
     return <Navigate to="/login" replace />;
   }
-
-  // Verificar si el wizard está habilitado
   if (!WIZARD_V2_ENABLED) {
     return <Navigate to="/damage-assessments/create" />;
   }

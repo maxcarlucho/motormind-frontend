@@ -23,7 +23,6 @@ const getOperationLabel = (operationCode: string): string => {
   return operationLabels[operationCode] || operationCode;
 };
 
-// Helper para verificar si el assessment puede finalizar
 const canFinalizeAssessment = (valuation: BackendDamageAssessment | undefined): boolean => {
   return Boolean(
     valuation &&
@@ -31,35 +30,22 @@ const canFinalizeAssessment = (valuation: BackendDamageAssessment | undefined): 
   );
 };
 
-// Helper para determinar si está cargando datos
-const isDataLoading = (
-  isInitialLoading: boolean,
-  stateLoading: boolean,
-  assessmentId?: string,
-  valuation?: BackendDamageAssessment,
-): boolean => {
-  return Boolean(isInitialLoading || stateLoading || (assessmentId && !valuation));
-};
-
-// Helper para procesar datos de mano de obra (sin pintura)
 const processLaborData = (laborOutput?: BackendLaborOutput[]) => {
   if (!laborOutput) return [];
 
   return laborOutput
     .filter((item: BackendLaborOutput) => {
-      // Solo operaciones de Sustituir/Reparar (sin pintar)
       const operation = item.mainOperation?.operation;
       return operation === 'REPLACE' || operation === 'REPAIR';
     })
     .map((item: BackendLaborOutput) => ({
       operation: `${getOperationLabel(item.mainOperation?.operation || 'REPAIR')} - ${item.partName}`,
       hours: `${item.mainOperation?.estimatedHours || 0}h`,
-      rate: 42, // Rate fijo por ahora
+      rate: 42,
       total: (item.mainOperation?.estimatedHours || 0) * 42,
     }));
 };
 
-// Helper para procesar datos de pintura
 const processPaintData = (paintWorks?: BackendPaintWork[]) => {
   if (!paintWorks) return [];
 
@@ -73,7 +59,7 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     total: number;
   }> = [];
 
-  // Agrupar datos de mano de obra por pieza
+
   const laborByPart = new Map<string, { hours: number; rate: number; total: number }>();
   paintWorks.forEach((item: BackendPaintWork) => {
     const partName = item.partName || 'Pieza sin nombre';
@@ -91,7 +77,7 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     }
   });
 
-  // Agregar datos agrupados de mano de obra de pintura
+
   laborByPart.forEach((data, partName) => {
     paintDataArray.push({
       type: 'labor',
@@ -102,7 +88,7 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     });
   });
 
-  // Agrupar datos de materiales por pieza
+
   const materialsByPart = new Map<string, { units: number; unitCost: number; total: number }>();
   paintWorks.forEach((item: BackendPaintWork) => {
     const partName = item.partName || 'Pieza sin nombre';
@@ -118,7 +104,7 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     }
   });
 
-  // Agregar datos agrupados de materiales
+
   materialsByPart.forEach((data, partName) => {
     paintDataArray.push({
       type: 'material',
@@ -132,7 +118,6 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
   return paintDataArray;
 };
 
-// Helper para procesar datos de recambios
 const processPartsData = (parts?: Record<string, unknown>[]) => {
   if (!parts) return [];
 
@@ -145,7 +130,6 @@ const processPartsData = (parts?: Record<string, unknown>[]) => {
   }));
 };
 
-// STEPPER FIJO - Siempre disponible, sin loading
 const FIXED_STEPPER = (
   <WizardStepperWithNav
     currentStep="finalize"
@@ -160,29 +144,16 @@ const Finalize = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // CARGAR DATOS SIN MOSTRAR LOADING VISUAL
   useEffect(() => {
-    // Si ya tenemos los datos de valoración, no cargar de nuevo
-    if (state.valuation) {
-      return;
-    }
-
-    // Si tenemos assessmentId pero no valoración, cargar datos
-    if (state.assessmentId) {
-      loadAssessmentData().catch((error: unknown) => {
-        console.error('Error cargando datos del assessment:', error);
-      });
-    }
+    if (state.valuation || !state.assessmentId) return;
+    
+    loadAssessmentData().catch((error: unknown) => {
+      console.error('Error cargando datos del assessment:', error);
+    });
   }, [state.assessmentId, state.valuation, loadAssessmentData]);
 
-  // Estados derivados
   const canFinalize = canFinalizeAssessment(state.valuation);
-  
-  // MOSTRAR LOADING SI NO TENEMOS DATOS COMPLETOS
-  // Solo loading si tenemos assessmentId pero no valuation (datos incompletos)
-  const isLoadingData = Boolean(
-    state.assessmentId && !state.valuation
-  );
+  const isLoadingData = Boolean(state.assessmentId && !state.valuation);
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -298,7 +269,6 @@ const Finalize = () => {
       loadingDescription="Estamos cargando la información completa del peritaje"
       content={
         <div className="space-y-6">
-          {/* Header con estado */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
@@ -328,12 +298,10 @@ const Finalize = () => {
             </div>
           </div>
 
-          {/* Contenido del PDF */}
           <div
             ref={contentRef}
             className={`rounded-lg bg-white p-6 shadow-sm ${!isGeneratingPDF && 'border border-gray-200'}`}
           >
-            {/* Header del informe */}
             <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                 <div className="w-32 sm:w-40">
@@ -356,20 +324,17 @@ const Finalize = () => {
               </div>
             </div>
 
-            {/* Desglose de la valoración */}
             <div className="mb-6">
               <h3 className="mb-6 text-lg font-bold text-[#111827]">
                 DESGLOSE DETALLADO DE LA VALORACIÓN
               </h3>
-
-              {/* Tablas de valoración */}
               <FinalizeLaborTable data={laborData} />
 
               <FinalizePaintTable data={paintData} />
 
               <FinalizePartsTable data={partsData} />
 
-              {/* Resumen de costes */}
+
               <ValuationCostsSummary
                 laborTotal={laborTotal}
                 paintLaborTotal={paintLaborTotal}
@@ -382,7 +347,6 @@ const Finalize = () => {
             </div>
           </div>
 
-          {/* Acciones */}
           <div className="flex justify-center">
             <Button onClick={goToList} variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="h-4 w-4" />

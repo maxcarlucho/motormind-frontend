@@ -1,9 +1,7 @@
-import { ProgressCard } from './ProgressCard';
+import { WizardStepKey } from '../types';
 import { PageShell } from './PageShell';
 import { WizardStepperWithNav } from './WizardStepperWithNav';
-import { WizardStepKey } from '../types';
 
-// Helper para obtener los pasos completados según el paso actual
 const getCompletedSteps = (currentStep: WizardStepKey): WizardStepKey[] => {
   const allSteps: WizardStepKey[] = ['intake', 'damages', 'operations', 'valuation', 'finalize'];
   const currentIndex = allSteps.indexOf(currentStep);
@@ -14,9 +12,6 @@ interface LoadingStateProps {
   currentStep?: WizardStepKey;
 }
 
-/**
- * Componente para mostrar estado de carga CON STEPPER
- */
 export const LoadingState = ({ currentStep = 'intake' }: LoadingStateProps) => (
   <PageShell
     header={
@@ -33,9 +28,6 @@ export const LoadingState = ({ currentStep = 'intake' }: LoadingStateProps) => (
   />
 );
 
-/**
- * Componente para mostrar estado de error
- */
 export const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="flex min-h-screen items-center justify-center">
     <div className="text-center">
@@ -52,9 +44,6 @@ export const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => v
   </div>
 );
 
-/**
- * Componente para mostrar estado de no encontrado
- */
 export const NotFoundState = () => (
   <div className="flex min-h-screen items-center justify-center">
     <div className="text-center">
