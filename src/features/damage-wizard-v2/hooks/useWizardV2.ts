@@ -492,7 +492,10 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setError(errorMessage);
       throw error;
     } finally {
-      setLoading(false);
+      // Solo setLoading(false) si no es silencioso
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
   }, [assessmentId, setLoading, setError, dispatch]);
 

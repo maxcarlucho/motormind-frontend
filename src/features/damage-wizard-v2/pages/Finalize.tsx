@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { CheckCircle, ArrowLeft, Download, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { useWizardV2 } from '../hooks/useWizardV2';
@@ -59,7 +59,6 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     total: number;
   }> = [];
 
-
   const laborByPart = new Map<string, { hours: number; rate: number; total: number }>();
   paintWorks.forEach((item: BackendPaintWork) => {
     const partName = item.partName || 'Pieza sin nombre';
@@ -77,7 +76,6 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
     }
   });
 
-
   laborByPart.forEach((data, partName) => {
     paintDataArray.push({
       type: 'labor',
@@ -87,7 +85,6 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
       total: data.total,
     });
   });
-
 
   const materialsByPart = new Map<string, { units: number; unitCost: number; total: number }>();
   paintWorks.forEach((item: BackendPaintWork) => {
@@ -103,7 +100,6 @@ const processPaintData = (paintWorks?: BackendPaintWork[]) => {
       materialsByPart.set(partName, { units: 1, unitCost, total });
     }
   });
-
 
   materialsByPart.forEach((data, partName) => {
     paintDataArray.push({
@@ -139,21 +135,12 @@ const FIXED_STEPPER = (
 
 const Finalize = () => {
   const navigate = useNavigate();
-  const { state, loadAssessmentData } = useWizardV2();
+  const { state } = useWizardV2();
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (state.valuation || !state.assessmentId) return;
-    
-    loadAssessmentData().catch((error: unknown) => {
-      console.error('Error cargando datos del assessment:', error);
-    });
-  }, [state.assessmentId, state.valuation, loadAssessmentData]);
-
   const canFinalize = canFinalizeAssessment(state.valuation);
-  const isLoadingData = Boolean(state.assessmentId && !state.valuation);
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -264,9 +251,6 @@ const Finalize = () => {
   return (
     <PageShell
       header={FIXED_STEPPER}
-      loading={isLoadingData}
-      loadingTitle="Cargando valoración"
-      loadingDescription="Estamos cargando la información completa del peritaje"
       content={
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -333,7 +317,6 @@ const Finalize = () => {
               <FinalizePaintTable data={paintData} />
 
               <FinalizePartsTable data={partsData} />
-
 
               <ValuationCostsSummary
                 laborTotal={laborTotal}

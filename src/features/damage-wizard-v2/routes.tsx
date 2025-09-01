@@ -17,8 +17,6 @@ import Valuation from './pages/Valuation';
 
 const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
 
-
-
 export const WizardV2Entry = () => {
   const { id, damageAssessmentId } = useParams<{ id: string; damageAssessmentId: string }>();
   const [searchParams] = useSearchParams();
@@ -54,8 +52,6 @@ export const WizardV2Entry = () => {
   );
 };
 
-
-
 interface WizardV2RouterProps {
   assessmentData: BackendDamageAssessment;
 }
@@ -68,9 +64,7 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
   useEffect(() => {
     if (!assessmentData?._id) return;
 
-
     dispatch({ type: 'SET_ASSESSMENT_ID', payload: assessmentData._id });
-
 
     if (assessmentData.car?.plate || assessmentData.description || assessmentData.images) {
       dispatch({
@@ -82,7 +76,6 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
         },
       });
     }
-
 
     if (assessmentData.damages) {
       const damagesResponse: BackendDamagesResponse = {
@@ -96,7 +89,6 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
     }
 
-
     if (assessmentData.confirmedDamages?.length) {
       dispatch({
         type: 'CONFIRM_DAMAGES',
@@ -109,11 +101,18 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       });
     }
 
-
     if (assessmentData.workflow?.status) {
       dispatch({ type: 'SET_STATUS', payload: assessmentData.workflow.status as WorkflowStatus });
     }
-  }, [assessmentData._id, dispatch]);
+
+    // Si tiene datos de valoración, cargarlos
+    if (
+      assessmentData.workflow?.status === 'valuated' || 
+      assessmentData.workflow?.status === 'completed'
+    ) {
+      dispatch({ type: 'SET_VALUATION', payload: assessmentData });
+    }
+  }, [assessmentData, dispatch]);
 
   useEffect(() => {
     const currentStep = searchParams.get('step');
@@ -124,7 +123,6 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
       setSearchParams({ step: targetStep }, { replace: true });
     }
   }, [assessmentData.workflow?.status, searchParams, setSearchParams]);
-
 
   const Component = useMemo(() => {
     switch (step) {
@@ -155,8 +153,6 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
     </StepperNavigationProvider>
   );
 };
-
-
 
 export const WizardV2NewEntry = () => {
   const { isAuthorized } = useAuthGuard();
