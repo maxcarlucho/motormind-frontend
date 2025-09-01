@@ -58,21 +58,14 @@ const Intake = () => {
     try {
       setIsProcessing(true);
 
-      // 1. Buscar/crear el coche primero (como en el flujo original)
-      console.log('🔍 Buscando/creando coche por matrícula:', plate);
       const car = await searchCar({ plate: plate.toUpperCase() });
-      console.log('✅ Coche encontrado/creado:', car);
 
-      // 2. Subir imágenes con el carId (si hay alguna)
       let imageUrls: string[] = [];
       if (selectedFiles.length > 0) {
-        console.log('📤 Subiendo imágenes con carId:', car._id);
         const uploadResult = await upload(selectedFiles, { carId: car._id }, 'damage-assessment');
         imageUrls = uploadResult.keys;
-        console.log('✅ Imágenes subidas:', imageUrls);
       }
 
-      // 3. Crear el assessment con las URLs reales y el carId
       const assessmentId = await startIntake({
         plate: plate.toUpperCase(),
         claimDescription: claim,
@@ -82,8 +75,6 @@ const Intake = () => {
       // Navegar con el ID real del assessment
       navigate(`/damage-assessments/${assessmentId}/wizard-v2?step=damages`, { replace: true });
     } catch (error) {
-      console.error('❌ Error creando assessment:', error);
-      // Mostrar error específico según el paso que falló
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       alert(`Error: ${errorMessage}`);
       setIsProcessing(false);

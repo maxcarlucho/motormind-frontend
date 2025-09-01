@@ -22,38 +22,23 @@ const Valuation = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const hasGeneratedValuation = useRef(false);
 
-  // Cargar valoración si no existe (solo una vez)
   useEffect(() => {
-    console.log('🔄 Valuation useEffect triggered:', {
-      assessmentId: state.assessmentId,
-      hasValuation: !!state.valuation,
-      isGenerating,
-      hasGenerated: hasGeneratedValuation.current,
-    });
-
-    // Si ya tenemos valoración, no necesitamos generar
     if (state.valuation) {
-      console.log('✅ Valuation already exists, skipping generation');
       return;
     }
 
-    // Solo generar si no existe y no se ha generado antes
     if (state.assessmentId && !state.valuation && !isGenerating && !hasGeneratedValuation.current) {
-      console.log('✅ Starting valuation generation...');
       hasGeneratedValuation.current = true;
       handleGenerateValuation();
     }
-  }, [state.assessmentId]); // Solo depende del assessmentId
+  }, [state.assessmentId]);
 
   const handleGenerateValuation = async () => {
-    console.log('🚀 handleGenerateValuation called');
     try {
       setIsGenerating(true);
       await generateValuation();
-      console.log('✅ Valuation generated successfully');
     } catch (error) {
-      console.error('❌ Error generating valuation:', error);
-      // Reset flag en caso de error para permitir reintento
+      console.error('Error generating valuation:', error);
       hasGeneratedValuation.current = false;
     } finally {
       setIsGenerating(false);
@@ -67,8 +52,7 @@ const Valuation = () => {
       navigate(`?step=finalize`, { replace: true });
     } catch (error) {
       console.error('Error finalizing assessment:', error);
-      // Fallback a navegación directa en caso de error
-      console.warn('Fallback: navegando a finalize después de error');
+
       setParams({ step: 'finalize' });
       navigate(`?step=finalize`, { replace: true });
     }
@@ -220,15 +204,6 @@ const Valuation = () => {
         total: (item.total as number) || 0,
       }))
     : [];
-
-  // Debug: Log del estado de valoración
-  console.log('🔍 Valuation state:', {
-    hasValuation: !!state.valuation,
-    laborOutput: state.valuation?.laborOutput?.length || 0,
-    paintWorks: state.valuation?.paintWorks?.length || 0,
-    parts: state.valuation?.parts?.length || 0,
-    compact: state.valuation?.compact,
-  });
 
   // Mostrar loading mientras se genera la valoración
   if (isGenerating) {

@@ -1,5 +1,5 @@
 import { Button } from '@/components/atoms/Button';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { NoConfirmedDamagesMessage } from '../components/NoConfirmedDamagesMessage';
 import { OperationsInfoAlert } from '../components/OperationsInfoAlert';
@@ -16,26 +16,10 @@ import apiService from '@/service/api.service';
 const Operations = () => {
   const navigate = useNavigate();
   const [, setParams] = useSearchParams();
-  const { state, loadAssessmentData } = useWizardV2();
+  const { state } = useWizardV2();
   const { dispatch } = useWizardV2Context();
-  const [isSavingOperations, setIsSavingOperations] = useState(false);
 
-  const confirmedDamages = state.confirmedDamages || [];
-
-  console.log('🔍 Operations Debug:', {
-    assessmentId: state.assessmentId,
-    confirmedDamagesCount: confirmedDamages.length,
-    confirmedDamages: confirmedDamages,
-    state: state,
-  });
-
-  useEffect(() => {
-    if (state.assessmentId && !state.confirmedDamages?.length) {
-      loadAssessmentData().catch((error: Error) => {
-        console.error('Error cargando datos del assessment:', error);
-      });
-    }
-  }, [state.assessmentId]);
+  const confirmedDamages = useMemo(() => state.confirmedDamages || [], [state.confirmedDamages]);
 
   const handleUpdateOperation = async (damageId: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
@@ -69,16 +53,11 @@ const Operations = () => {
         type: 'UPDATE_OPERATION',
         payload: { damageId, operation: newOperation },
       });
-
-      console.log(
-        `Operación de daño ${damageId} actualizada a ${newOperation} (trackeada localmente)`,
-      );
     } catch (error) {
       console.error(`Error al actualizar la operación de daño ${damageId}:`, error);
     }
   };
 
-  // ✅ NUEVO: Agrupar daños por pieza
   const groupedDamages = useMemo(() => {
     const groups: Record<string, { title: string; items: Damage[] }> = {};
 
@@ -109,17 +88,11 @@ const Operations = () => {
       const modifiedOperations = state.modifiedOperations;
 
       if (modifiedOperations && Object.keys(modifiedOperations).length > 0) {
-        console.log(
-          '🔄 Guardando operaciones modificadas antes de continuar...',
-          modifiedOperations,
-        );
-        setIsSavingOperations(true);
-
         // ✅ NUEVO: Guardar todas las operaciones modificadas en paralelo
         const updatePromises = Object.entries(modifiedOperations).map(([damageId, operation]) =>
           apiService.updateDamage(state.assessmentId!, damageId, {
             proposedOperation: {
-              operation: operation as any, // Cast para evitar conflicto de tipos
+              operation: operation as DamageAction,
               confidence: 0.85,
               reason: `Operación actualizada manualmente a ${operation}`,
               source: 'rule_engine',
@@ -130,11 +103,8 @@ const Operations = () => {
         // ✅ NUEVO: Esperar a que todas las actualizaciones terminen
         await Promise.all(updatePromises);
 
-        console.log('✅ Todas las operaciones modificadas guardadas exitosamente');
-
         // ✅ NUEVO: Limpiar operaciones modificadas del estado
         dispatch({ type: 'CLEAR_MODIFIED_OPERATIONS' });
-        setIsSavingOperations(false);
       }
 
       // ✅ NUEVO: Navegar a valuation
@@ -142,8 +112,7 @@ const Operations = () => {
       navigate(`?step=valuation`, { replace: true });
     } catch (error) {
       console.error('Error navegando a valuation:', error);
-      setIsSavingOperations(false);
-      console.warn('Fallback: navegando a valuation después de error');
+
       setParams({ step: 'valuation' });
       navigate(`?step=valuation`, { replace: true });
     }

@@ -68,7 +68,6 @@ const Damages = () => {
       navigate(`?step=operations`, { replace: true });
     } catch (error) {
       console.error('Error confirming damages:', error);
-      console.warn('Fallback: navegando a operations después de error');
       setParams({ step: 'operations' });
       navigate(`?step=operations`, { replace: true });
     }

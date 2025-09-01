@@ -38,10 +38,8 @@ export const getTargetStepFromWorkflow = (workflowStatus: WorkflowStatus): Wizar
             targetStep = 'damages';
             break;
         default:
-            console.warn('⚠️ Estado de workflow desconocido:', workflowStatus);
             targetStep = 'damages';
     }
 
-    console.log('🎯 getTargetStepFromWorkflow - targetStep:', targetStep);
     return targetStep;
 };
