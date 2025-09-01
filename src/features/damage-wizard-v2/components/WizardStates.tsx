@@ -1,16 +1,28 @@
 import { ProgressCard } from './ProgressCard';
 import { PageShell } from './PageShell';
 import { WizardStepperWithNav } from './WizardStepperWithNav';
+import { WizardStepKey } from '../types';
+
+// Helper para obtener los pasos completados según el paso actual
+const getCompletedSteps = (currentStep: WizardStepKey): WizardStepKey[] => {
+  const allSteps: WizardStepKey[] = ['intake', 'damages', 'operations', 'valuation', 'finalize'];
+  const currentIndex = allSteps.indexOf(currentStep);
+  return allSteps.slice(0, currentIndex);
+};
+
+interface LoadingStateProps {
+  currentStep?: WizardStepKey;
+}
 
 /**
  * Componente para mostrar estado de carga CON STEPPER
  */
-export const LoadingState = () => (
+export const LoadingState = ({ currentStep = 'intake' }: LoadingStateProps) => (
   <PageShell
     header={
       <WizardStepperWithNav
-        currentStep="finalize"
-        completedSteps={['intake', 'damages', 'operations', 'valuation']}
+        currentStep={currentStep}
+        completedSteps={getCompletedSteps(currentStep)}
         loading={true}
       />
     }

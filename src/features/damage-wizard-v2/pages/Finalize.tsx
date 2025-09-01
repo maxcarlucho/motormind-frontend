@@ -160,12 +160,29 @@ const Finalize = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Estados derivados - Simplificados para evitar flicker
-  const canFinalize = canFinalizeAssessment(state.valuation);
+  // CARGAR DATOS SIN MOSTRAR LOADING VISUAL
+  useEffect(() => {
+    // Si ya tenemos los datos de valoración, no cargar de nuevo
+    if (state.valuation) {
+      return;
+    }
 
-  // ELIMINAR LOADING INTERNO - El loading se maneja en el router nivel superior
-  // Si llegamos aquí, es porque ya se cargaron los datos principales
-  const isLoadingData = false;
+    // Si tenemos assessmentId pero no valoración, cargar datos
+    if (state.assessmentId) {
+      loadAssessmentData().catch((error: unknown) => {
+        console.error('Error cargando datos del assessment:', error);
+      });
+    }
+  }, [state.assessmentId, state.valuation, loadAssessmentData]);
+
+  // Estados derivados
+  const canFinalize = canFinalizeAssessment(state.valuation);
+  
+  // MOSTRAR LOADING SI NO TENEMOS DATOS COMPLETOS
+  // Solo loading si tenemos assessmentId pero no valuation (datos incompletos)
+  const isLoadingData = Boolean(
+    state.assessmentId && !state.valuation
+  );
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -276,6 +293,9 @@ const Finalize = () => {
   return (
     <PageShell
       header={FIXED_STEPPER}
+      loading={isLoadingData}
+      loadingTitle="Cargando valoración"
+      loadingDescription="Estamos cargando la información completa del peritaje"
       content={
         <div className="space-y-6">
           {/* Header con estado */}

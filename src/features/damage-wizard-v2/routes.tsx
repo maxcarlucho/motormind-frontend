@@ -23,9 +23,13 @@ const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';
 
 export const WizardV2Entry = () => {
   const { id, damageAssessmentId } = useParams<{ id: string; damageAssessmentId: string }>();
+  const [searchParams] = useSearchParams();
   const assessmentId = id || damageAssessmentId;
   const { data: assessmentData, isLoading, error } = useAssessmentData(assessmentId);
   const { isAuthorized } = useAuthGuard();
+  
+  // Obtener step actual de la URL
+  const currentStep = (searchParams.get('step') as WizardStepKey) || 'intake';
 
   // Verificar permisos
   if (!isAuthorized) {
@@ -39,9 +43,9 @@ export const WizardV2Entry = () => {
         <StepperNavigationProvider
           assessmentId={assessmentId || ''}
           workflowStatus="processing"
-          currentStep="finalize"
+          currentStep={currentStep}
         >
-          <LoadingState />
+          <LoadingState currentStep={currentStep} />
         </StepperNavigationProvider>
       </WizardV2Provider>
     );
