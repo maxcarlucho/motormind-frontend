@@ -5,11 +5,13 @@ import { WizardStepKey } from '../types';
 interface WizardStepperWithNavProps {
   currentStep: WizardStepKey;
   completedSteps?: WizardStepKey[];
+  loading?: boolean;
 }
 
 export const WizardStepperWithNav: React.FC<WizardStepperWithNavProps> = ({
   currentStep,
   completedSteps = [],
+  loading = false,
 }) => {
   const { canGoTo, goTo } = useWizardStepNav();
 
@@ -29,6 +31,7 @@ export const WizardStepperWithNav: React.FC<WizardStepperWithNavProps> = ({
       currentStep={currentStep}
       completedSteps={completedSteps}
       onStepClick={handleStepClick}
+      loading={loading}
     />
   );
 };

@@ -24,12 +24,15 @@ interface WizardStepperProps {
   currentStep: WizardStepKey;
   onStepClick?: (step: WizardStepKey) => void;
   completedSteps?: WizardStepKey[];
+  /** Disable all interactions when loading */
+  loading?: boolean;
 }
 
 export const WizardStepper = ({
   currentStep,
   onStepClick,
   completedSteps = [],
+  loading = false,
 }: WizardStepperProps) => {
   const currentStepIndex = STEPS.findIndex((step) => step.key === currentStep);
 
@@ -53,11 +56,17 @@ export const WizardStepper = ({
   return (
     <div className="bg-card border-border border-b">
       <div className="mx-auto max-w-7xl p-4">
-        <div className="flex items-center justify-between">
+        <div
+          className={cn(
+            'flex items-center justify-between transition-opacity',
+            loading && 'pointer-events-none opacity-60',
+          )}
+        >
           {STEPS.map((step, index) => {
             const status = getStepStatus(index);
             const isClickable =
               onStepClick &&
+              !loading &&
               (status === 'completed' || status === 'current' || index < currentStepIndex);
 
             return (

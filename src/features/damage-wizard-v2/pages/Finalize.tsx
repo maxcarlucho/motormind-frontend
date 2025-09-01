@@ -150,7 +150,7 @@ const Finalize = () => {
   const { state, loadAssessmentData } = useWizardV2();
   const { enqueueSnackbar } = useSnackbar();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const hasLoadedRef = useRef(false);
 
@@ -197,6 +197,15 @@ const Finalize = () => {
     state.assessmentId,
     state.valuation,
   );
+
+  // Debug temporal para entender el problema
+  console.log('🔍 Finalize render debug:', {
+    assessmentId: state.assessmentId,
+    hasValuation: !!state.valuation,
+    isInitialLoading,
+    stateLoading: state.loading,
+    isLoadingData,
+  });
 
   // Procesar datos para las tablas
   const laborData = processLaborData(state.valuation?.laborOutput);
@@ -304,14 +313,18 @@ const Finalize = () => {
     navigate('/damage-assessments');
   };
 
+  // Render del stepper - siempre visible
+  const wizardStepper = (
+    <WizardStepperWithNav
+      currentStep="finalize"
+      completedSteps={['intake', 'damages', 'operations', 'valuation']}
+      loading={isLoadingData}
+    />
+  );
+
   return (
     <PageShell
-      header={
-        <WizardStepperWithNav
-          currentStep="finalize"
-          completedSteps={['intake', 'damages', 'operations', 'valuation']}
-        />
-      }
+      header={wizardStepper}
       loading={isLoadingData}
       loadingTitle="Cargando peritaje"
       loadingDescription="Estamos cargando la información completa del peritaje"
@@ -381,11 +394,11 @@ const Finalize = () => {
                 DESGLOSE DETALLADO DE LA VALORACIÓN
               </h3>
 
-                            {/* Tablas de valoración */}
+              {/* Tablas de valoración */}
               <FinalizeLaborTable data={laborData} />
-              
+
               <FinalizePaintTable data={paintData} />
-              
+
               <FinalizePartsTable data={partsData} />
 
               {/* Resumen de costes */}

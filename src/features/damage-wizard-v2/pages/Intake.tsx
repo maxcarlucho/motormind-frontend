@@ -96,7 +96,9 @@ const Intake = () => {
   if (isProcessing) {
     return (
       <PageShell
-        header={<WizardStepperWithNav currentStep="damages" completedSteps={['intake']} />}
+        header={
+          <WizardStepperWithNav currentStep="damages" completedSteps={['intake']} loading={true} />
+        }
         loading={true}
         loadingTitle="Detectando daños"
         loadingDescription="Estamos procesando las imágenes... esto puede tardar unos minutos."
@@ -107,7 +109,9 @@ const Intake = () => {
 
   return (
     <PageShell
-      header={<WizardStepperWithNav currentStep="intake" completedSteps={[]} />}
+      header={
+        <WizardStepperWithNav currentStep="intake" completedSteps={[]} loading={state.loading} />
+      }
       title="Datos iniciales del vehículo"
       subtitle="Ingresá la matrícula y una breve descripción del siniestro. Podés subir fotos ahora o más tarde."
       loading={state.loading}

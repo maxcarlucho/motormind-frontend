@@ -158,7 +158,11 @@ const Operations = () => {
     return (
       <PageShell
         header={
-          <WizardStepperWithNav currentStep="operations" completedSteps={['intake', 'damages']} />
+          <WizardStepperWithNav
+            currentStep="operations"
+            completedSteps={['intake', 'damages']}
+            loading={state.loading}
+          />
         }
         title="Operaciones de reparación"
         subtitle="Define las operaciones necesarias para cada daño confirmado"
@@ -173,7 +177,11 @@ const Operations = () => {
   return (
     <PageShell
       header={
-        <WizardStepperWithNav currentStep="operations" completedSteps={['intake', 'damages']} />
+        <WizardStepperWithNav
+          currentStep="operations"
+          completedSteps={['intake', 'damages']}
+          loading={state.loading}
+        />
       }
       title="Operaciones de reparación"
       subtitle="Define las operaciones necesarias para cada daño confirmado"

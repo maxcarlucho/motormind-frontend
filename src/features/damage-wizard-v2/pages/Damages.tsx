@@ -102,7 +102,9 @@ const Damages = () => {
   if (isProcessing) {
     return (
       <PageShell
-        header={<WizardStepperWithNav currentStep="damages" completedSteps={['intake']} />}
+        header={
+          <WizardStepperWithNav currentStep="damages" completedSteps={['intake']} loading={true} />
+        }
         loading={true}
         loadingTitle="Detectando daños"
         loadingDescription="Estamos procesando las imágenes... esto puede tardar unos minutos."

@@ -238,6 +238,7 @@ const Valuation = () => {
           <WizardStepperWithNav
             currentStep="valuation"
             completedSteps={['intake', 'damages', 'operations']}
+            loading={true}
           />
         }
         title="Valoración del peritaje"
