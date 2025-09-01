@@ -11,57 +11,28 @@ export const StepperNavigationProvider: React.FC<StepperNavProviderProps> = ({
   workflowStatus,
   currentStep,
   children,
-  allowBackEdit = false,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Calcular el máximo paso editable según el workflow status
-  const maxReachableStep = useMemo(() => {
-    return getMaxEditableStep(workflowStatus);
-  }, [workflowStatus]);
-
   // Determinar el modo del paso actual
   const mode = useMemo((): StepMode => {
-    return isStepEditable(currentStep, workflowStatus, allowBackEdit) ? 'edit' : 'view';
-  }, [currentStep, workflowStatus, allowBackEdit]);
-
-  // Detectar si el usuario saltó hacia atrás desde un paso posterior
-  const originStep = useMemo(() => {
-    const currentIndex = STEP_ORDER.indexOf(currentStep);
-    const maxIndex = STEP_ORDER.indexOf(maxReachableStep);
-
-    // Si estamos en un paso anterior al máximo editable, probablemente saltamos hacia atrás
-    if (currentIndex < maxIndex && mode === 'view') {
-      return maxReachableStep;
-    }
-
-    return undefined;
-  }, [currentStep, maxReachableStep, mode]);
-
-  // Helper para obtener el siguiente paso
-  const nextOf = useCallback((step: WizardStepKey): WizardStepKey => {
-    const currentIndex = STEP_ORDER.indexOf(step);
-    const nextIndex = Math.min(currentIndex + 1, STEP_ORDER.length - 1);
-    return STEP_ORDER[nextIndex];
-  }, []);
-
-  // Helper para obtener el paso anterior
-  const prevOf = useCallback((step: WizardStepKey): WizardStepKey => {
-    const currentIndex = STEP_ORDER.indexOf(step);
-    const prevIndex = Math.max(currentIndex - 1, 0);
-    return STEP_ORDER[prevIndex];
-  }, []);
+    return isStepEditable(currentStep, workflowStatus) ? 'edit' : 'view';
+  }, [currentStep, workflowStatus]);
 
   // Verificar si se puede navegar a un paso específico
   const canGoTo = useCallback(
     (step: WizardStepKey): boolean => {
-      const stepIndex = STEP_ORDER.indexOf(step);
-      const maxIndex = STEP_ORDER.indexOf(maxReachableStep);
+      // Si el assessment está completado, permitir navegación libre a todos los pasos
+      if (workflowStatus === 'completed') {
+        return true;
+      }
 
-      // Permitir navegar hacia atrás siempre, hacia adelante solo hasta maxReachableStep
+      const stepIndex = STEP_ORDER.indexOf(step);
+      const maxIndex = STEP_ORDER.indexOf(getMaxEditableStep(workflowStatus));
+
       return stepIndex <= maxIndex;
     },
-    [maxReachableStep],
+    [workflowStatus],
   );
 
   // Navegar a un paso específico
@@ -78,19 +49,21 @@ export const StepperNavigationProvider: React.FC<StepperNavProviderProps> = ({
   const continueFromHere = useCallback(() => {
     if (mode === 'view') {
       // En modo solo lectura, avanzar al siguiente paso sin side-effects
-      const nextStep = nextOf(currentStep);
+      const currentIndex = STEP_ORDER.indexOf(currentStep);
+      const nextIndex = Math.min(currentIndex + 1, STEP_ORDER.length - 1);
+      const nextStep = STEP_ORDER[nextIndex];
       goTo(nextStep);
     }
     // En modo edit, no hacer nada - cada página decide su comportamiento
-  }, [mode, currentStep, nextOf, goTo]);
+  }, [mode, currentStep, goTo]);
 
   // Verificar si un paso está en solo lectura
   const isReadOnly = useCallback(
     (step?: WizardStepKey): boolean => {
       const targetStep = step || currentStep;
-      return !isStepEditable(targetStep, workflowStatus, allowBackEdit);
+      return !isStepEditable(targetStep, workflowStatus);
     },
-    [currentStep, workflowStatus, allowBackEdit],
+    [currentStep, workflowStatus],
   );
 
   const contextValue: StepperNavigationContextValue = useMemo(
@@ -98,32 +71,13 @@ export const StepperNavigationProvider: React.FC<StepperNavProviderProps> = ({
       assessmentId,
       currentStep,
       mode,
-      maxReachableStep,
-      originStep,
       workflowStatus,
-      allowBackEdit,
       canGoTo,
       goTo,
-      nextOf,
-      prevOf,
       continueFromHere,
       isReadOnly,
     }),
-    [
-      assessmentId,
-      currentStep,
-      mode,
-      maxReachableStep,
-      originStep,
-      workflowStatus,
-      allowBackEdit,
-      canGoTo,
-      goTo,
-      nextOf,
-      prevOf,
-      continueFromHere,
-      isReadOnly,
-    ],
+    [assessmentId, currentStep, mode, workflowStatus, canGoTo, goTo, continueFromHere, isReadOnly],
   );
 
   return (

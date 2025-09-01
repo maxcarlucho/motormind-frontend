@@ -1,27 +1,17 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
 import { BackendDamageAssessment, BackendDamagesResponse } from '../types/backend.types';
-import { FrontendOperation, DamageAction } from '../types';
+import { FrontendOperation, DamageAction, WorkflowStatus } from '../types';
 import { Damage } from '@/types/DamageAssessment';
 
 // ============================================================================
 // TIPOS - Estado del Wizard V2
 // ============================================================================
 
-export type WizardV2Status =
-  | 'idle'
-  | 'processing' // Tchek analizando imágenes
-  | 'detected' // Daños detectados, listo para confirmar
-  | 'damages_confirmed' // Daños confirmados, listo para operaciones
-  | 'operations_defined' // Operaciones definidas, listo para valoración
-  | 'valuated' // Valoración completa, listo para finalizar
-  | 'completed' // Peritaje finalizado
-  | 'error'; // Error en algún paso
-
 export interface WizardV2State {
   // Identificación
   assessmentId?: string;
   carId?: string;
-  status: WizardV2Status;
+  status: WorkflowStatus;
 
   // Datos de entrada (Intake)
   plate?: string;
@@ -63,12 +53,12 @@ export interface WizardV2State {
 type WizardV2Action =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | undefined }
-  | { type: 'SET_STATUS'; payload: WizardV2Status }
+  | { type: 'SET_STATUS'; payload: WorkflowStatus }
   | { type: 'SET_CURRENT_STEP'; payload: WizardV2State['currentStep'] }
   | { type: 'SET_ASSESSMENT_ID'; payload: string }
   | { type: 'SET_CAR_ID'; payload: string }
   | { type: 'START_INTAKE'; payload: { plate: string; claimDescription: string; images: string[] } }
-  | { type: 'INTAKE_SUCCESS'; payload: { assessmentId: string; status: WizardV2Status } }
+  | { type: 'INTAKE_SUCCESS'; payload: { assessmentId: string; status: WorkflowStatus } }
   | { type: 'SET_DETECTED_DAMAGES'; payload: BackendDamagesResponse }
   | { type: 'CONFIRM_DAMAGES'; payload: { ids: string[]; damages: Damage[] } }
   | { type: 'ADD_USER_CREATED_DAMAGE'; payload: Damage } // ✅ NUEVO: Agregar daño creado por usuario
@@ -84,7 +74,7 @@ type WizardV2Action =
 // ============================================================================
 
 const initialState: WizardV2State = {
-  status: 'idle',
+  status: 'processing', // Estado inicial basado en backend
   images: [],
   loading: false,
   currentStep: 'intake',
@@ -158,7 +148,7 @@ function wizardV2Reducer(state: WizardV2State, action: WizardV2Action): WizardV2
         ...state,
         confirmedDamageIds: action.payload.ids,
         confirmedDamages: action.payload.damages,
-        status: 'damages_confirmed' as WizardV2Status,
+        status: 'damages_confirmed' as WorkflowStatus,
         canGoNext: action.payload.ids.length > 0,
       };
 

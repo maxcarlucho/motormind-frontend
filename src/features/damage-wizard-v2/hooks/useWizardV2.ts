@@ -137,7 +137,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
     // Para navegar hacia adelante, necesita haber completado los pasos anteriores
     switch (step) {
       case 'damages':
-        return state.status !== 'idle' && state.status !== 'processing';
+        return state.status !== 'processing';
       case 'operations':
         return state.status === 'damages_confirmed' || state.status === 'operations_defined' ||
           state.status === 'valuated' || state.status === 'completed';
@@ -464,7 +464,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
       // Si el assessment está valuado o completado, cargar los datos de valoración
       if (response.workflow?.status === 'valuated' || response.workflow?.status === 'completed') {
         console.log('🔄 loadAssessmentData: Assessment valuado/completado, cargando datos de valoración');
-        
+
         // Verificar si hay datos de valoración
         if (response.laborOutput || response.paintWorks || response.parts || response.compact) {
           console.log('🔄 loadAssessmentData: Datos de valoración encontrados:', {

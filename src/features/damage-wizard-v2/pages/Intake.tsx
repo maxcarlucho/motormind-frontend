@@ -5,7 +5,7 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
 import { useWizardV2 } from '../hooks/useWizardV2';
-import { useReadOnlyMode } from '../hooks/useReadOnlyMode';
+import { useWizardStepNav } from '../nav';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useCarSearch } from '@/hooks/useCarSearch';
 import { PageShell } from '../components/PageShell';
@@ -19,7 +19,8 @@ const Intake = () => {
   const navigate = useNavigate();
   const [,] = useSearchParams();
   const { state, startIntake } = useWizardV2();
-  const { isReadOnly, continueFromHere } = useReadOnlyMode();
+  const { mode, continueFromHere } = useWizardStepNav();
+  const isReadOnly = mode === 'view';
   const { upload, isLoading: isUploading } = useFileUpload();
   const { searchCar, isLoading: isSearchingCar, error: carSearchError } = useCarSearch();
 

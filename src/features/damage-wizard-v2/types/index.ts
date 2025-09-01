@@ -144,16 +144,7 @@ export type WizardStep = {
 };
 
 
-export type WizardV2Status =
-  | 'idle'
-  | 'processing'
-  | 'detected'
-  | 'damages_confirmed'
-  | 'operations_defined'
-  | 'valuated'
-  | 'completed'
-  | 'error';
-
+// ✅ Tipo único basado en backend - fuente de verdad
 export type WorkflowStatus = 'processing' | 'detected' | 'damages_confirmed' | 'operations_defined' | 'valuated' | 'completed' | 'error';
 
 export interface FrontendOperation {

@@ -14,6 +14,8 @@ export function stepFromWorkflow(status: WorkflowStatus): WizardStepKey {
             return 'valuation';
         case 'completed':
             return 'finalize';
+        case 'error':
+            return 'damages';
         default:
             return 'damages';
     }
@@ -31,18 +33,14 @@ export function getMaxEditableIndex(workflowStatus: WorkflowStatus): number {
     return getStepIndex(getMaxEditableStep(workflowStatus));
 }
 
-export function isStepEditable(currentStep: WizardStepKey, workflowStatus: WorkflowStatus, allowBackEdit: boolean = false): boolean {
-    if (allowBackEdit) {
-        return true;
+export function isStepEditable(currentStep: WizardStepKey, workflowStatus: WorkflowStatus): boolean {
+    // Si el assessment está completado, no permitir edición en ningún paso
+    if (workflowStatus === 'completed') {
+        return false;
     }
 
     const currentIndex = getStepIndex(currentStep);
     const maxEditableIndex = getMaxEditableIndex(workflowStatus);
-
-    // Si estamos en finalize y no está completado, permitir edición para cerrar
-    if (currentStep === 'finalize' && workflowStatus !== 'completed') {
-        return true;
-    }
 
     return currentIndex <= maxEditableIndex;
 }

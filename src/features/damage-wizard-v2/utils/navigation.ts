@@ -2,8 +2,9 @@
  * Utilidades para navegación del Wizard V2
  */
 
-export type WizardStep = 'intake' | 'damages' | 'operations' | 'valuation' | 'finalize';
-export type WorkflowStatus = 'processing' | 'detected' | 'damages_confirmed' | 'operations_defined' | 'valuated' | 'completed';
+import { WizardStepKey, WorkflowStatus } from '../types';
+
+export type WizardStep = WizardStepKey;
 
 /**
  * Construye la URL del wizard con ID y step

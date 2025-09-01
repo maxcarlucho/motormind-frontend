@@ -6,14 +6,15 @@ import { DamageCard } from '../components/DamageCard';
 import { PageShell } from '../components/PageShell';
 import { ReadOnlyBanner } from '../components/ReadOnlyBanner';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
-import { useReadOnlyMode } from '../hooks/useReadOnlyMode';
+import { useWizardStepNav } from '../nav';
 import { useWizardV2 } from '../hooks/useWizardV2';
 
 const Damages = () => {
   const navigate = useNavigate();
   const [, setParams] = useSearchParams();
   const { state, confirmDamages, createManualDamage } = useWizardV2();
-  const { isReadOnly, continueFromHere } = useReadOnlyMode();
+  const { mode, continueFromHere } = useWizardStepNav();
+  const isReadOnly = mode === 'view';
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDamages, setSelectedDamages] = useState<string[]>([]);
   const [showOnlyConfident, setShowOnlyConfident] = useState(false);
