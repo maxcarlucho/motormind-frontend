@@ -45,3 +45,17 @@ export const ASSESSMENT_STATUS = {
 export const FEATURES = {
   WIZARD_V2_ENABLED: import.meta.env.VITE_WIZARD_V2_ENABLED === 'true',
 } as const;
+
+// ✅ NUEVO: Mapeo de workflow status a labels amigables para el usuario
+export const WORKFLOW_STATUS_LABELS = {
+  processing: 'Detectando daños',
+  detected: 'Daños detectados',
+  damages_confirmed: 'Daños confirmados',
+  operations_defined: 'Operaciones definidas',
+  valuated: 'Valoración completada',
+  completed: 'Wizard finalizado',
+  error: 'Error en proceso',
+} as const;
+
+// ✅ NUEVO: Tipo para el mapeo de workflow status
+export type WorkflowStatus = keyof typeof WORKFLOW_STATUS_LABELS;

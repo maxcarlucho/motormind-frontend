@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BackendDamageAssessment } from '@/features/damage-wizard-v2/types/backend.types';
+import { WORKFLOW_STATUS_LABELS } from '@/constants';
 
 interface DamageAssessmentCardProps {
   assessment: BackendDamageAssessment;
@@ -37,7 +38,7 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
                   : 'bg-green-100 text-green-700'
               }`}
             >
-              {workflow?.status}
+              {workflow?.status ? WORKFLOW_STATUS_LABELS[workflow.status] : 'Sin estado'}
             </span>
 
             <button
