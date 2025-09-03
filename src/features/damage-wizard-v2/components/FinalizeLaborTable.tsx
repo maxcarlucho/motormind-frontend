@@ -34,9 +34,7 @@ export const FinalizeLaborTable = ({ data }: LaborTableProps) => {
         }))}
       />
       <div className="mt-3 bg-[#f9fafb] p-3 text-right">
-        <span className="font-medium">
-          Subtotal Mano de Obra: €{total.toFixed(2)}
-        </span>
+        <span className="font-medium">Subtotal Mano de Obra: €{total.toFixed(2)}</span>
       </div>
     </div>
   );

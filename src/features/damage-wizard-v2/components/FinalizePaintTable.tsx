@@ -19,7 +19,7 @@ export const FinalizePaintTable = ({ data }: PaintTableProps) => {
 
   const laborData = data.filter((item) => item.type === 'labor');
   const materialData = data.filter((item) => item.type === 'material');
-  
+
   const laborTotal = laborData.reduce((sum, item) => sum + item.total, 0);
   const materialTotal = materialData.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = laborTotal + materialTotal;
@@ -75,9 +75,7 @@ export const FinalizePaintTable = ({ data }: PaintTableProps) => {
         data={paintDataArray}
       />
       <div className="mt-3 bg-[#f9fafb] p-3 text-right">
-        <span className="font-medium">
-          Subtotal Pintura: €{grandTotal.toFixed(2)}
-        </span>
+        <span className="font-medium">Subtotal Pintura: €{grandTotal.toFixed(2)}</span>
       </div>
     </div>
   );

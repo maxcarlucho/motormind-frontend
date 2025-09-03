@@ -12,7 +12,7 @@ interface PartsTableProps {
   data: PartsData[];
 }
 
-export const FinalizePartsTable = ({ data }: PartsTableProps) => {
+export const PartsTable = ({ data }: PartsTableProps) => {
   if (data.length === 0) return null;
 
   const total = data.reduce((sum, item) => sum + item.total, 0);
