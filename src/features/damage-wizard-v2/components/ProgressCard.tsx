@@ -57,14 +57,14 @@ export const ProgressCard = ({
 
   if (asOverlay) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white px-6">
         {cardContent}
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-200px)] w-full items-center justify-center">
+    <div className="flex min-h-[calc(100vh-200px)] w-full items-center justify-center px-6">
       {cardContent}
     </div>
   );

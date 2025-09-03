@@ -4,7 +4,7 @@ import { WizardV2Provider, useWizardV2 } from './context/WizardV2Context';
 import { StepperNavigationProvider } from './nav';
 import { BackendDamagesResponse, BackendDamageAssessment } from './types/backend.types';
 import { WizardStepKey, WorkflowStatus } from './types';
-import { extractStepFromUrl, getTargetStepFromWorkflow } from './utils/wizardNavigation';
+import { stepFromWorkflow } from './nav';
 import { useAssessmentData, useAuthGuard } from './hooks/useWizardData';
 import { LoadingState, ErrorState, NotFoundState } from './components/WizardStates';
 
@@ -58,7 +58,7 @@ interface WizardV2RouterProps {
 
 const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const step = extractStepFromUrl(searchParams) as WizardStepKey;
+  const step = (searchParams.get('step') || 'damages') as WizardStepKey;
   const { dispatch } = useWizardV2();
 
   useEffect(() => {
@@ -119,7 +119,7 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
 
     if (!currentStep) {
       const workflowStatus = (assessmentData.workflow?.status as WorkflowStatus) || 'processing';
-      const targetStep = getTargetStepFromWorkflow(workflowStatus);
+      const targetStep = stepFromWorkflow(workflowStatus);
       setSearchParams({ step: targetStep }, { replace: true });
     }
   }, [assessmentData.workflow?.status, searchParams, setSearchParams]);
