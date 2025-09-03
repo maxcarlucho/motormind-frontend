@@ -1,6 +1,4 @@
 import { Badge } from '@/components/atoms/Badge';
-import { DamageAction } from '../types';
-import { Damage } from '@/types/DamageAssessment';
 import { AlertTriangle } from 'lucide-react';
 import React from 'react';
 
@@ -21,11 +19,11 @@ export const DamageOperationsGroup: React.FC<DamageOperationsGroupProps> = ({
     <div className="space-y-4" role="region" aria-labelledby={`group-${title}`}>
       {/* Header del grupo */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <h3 id={`group-${title}`} className="text-lg font-semibold text-gray-900">
             {title}
           </h3>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="w-fit text-xs">
             {count} {count === 1 ? 'daño' : 'daños'}
           </Badge>
           {isSubstitutionActive && (
