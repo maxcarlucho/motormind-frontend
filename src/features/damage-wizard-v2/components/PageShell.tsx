@@ -38,7 +38,10 @@ export const PageShell = ({
       {/* Main content */}
       {loading ? (
         // Estado de carga: usar toda la altura disponible sin scroll
-        <div className="flex items-center justify-center" style={{ minHeight: 'calc(100vh - 120px)' }}>
+        <div
+          className="flex items-center justify-center"
+          style={{ minHeight: 'calc(100vh - 120px)' }}
+        >
           <ProgressCard title={loadingTitle} description={loadingDescription} asOverlay={false} />
         </div>
       ) : (

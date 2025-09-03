@@ -21,7 +21,6 @@ import {
   createWizardUrl,
   logger,
   ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
 } from '../utils/constants';
 
 // ============================================================================
@@ -161,7 +160,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
     const poll = async (): Promise<boolean> => {
       try {
         attempts++;
-        logger.debug(`Polling attempt ${attempts}/${MAX_POLLING_ATTEMPTS}`);
 
         const response = await damageAssessmentApi.getDetectedDamages(assessmentId);
         const adaptedResponse = adaptDamagesResponse(response);
@@ -169,7 +167,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
         if (adaptedResponse.workflow?.status !== 'processing') {
           // Detección completa - guardar respuesta completa
           dispatch({ type: 'SET_DETECTED_DAMAGES', payload: response });
-          logger.info('Damage detection completed', {
+          logger.debug('Damage detection completed', {
             damagesCount: adaptedResponse.damages.length,
             status: adaptedResponse.workflow?.status
           });
@@ -214,16 +212,12 @@ export const useWizardV2 = (): UseWizardV2Return => {
     });
   }, [dispatch]);
 
-  // ============================================================================
-  // ACCIONES DEL FLUJO
-  // ============================================================================
 
   const startIntake = useCallback(async (data: IntakeData): Promise<string> => {
     try {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Starting intake', { plate: data.plate, imagesCount: data.images.length });
 
       // Actualizar estado local primero
       dispatch({
@@ -249,7 +243,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
 
       // Si está procesando, iniciar polling
       if (response.workflow?.status === 'processing') {
-        logger.info('Starting damage detection polling');
         await pollForDamages(response.id);
       } else {
         // Si ya está detectado, cargar daños directamente
@@ -257,7 +250,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
         dispatch({ type: 'SET_DETECTED_DAMAGES', payload: damagesResponse });
       }
 
-      logger.info(SUCCESS_MESSAGES.INTAKE_CREATED);
 
       // Retornar el ID del assessment creado
       return response.id;
@@ -281,8 +273,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Confirming damages', { confirmedCount: confirmedIds.length });
-
       // ✅ NUEVO: Usar IDs directos del backend (sin mapeo complejo)
       const payload = prepareConfirmDamagesPayload(confirmedIds);
       const response = await damageAssessmentApi.confirmDamages(assessmentId, payload.confirmedDamageIds, payload.edits);
@@ -298,11 +288,9 @@ export const useWizardV2 = (): UseWizardV2Return => {
         }
       });
 
-      logger.info(SUCCESS_MESSAGES.DAMAGES_CONFIRMED);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Damage confirmation failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -326,7 +314,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Creating manual damage', { damageData });
 
       const response = await damageAssessmentApi.createConfirmedDamage(assessmentId, damageData);
 
@@ -353,11 +340,9 @@ export const useWizardV2 = (): UseWizardV2Return => {
         }
       }
 
-      logger.info('Manual damage created successfully');
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Manual damage creation failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -374,17 +359,14 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Saving operations', { operationsCount: operations.length });
 
       // Por ahora, solo actualizamos el estado local
       // TODO: Implementar guardado en backend cuando se necesite
       dispatch({ type: 'SET_OPERATIONS', payload: operations });
 
-      logger.info(SUCCESS_MESSAGES.OPERATIONS_SAVED);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Operations save failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -401,7 +383,6 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Generating valuation');
 
       const response = await damageAssessmentApi.generateValuationNew(assessmentId);
 
@@ -409,11 +390,9 @@ export const useWizardV2 = (): UseWizardV2Return => {
       // No necesitamos adaptación, solo dispatch directo
       dispatch({ type: 'SET_VALUATION', payload: response });
 
-      logger.info(SUCCESS_MESSAGES.VALUATION_GENERATED);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Valuation generation failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -431,18 +410,10 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Loading assessment data', { assessmentId });
 
       // Usar el endpoint que devuelve el assessment completo
       const response = await damageAssessmentApi.getAssessment(assessmentId);
 
-      console.log('🔍 loadAssessmentData Debug:', {
-        assessmentId,
-        responseKeys: Object.keys(response),
-        confirmedDamages: response.confirmedDamages,
-        confirmedDamagesLength: response.confirmedDamages?.length,
-        response: response
-      });
 
       // Si hay confirmedDamages, actualizar el contexto
       if (response.confirmedDamages && response.confirmedDamages.length > 0) {
@@ -451,51 +422,34 @@ export const useWizardV2 = (): UseWizardV2Return => {
           damages: response.confirmedDamages
         };
 
-        console.log('🔄 loadAssessmentData: Actualizando confirmedDamages:', payload);
 
         dispatch({
           type: 'CONFIRM_DAMAGES',
           payload
         });
-      } else {
-        console.log('⚠️ loadAssessmentData: No hay confirmedDamages en la respuesta');
       }
-
       // Si el assessment está valuado o completado, cargar los datos de valoración
       if (response.workflow?.status === 'valuated' || response.workflow?.status === 'completed') {
-        console.log('🔄 loadAssessmentData: Assessment valuado/completado, cargando datos de valoración');
 
         // Verificar si hay datos de valoración
         if (response.laborOutput || response.paintWorks || response.parts || response.compact) {
-          console.log('🔄 loadAssessmentData: Datos de valoración encontrados:', {
-            laborOutput: response.laborOutput?.length || 0,
-            paintWorks: response.paintWorks?.length || 0,
-            parts: response.parts?.length || 0,
-            hasCompact: !!response.compact
-          });
+
 
           // Actualizar el contexto con los datos de valoración
           dispatch({
             type: 'SET_VALUATION',
             payload: response
           });
-        } else {
-          console.log('⚠️ loadAssessmentData: Assessment valuado pero sin datos de valoración');
         }
       }
 
-      logger.info('Assessment data loaded');
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Assessment data load failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
-      // Solo setLoading(false) si no es silencioso
-      if (!options?.silent) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [assessmentId, setLoading, setError, dispatch]);
 
@@ -508,17 +462,14 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setLoading(true);
       setError(undefined);
 
-      logger.info('Finalizing assessment');
 
       await damageAssessmentApi.finalize(assessmentId);
 
       dispatch({ type: 'FINALIZE_SUCCESS' });
 
-      logger.info(SUCCESS_MESSAGES.ASSESSMENT_FINALIZED);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR;
-      logger.error('Assessment finalization failed:', errorMessage);
       setError(errorMessage);
       throw error;
     } finally {
@@ -526,20 +477,12 @@ export const useWizardV2 = (): UseWizardV2Return => {
     }
   }, [assessmentId, setLoading, setError, dispatch]);
 
-  // ============================================================================
-  // SINCRONIZACIÓN CON URL
-  // ============================================================================
-
   useEffect(() => {
     const stepFromUrl = extractStepFromUrl();
     if (stepFromUrl && stepFromUrl !== state.currentStep) {
       dispatch({ type: 'SET_CURRENT_STEP', payload: stepFromUrl });
     }
   }, [searchParams, state.currentStep, dispatch]);
-
-  // ============================================================================
-  // RETURN DEL HOOK
-  // ============================================================================
 
   return {
     // Estado del contexto

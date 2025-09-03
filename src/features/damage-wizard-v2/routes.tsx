@@ -107,7 +107,7 @@ const WizardV2Router = ({ assessmentData }: WizardV2RouterProps) => {
 
     // Si tiene datos de valoración, cargarlos
     if (
-      assessmentData.workflow?.status === 'valuated' || 
+      assessmentData.workflow?.status === 'valuated' ||
       assessmentData.workflow?.status === 'completed'
     ) {
       dispatch({ type: 'SET_VALUATION', payload: assessmentData });
