@@ -1,5 +1,5 @@
 import { useWizardStepNav, STEP_ORDER } from '../nav';
-import { WizardStepper } from './WizardStepper';
+import { WizardStepperMobile } from './WizardStepperMobile';
 import { WizardStepKey } from '../types';
 
 interface WizardStepperWithNavProps {
@@ -27,7 +27,7 @@ export const WizardStepperWithNav: React.FC<WizardStepperWithNavProps> = ({
   };
 
   return (
-    <WizardStepper
+    <WizardStepperMobile
       currentStep={currentStep}
       completedSteps={completedSteps}
       onStepClick={handleStepClick}
