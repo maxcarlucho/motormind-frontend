@@ -54,36 +54,37 @@ export const WizardStepperMobile = ({
   };
 
   return (
-    <div className="bg-card border-b border-border">
+    <div className="bg-card border-border border-b">
       <div className="mx-auto max-w-7xl p-4">
         {/* Mobile: Show only current step */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold',
-                  getStepStatus(currentStepIndex) === 'completed' && 'bg-success text-success-foreground',
-                  getStepStatus(currentStepIndex) === 'current' && 'bg-primary text-primary-foreground',
-                  getStepStatus(currentStepIndex) === 'upcoming' && 'bg-muted text-muted-foreground border border-border'
+                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
+                  getStepStatus(currentStepIndex) === 'completed' &&
+                    'bg-success text-success-foreground',
+                  getStepStatus(currentStepIndex) === 'current' &&
+                    'bg-primary text-primary-foreground',
+                  getStepStatus(currentStepIndex) === 'upcoming' &&
+                    'bg-muted text-muted-foreground border-border border',
                 )}
               >
                 {getStepStatus(currentStepIndex) === 'completed' ? '✓' : currentStepIndex + 1}
               </div>
               <div>
-                <p className="text-sm font-medium text-primary">
-                  {currentStepData.label}
-                </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-primary text-sm font-medium">{currentStepData.label}</p>
+                <p className="text-xs">
                   Paso {currentStepIndex + 1} de {STEPS.length}
                 </p>
               </div>
             </div>
           </div>
-          
+
           {/* Progress bar */}
-          <div className="w-full bg-card rounded-full h-2 border border-border">
-            <div 
+          <div className="bg-card border-border h-2 w-full rounded-full border">
+            <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${((currentStepIndex + 1) / STEPS.length) * 100}%` }}
             />
@@ -148,9 +149,7 @@ export const WizardStepperMobile = ({
 
                   {/* Arrow between steps */}
                   {index < STEPS.length - 1 && (
-                    <div className="text-muted-foreground mx-2 h-4 w-4 flex-shrink-0">
-                      →
-                    </div>
+                    <div className="text-muted-foreground mx-2 h-4 w-4 flex-shrink-0">→</div>
                   )}
                 </div>
               );
