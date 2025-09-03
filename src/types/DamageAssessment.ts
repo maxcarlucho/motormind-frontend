@@ -1,10 +1,11 @@
+import { DamageAction } from '@/features/damage-wizard-v2/types';
 import { Car } from './Car';
 import { DocumentLink } from './Diagnosis';
 import { PaintMaterialType } from './PaintMaterial';
-import { DamageSeverity, DamageType, DamageAction } from './shared/damage.types';
+import { DamageSeverity, DamageType } from './shared/damage.types';
 
 // ✅ CENTRALIZADO: Re-exportar enums desde tipos compartidos
-export { DamageSeverity, DamageType, DamageAction };
+export { DamageSeverity, DamageType };
 
 // ✅ UNIFICADO: Definición completa de DamageEvidence
 export type DamagePictureROI =

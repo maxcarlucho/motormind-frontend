@@ -31,22 +31,6 @@ export enum DamageType {
     CORROSION = 'corrosion',
 }
 
-export enum DamageAction {
-    REPLACE = 'REPLACE',
-    REPAIR = 'REPAIR',
-    DISASSEMBLE_AND_ASSEMBLE = 'DISASSEMBLE_AND_ASSEMBLE',
-    PAINT = 'PAINT',
-    ANTI_CORROSION_TREATMENT = 'ANTI_CORROSION_TREATMENT',
-    VERIFY = 'VERIFY',
-    ADJUST = 'ADJUST',
-    DISASSEMBLE_OR_DISMANTLE = 'DISASSEMBLE_OR_DISMANTLE',
-    POLISH = 'POLISH',
-    REPAIR_BY_HAIL_FORMULA = 'REPAIR_BY_HAIL_FORMULA',
-    RENOVATE = 'RENOVATE',
-    QUICK_REPAIR = 'QUICK_REPAIR',
-    REPAIR_AND_PAINT = 'REPAIR_AND_PAINT',
-}
-
 // Mapeo de tipos de daño a descripciones en español
 export const damageTypeMap: Record<string, string> = {
     'dent': 'Abolladura',
