@@ -23,7 +23,10 @@ export const ConfirmDamagesActions = ({
   onConfirmSelected,
 }: ConfirmDamagesActionsProps) => {
   return (
-    <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between" role="toolbar">
+    <div
+      className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between"
+      role="toolbar"
+    >
       {/* Left side - Counter */}
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <Check className="h-4 w-4 text-blue-500" />
@@ -38,7 +41,7 @@ export const ConfirmDamagesActions = ({
               <Plus className="mr-1 h-4 w-4" />
               Añadir daño
             </Button>
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               onClick={onToggleConfidentFilter}
@@ -46,7 +49,7 @@ export const ConfirmDamagesActions = ({
             >
               <Zap className="mr-1 h-4 w-4" />
               Solo seguros &gt;85%
-            </Button>
+            </Button> */}
             <Button
               variant="default"
               size="sm"
