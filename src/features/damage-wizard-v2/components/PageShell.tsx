@@ -62,7 +62,9 @@ export const PageShell = ({
       {/* Footer slot (sticky toolbar) - solo visible cuando no está cargando */}
       {footer && !loading && (
         <div className="bg-card border-border fixed right-0 bottom-0 left-0 z-50 border-t shadow-lg">
-          <div className={`${maxWidth} mx-auto p-4`}>{footer}</div>
+          <div className="mx-auto p-4 md:max-w-7xl md:px-4">
+            {footer}
+          </div>
         </div>
       )}
     </div>

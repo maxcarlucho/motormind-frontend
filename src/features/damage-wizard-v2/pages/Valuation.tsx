@@ -334,11 +334,18 @@ const Valuation = () => {
         </div>
       }
       footer={
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={() => navigate(`?step=operations`, { replace: true })}>
+        <div className="flex w-full flex-col gap-3 md:flex-row md:justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(`?step=operations`, { replace: true })}
+            className="w-full md:w-auto"
+          >
             Volver a Operaciones
           </Button>
-          <Button onClick={handleFinalize} className="px-6">
+          <Button 
+            onClick={handleFinalize} 
+            className="w-full px-6 md:w-auto"
+          >
             Finalizar Peritaje
           </Button>
         </div>

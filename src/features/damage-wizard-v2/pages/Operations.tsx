@@ -196,8 +196,8 @@ const Operations = () => {
         </>
       }
       footer={
-        <div className="flex justify-end">
-          <Button onClick={goValuation} className="px-6">
+        <div className="flex w-full justify-end md:w-auto">
+          <Button onClick={goValuation} className="w-full px-6 md:w-auto">
             Continuar a Valoración
           </Button>
         </div>

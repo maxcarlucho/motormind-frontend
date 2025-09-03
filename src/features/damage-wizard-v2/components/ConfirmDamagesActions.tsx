@@ -23,7 +23,7 @@ export const ConfirmDamagesActions = ({
   onConfirmSelected,
 }: ConfirmDamagesActionsProps) => {
   return (
-    <div className="flex w-full items-center justify-between" role="toolbar">
+    <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between" role="toolbar">
       {/* Left side - Counter */}
       <div className="flex items-center gap-2 text-sm text-gray-600">
         <Check className="h-4 w-4 text-blue-500" />
@@ -31,10 +31,10 @@ export const ConfirmDamagesActions = ({
       </div>
 
       {/* Right side - Action buttons */}
-      <div className="flex items-center gap-3">
+      <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
         {!isReadOnly && (
           <>
-            <Button variant="outline" size="sm" onClick={onAddDamage}>
+            <Button variant="outline" size="sm" onClick={onAddDamage} className="w-full md:w-auto">
               <Plus className="mr-1 h-4 w-4" />
               Añadir daño
             </Button>
@@ -42,7 +42,7 @@ export const ConfirmDamagesActions = ({
               variant="outline"
               size="sm"
               onClick={onToggleConfidentFilter}
-              className={showOnlyConfident ? 'border-blue-200 bg-blue-50' : ''}
+              className={`w-full md:w-auto ${showOnlyConfident ? 'border-blue-200 bg-blue-50' : ''}`}
             >
               <Zap className="mr-1 h-4 w-4" />
               Solo seguros &gt;85%
@@ -51,7 +51,7 @@ export const ConfirmDamagesActions = ({
               variant="default"
               size="sm"
               onClick={onConfirmAll}
-              className="bg-green-600 hover:bg-green-700"
+              className="w-full bg-green-600 hover:bg-green-700 md:w-auto"
             >
               <Check className="mr-1 h-4 w-4" />
               Confirmar Todos
@@ -62,6 +62,7 @@ export const ConfirmDamagesActions = ({
           onClick={onConfirmSelected}
           disabled={!isReadOnly && selectedDamagesCount === 0}
           size="sm"
+          className="w-full md:w-auto"
         >
           Continuar
           <ArrowRight className="ml-1 h-4 w-4" />

@@ -180,11 +180,11 @@ const Intake = () => {
         </>
       }
       footer={
-        <div className="flex justify-end">
+        <div className="flex w-full justify-end md:w-auto">
           <Button
             onClick={isReadOnly ? continueFromHere : createAssessment}
             disabled={!isReadOnly && (!isValid || isUploading || isSearchingCar)}
-            className="px-6"
+            className="w-full px-6 md:w-auto"
           >
             {isReadOnly || isExistingAssessment ? 'Continuar' : 'Crear assessment'}
           </Button>
