@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useEffect } from 'react';
 
@@ -38,7 +38,7 @@ export const ProgressCard = ({
       {/* Icon */}
       <div className="mb-6 flex justify-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-          <ArrowRight className="h-8 w-8 text-blue-600" />
+          <Clock className="animate-wiggle h-8 w-8 text-blue-600" />
         </div>
       </div>
 

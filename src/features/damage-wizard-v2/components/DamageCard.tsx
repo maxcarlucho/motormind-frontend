@@ -1,7 +1,7 @@
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { Damage, severityColors, severityLabels } from '@/types/DamageAssessment';
-import { getDamageTypeLabel } from '@/types/shared/damage.types';
+import { getDamageTypeLabel } from '@/types/DamageAssessment';
 
 interface DamageCardProps {
   damage: Damage;
@@ -10,12 +10,6 @@ interface DamageCardProps {
   onStatusChange: (id: string, status: 'confirmed' | 'rejected') => void;
   className?: string;
 }
-
-// const severityColors = {
-//   leve: 'text-success-foreground bg-success',
-//   medio: 'text-warning-foreground bg-warning',
-//   grave: 'text-destructive-foreground bg-destructive',
-// };
 
 const confidenceColor = (confidence: number): string => {
   const confidencePercent = confidence * 100;

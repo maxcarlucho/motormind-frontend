@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/atoms/Dialog';
-import { DamageType, DamageSeverity, getDamageTypeLabel } from '@/types/shared/damage.types';
+import { DamageType, DamageSeverity, getDamageTypeLabel } from '@/types/DamageAssessment';
 import { Upload, Loader2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { severityLabels } from '@/types/DamageAssessment';
@@ -239,7 +239,7 @@ export const AddManualDamageModal = ({
                   <SelectValue placeholder="Seleccionar severidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(DamageSeverity).map((severity) => (
+                  {Object.values(DamageSeverity).map((severity: DamageSeverity) => (
                     <SelectItem key={severity} value={severity}>
                       {severityLabels[severity]}
                     </SelectItem>

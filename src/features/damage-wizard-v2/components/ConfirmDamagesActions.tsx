@@ -1,13 +1,11 @@
 import { Button } from '@/components/atoms/Button';
-import { Check, ArrowRight, Plus, Zap } from 'lucide-react';
+import { Check, ArrowRight, Plus } from 'lucide-react';
 
 interface ConfirmDamagesActionsProps {
   isReadOnly: boolean;
   selectedDamagesCount: number;
   totalDamagesCount: number;
-  showOnlyConfident: boolean;
   onAddDamage: () => void;
-  onToggleConfidentFilter: () => void;
   onConfirmAll: () => void;
   onConfirmSelected: () => void;
 }
@@ -16,9 +14,7 @@ export const ConfirmDamagesActions = ({
   isReadOnly,
   selectedDamagesCount,
   totalDamagesCount,
-  showOnlyConfident,
   onAddDamage,
-  onToggleConfidentFilter,
   onConfirmAll,
   onConfirmSelected,
 }: ConfirmDamagesActionsProps) => {

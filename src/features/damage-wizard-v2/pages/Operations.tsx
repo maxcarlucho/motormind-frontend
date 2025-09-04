@@ -9,7 +9,7 @@ import { DamageOperationsGroup } from '../components/DamageOperationsGroup';
 import { WizardStepperWithNav } from '../components/WizardStepperWithNav';
 import { useWizardV2 } from '../hooks/useWizardV2';
 import { useWizardV2 as useWizardV2Context } from '../context/WizardV2Context';
-import { DamageAction } from '../types';
+import { DamageAction } from '@/types/DamageAssessment';
 import { Damage } from '@/types/DamageAssessment';
 import apiService from '@/service/api.service';
 

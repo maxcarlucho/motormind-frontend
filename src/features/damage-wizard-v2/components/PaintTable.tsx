@@ -1,27 +1,17 @@
 import { ValuationTable } from './ValuationTable';
 
-interface PaintData {
-  type: 'labor' | 'material';
-  description: string;
-  hours?: string;
-  rate?: number;
-  quantity?: string;
-  unitCost?: number;
-  total: number;
-}
+import { PaintOperation, PaintMaterial } from '../types';
 
 interface PaintTableProps {
-  data: PaintData[];
+  paintOperations: PaintOperation[];
+  paintMaterials: PaintMaterial[];
 }
 
-export const PaintTable = ({ data }: PaintTableProps) => {
-  if (data.length === 0) return null;
+export const PaintTable = ({ paintOperations, paintMaterials }: PaintTableProps) => {
+  if (paintOperations.length === 0 && paintMaterials.length === 0) return null;
 
-  const laborData = data.filter((item) => item.type === 'labor');
-  const materialData = data.filter((item) => item.type === 'material');
-
-  const laborTotal = laborData.reduce((sum, item) => sum + item.total, 0);
-  const materialTotal = materialData.reduce((sum, item) => sum + item.total, 0);
+  const laborTotal = paintOperations.reduce((sum, item) => sum + item.total, 0);
+  const materialTotal = paintMaterials.reduce((sum, item) => sum + item.total, 0);
   const grandTotal = laborTotal + materialTotal;
 
   // Crear una sola estructura de datos como en el original con subtítulos
@@ -35,17 +25,17 @@ export const PaintTable = ({ data }: PaintTableProps) => {
   }> = [];
 
   // Agregar datos de mano de obra
-  laborData.forEach((item) => {
+  paintOperations.forEach((item) => {
     paintDataArray.push({
-      description: item.description,
-      units: item.hours || '',
-      price: item.rate ? `€${item.rate}` : '',
+      description: item.operation,
+      units: item.hours.toString(),
+      price: `€${item.rate}`,
       total: `€${item.total.toFixed(2)}`,
     });
   });
 
   // Agregar subtítulo para materiales si hay ambos tipos
-  if (laborData.length > 0 && materialData.length > 0) {
+  if (paintOperations.length > 0 && paintMaterials.length > 0) {
     paintDataArray.push({
       _isSubtitle: true,
       _subtitleText: 'Materiales de pintura',
@@ -53,11 +43,11 @@ export const PaintTable = ({ data }: PaintTableProps) => {
   }
 
   // Agregar datos de materiales
-  materialData.forEach((item) => {
+  paintMaterials.forEach((item) => {
     paintDataArray.push({
       description: item.description,
-      units: item.quantity || '',
-      price: item.unitCost ? `€${item.unitCost.toFixed(2)}` : '',
+      units: item.units,
+      price: `€${item.pricePerUnit.toFixed(2)}`,
       total: `€${item.total.toFixed(2)}`,
     });
   });

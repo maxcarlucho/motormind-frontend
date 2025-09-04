@@ -1,10 +1,10 @@
 import { Dropdown } from '@/components/atoms/Dropdown';
 import { Badge } from '@/components/atoms/Badge';
-import { getDamageTypeLabel } from '@/types/shared/damage.types';
+import { getDamageTypeLabel } from '@/types/DamageAssessment';
 import { Damage, operationLabels, severityColors, severityLabels } from '@/types/DamageAssessment';
 import { ChevronDown } from 'lucide-react';
 import React, { useState } from 'react';
-import { DamageAction } from '../types';
+import { DamageAction } from '@/types/DamageAssessment';
 
 interface RecommendedOperationCardProps {
   damage: Damage;

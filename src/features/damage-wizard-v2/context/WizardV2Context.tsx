@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, ReactNode } from 'react';
 import { BackendDamageAssessment, BackendDamagesResponse } from '../types/backend.types';
-import { FrontendOperation, DamageAction, WorkflowStatus } from '../types';
-import { Damage } from '@/types/DamageAssessment';
+import { FrontendOperation } from '../types';
+import { Damage, DamageAction, WorkflowStatus } from '@/types/DamageAssessment';
 
 // ============================================================================
 // TIPOS - Estado del Wizard V2

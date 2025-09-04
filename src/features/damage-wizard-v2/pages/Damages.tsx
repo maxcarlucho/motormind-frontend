@@ -17,7 +17,6 @@ const Damages = () => {
   const isReadOnly = mode === 'view';
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDamages, setSelectedDamages] = useState<string[]>([]);
-  const [showOnlyConfident, setShowOnlyConfident] = useState(false);
   const [showAddDamageModal, setShowAddDamageModal] = useState(false);
   const [isAddingDamage, setIsAddingDamage] = useState(false);
 
@@ -89,11 +88,10 @@ const Damages = () => {
     }
   };
 
-  const filteredDamages = showOnlyConfident
-    ? state.detectedDamages?.detectedDamages.filter(
-        (d) => d.confidence && d.confidence * 100 > 85,
-      ) || []
-    : [...(state.detectedDamages?.detectedDamages || []), ...(state.userCreatedDamages || [])];
+  const filteredDamages = [
+    ...(state.detectedDamages?.detectedDamages || []),
+    ...(state.userCreatedDamages || []),
+  ];
 
   if (isProcessing) {
     return (
@@ -152,9 +150,7 @@ const Damages = () => {
               (state.detectedDamages?.detectedDamages?.length || 0) +
               (state.userCreatedDamages?.length || 0)
             }
-            showOnlyConfident={showOnlyConfident}
             onAddDamage={() => setShowAddDamageModal(true)}
-            onToggleConfidentFilter={() => setShowOnlyConfident(!showOnlyConfident)}
             onConfirmAll={confirmAll}
             onConfirmSelected={confirmSelected}
           />

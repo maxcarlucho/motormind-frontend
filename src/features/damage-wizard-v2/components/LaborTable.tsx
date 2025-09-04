@@ -1,20 +1,16 @@
 import { ValuationTable } from './ValuationTable';
 
-interface LaborData {
-  operation: string;
-  hours: string;
-  rate: number;
-  total: number;
-}
+import { LaborOperation } from '../types';
 
 interface LaborTableProps {
-  data: LaborData[];
+  operations: LaborOperation[];
+  onUpdateOperation: (id: string, field: keyof LaborOperation, value: number) => void;
 }
 
-export const LaborTable = ({ data }: LaborTableProps) => {
-  if (data.length === 0) return null;
+export const LaborTable = ({ operations, onUpdateOperation }: LaborTableProps) => {
+  if (operations.length === 0) return null;
 
-  const total = data.reduce((sum, item) => sum + item.total, 0);
+  const total = operations.reduce((sum, item) => sum + item.total, 0);
 
   return (
     <div>
@@ -26,10 +22,19 @@ export const LaborTable = ({ data }: LaborTableProps) => {
           { key: 'rate', header: 'PRECIO/H' },
           { key: 'total', header: 'IMPORTE' },
         ]}
-        data={data.map((item) => ({
+        data={operations.map((item) => ({
           operation: item.operation,
-          hours: item.hours,
-          rate: `€${item.rate}`,
+          hours: {
+            value: item.hours.toString(),
+            editable: true,
+            onChange: (value: string) => onUpdateOperation(item.id, 'hours', parseFloat(value)),
+          },
+          rate: {
+            value: `€${item.rate}`,
+            editable: true,
+            onChange: (value: string) =>
+              onUpdateOperation(item.id, 'rate', parseFloat(value.replace('€', ''))),
+          },
           total: `€${item.total.toFixed(2)}`,
         }))}
       />

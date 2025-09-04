@@ -7,12 +7,7 @@ import { useCallback, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useWizardV2 as useWizardV2Context } from '../context/WizardV2Context';
 import damageAssessmentApi from '@/service/damageAssessmentApi.service';
-import {
-  adaptDamagesResponse,
-  prepareIntakePayload,
-  prepareConfirmDamagesPayload,
-} from '../api/adapter';
-import { BackendDamage } from '../types/backend.types';
+import { Damage } from '@/types/DamageAssessment';
 import { FrontendOperation } from '../types';
 import {
   POLLING_INTERVAL,
@@ -22,6 +17,7 @@ import {
   logger,
   ERROR_MESSAGES,
 } from '../utils/constants';
+import { prepareIntakePayload, prepareConfirmDamagesPayload } from '../api/adapter';
 
 // ============================================================================
 // TIPOS PARA EL HOOK
@@ -162,14 +158,13 @@ export const useWizardV2 = (): UseWizardV2Return => {
         attempts++;
 
         const response = await damageAssessmentApi.getDetectedDamages(assessmentId);
-        const adaptedResponse = adaptDamagesResponse(response);
 
-        if (adaptedResponse.workflow?.status !== 'processing') {
+        if (response.workflow?.status !== 'processing') {
           // Detección completa - guardar respuesta completa
           dispatch({ type: 'SET_DETECTED_DAMAGES', payload: response });
           logger.debug('Damage detection completed', {
-            damagesCount: adaptedResponse.damages.length,
-            status: adaptedResponse.workflow?.status
+            damagesCount: response.detectedDamages?.length || 0,
+            status: response.workflow?.status
           });
           return true;
         }
@@ -322,7 +317,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
         dispatch({
           type: 'CONFIRM_DAMAGES',
           payload: {
-            ids: response.confirmedDamages.map((d: BackendDamage) => d._id || `${d.area}-${d.subarea}`),
+            ids: response.confirmedDamages.map((d: Damage) => d._id || `${d.area}-${d.subarea}`),
             damages: response.confirmedDamages
           }
         });
@@ -418,7 +413,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
       // Si hay confirmedDamages, actualizar el contexto
       if (response.confirmedDamages && response.confirmedDamages.length > 0) {
         const payload = {
-          ids: response.confirmedDamages.map((d: BackendDamage) => d._id || `${d.area}-${d.subarea}`),
+          ids: response.confirmedDamages.map((d: Damage) => d._id || `${d.area}-${d.subarea}`),
           damages: response.confirmedDamages
         };
 
