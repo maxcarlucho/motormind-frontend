@@ -6,8 +6,7 @@
 import { Damage } from "@/types/DamageAssessment";
 import { WorkflowStatus } from './index';
 
-export type BackendDamage = Damage;
-export type DamageAction = "REPAIR" | "REPLACE" | "PAINT" | "POLISH" | "DISASSEMBLE_AND_ASSEMBLE";
+
 
 export enum PaintMaterialType {
   PRIMER = 'PRIMER',

@@ -7,13 +7,11 @@ export type DamageStatus = 'pending' | 'confirmed' | 'rejected';
 export type OperationKind = 'PULIR' | 'REPARAR' | 'PINTAR' | 'REPARAR_Y_PINTAR' | 'SUSTITUIR';
 
 // Nuevos tipos para el sistema de recomendación de operaciones
-// export type DamageAction = 'REPAIR' | 'REPLACE' | 'PAINT' | 'POLISH' | 'REPAIR_AND_PAINT';
-export type DamageAction = 'REPAIR' | 'REPLACE'
 
 export type OperationSource = 'autodata' | 'rule_engine' | 'no_data';
 
 export interface ProposedMainOperation {
-  operation: DamageAction;
+  operation: string;
   confidence: number;
   reason: string;
   source: OperationSource;
@@ -31,7 +29,7 @@ export interface ProposedOperation {
 }
 
 export interface EditedMainOperation {
-  operation: DamageAction;
+  operation: string;
   reason: string;
 }
 
@@ -143,9 +141,6 @@ export type WizardStep = {
   status: 'inactive' | 'active' | 'complete';
 };
 
-
-// ✅ Tipo único basado en backend - fuente de verdad
-export type WorkflowStatus = 'processing' | 'detected' | 'damages_confirmed' | 'operations_defined' | 'valuated' | 'completed' | 'error';
 
 export interface FrontendOperation {
   id: string;

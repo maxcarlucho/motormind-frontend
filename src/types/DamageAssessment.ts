@@ -1,11 +1,46 @@
-import { DamageAction } from '@/features/damage-wizard-v2/types';
+
 import { Car } from './Car';
 import { DocumentLink } from './Diagnosis';
 import { PaintMaterialType } from './PaintMaterial';
-import { DamageSeverity, DamageType } from './shared/damage.types';
+import { User } from './User';
 
-// ✅ CENTRALIZADO: Re-exportar enums desde tipos compartidos
-export { DamageSeverity, DamageType };
+
+export enum DamageAction {
+    REPAIR = 'REPAIR',
+    REPLACE = 'REPLACE',
+    PAINT = 'PAINT',
+    POLISH = 'POLISH',
+    REPAIR_AND_PAINT = 'REPAIR_AND_PAINT'
+}
+
+export enum DamageType {
+    SCRATCH = 'scratch',
+    DENT = 'dent',
+    CRACK = 'crack',
+    BREAK = 'break',
+    // Tipos específicos de Tchek
+    PAINT_PEEL = 'paint_peel',
+    DEFORMATION = 'deformation',
+    IMPACT = 'impact',
+    RUST = 'rust',
+    DISLOCATED_PART = 'dislocated_part',
+    BROKEN_PART = 'broken_part',
+    MISSING_PART = 'missing_part',
+    DETACHED_PART = 'detached_part',
+    HOLE = 'hole',
+    BURN = 'burn',
+    CORROSION = 'corrosion',
+}
+
+export enum DamageSeverity {
+    SEV1 = 'SEV1',
+    SEV2 = 'SEV2',
+    SEV3 = 'SEV3',
+    SEV4 = 'SEV4',
+    SEV5 = 'SEV5',
+}
+
+
 
 // ✅ UNIFICADO: Definición completa de DamageEvidence
 export type DamagePictureROI =
@@ -74,6 +109,18 @@ export interface Damage {
     partLabel?: string;            // Etiqueta de la pieza según proveedor
 }
 
+export type WorkflowStatus = 'processing' | 'detected' | 'damages_confirmed' | 'operations_defined' | 'valuated' | 'completed' | 'error';
+
+export interface Workflow {
+    status: WorkflowStatus;
+    history?: Array<{
+        status: string;
+        at: string | Date;
+        note?: string;
+        _id?: string;
+    }>;
+}
+
 export interface DamageAssessment {
     _id: string;
     carId: string;
@@ -82,15 +129,16 @@ export interface DamageAssessment {
     images: string[];
     repairTimes?: string;
     prices?: string;
-    createdBy: string;
+    createdBy: string | User;
     damages: Damage[];
+    confirmedDamages?: Damage[];
     workshopId: string;
     createdAt: string;
     updatedAt: string;
     notes?: string;
     insuranceCompany: string;
     claimNumber?: string;
-
+    workflow?: Workflow;
 }
 
 export const severityLabels: Record<DamageSeverity, string> = {
@@ -117,3 +165,31 @@ export const operationLabels: Record<string, string> = {
     //POLISH: 'Pulir',
     ////DISASSEMBLE_AND_ASSEMBLE: 'Desmontar y montar',
 };
+
+
+
+// Mapeo de tipos de daño a descripciones en español
+export const damageTypeMap: Record<string, string> = {
+    'dent': 'Abolladura',
+    'scratch': 'Rayón',
+    'broken': 'Pieza rota',
+    'broken_part': 'Pieza rota',
+    'break': 'Pieza rota',
+    'dislocated': 'Desplazamiento',
+    'dislocated_part': 'Pieza desplazada',
+    'crack': 'Grieta',
+    'hole': 'Agujero',
+    'burn': 'Quemadura',
+    'corrosion': 'Corrosión',
+    'paint_peel': 'Desprendimiento de pintura',
+    'deformation': 'Deformación',
+    'impact': 'Impacto',
+    'rust': 'Óxido',
+    'missing_part': 'Pieza faltante',
+    'detached_part': 'Pieza desprendida',
+};
+
+// Función helper para obtener la descripción en español de un tipo de daño
+export function getDamageTypeLabel(type: DamageType | string): string {
+    return damageTypeMap[type as string] || type;
+}
