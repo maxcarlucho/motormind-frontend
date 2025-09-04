@@ -115,7 +115,15 @@ const DiagnosisOBDCodes = () => {
         }}
       />
       <DetailsContainer>
-        <VehicleInformation car={diagnosis.car as Car} editMode={false} minimized />
+        <VehicleInformation
+          car={
+            diagnosis.car
+              ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+              : undefined
+          }
+          editMode={false}
+          minimized
+        />
         <DiagnosticContextSection
           symptoms={symptom}
           notes={diagnosis.notes}

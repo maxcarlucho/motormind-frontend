@@ -2,18 +2,26 @@ import { CarIcon, MoreVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { BackendDamageAssessment } from '@/features/damage-wizard-v2/types/backend.types';
+import { DamageAssessment, Damage, WorkflowStatus } from '@/types/DamageAssessment';
 import { WORKFLOW_STATUS_LABELS } from '@/constants';
+import { getDamageTypeLabel } from '@/types/DamageAssessment';
+import { User } from '@/types/User';
 
 interface DamageAssessmentCardProps {
-  assessment: BackendDamageAssessment;
+  assessment: DamageAssessment;
 }
 
 export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ assessment }) => {
   const { car, createdAt, _id, workflow, damages } = assessment;
 
-  const damagesToShow =
-    workflow?.status === 'damages_confirmed' ? assessment.confirmedDamages : damages;
+  const isWorkflowDamagesConfirmedOrGreater =
+    workflow?.status === 'damages_confirmed' ||
+    workflow?.status === 'operations_defined' ||
+    workflow?.status === 'valuated' ||
+    workflow?.status === 'completed';
+  console.log({ damages: assessment.confirmedDamages, status: workflow?.status });
+
+  const damagesToShow = isWorkflowDamagesConfirmedOrGreater ? assessment.confirmedDamages : damages;
 
   return (
     <Link to={`/damage-assessments/${_id}`} className="block">
@@ -38,7 +46,9 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
                   : 'bg-green-100 text-green-700'
               }`}
             >
-              {workflow?.status ? WORKFLOW_STATUS_LABELS[workflow.status] : 'Sin estado'}
+              {workflow?.status
+                ? WORKFLOW_STATUS_LABELS[workflow.status as WorkflowStatus]
+                : 'Sin estado'}
             </span>
 
             <button
@@ -56,15 +66,21 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
         <div className="mt-4 space-y-3 pl-1">
           <div className="text-sm">
             <span className="text-gray-500">Aseguradora:</span>{' '}
-            <span className="text-gray-800">{assessment.insuranceCompany}</span>
+            <span className="text-gray-800">
+              {assessment.insuranceCompany.replace('MOCK', '-')}
+            </span>
           </div>
 
           <div>
-            <p className="text-sm text-gray-500">Daños detectados:</p>
+            <p className="text-sm text-gray-500">
+              {isWorkflowDamagesConfirmedOrGreater ? 'Daños confirmados:' : 'Daños detectados:'}
+            </p>
             {damagesToShow && damagesToShow.length > 0 ? (
               <ul className="mt-1 ml-5 list-disc space-y-1 text-sm text-gray-800">
-                {damagesToShow.slice(0, 2).map((damage) => (
-                  <li key={damage._id}>{damage.description}</li>
+                {damagesToShow.slice(0, 2).map((damage: Damage) => (
+                  <li
+                    key={damage._id}
+                  >{`${getDamageTypeLabel(damage.type)} en ${damage.subarea}`}</li>
                 ))}
               </ul>
             ) : (
@@ -79,7 +95,11 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
           <div className="flex items-center gap-2">
             <img src="https://i.pravatar.cc/24" alt="Creator" className="h-6 w-6 rounded-full" />
-            <span className="text-sm text-gray-700">Carlos Ruiz</span>
+            <span className="text-sm text-gray-700">
+              {typeof assessment.createdBy === 'object'
+                ? (assessment.createdBy as User).name
+                : 'Usuario'}
+            </span>
           </div>
           <span className="text-sm text-gray-500">
             {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es })
