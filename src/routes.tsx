@@ -19,8 +19,6 @@ import PromptManager from '@/pages/PromptManager';
 import PromptDetail from '@/pages/PromptDetails';
 import Metrics from '@/pages/Metrics';
 import DamageAssessments from '@/pages/DamageAssessments';
-import CreateDamageAssessment from '@/pages/DamageAssessments/CreateDamageAssessment';
-import DamageAssessmentDetail from '@/pages/DamageAssessments/DamageAssessmentDetail';
 import DamageAssessmentReport from '@/pages/DamageAssessments/DamageAssessmentReport';
 import DiagnosisOBDCodes from '@/pages/DiagnosisOBDCodes';
 import { WizardV2Entry, WizardV2NewEntry } from '@/features/damage-wizard-v2/routes';
