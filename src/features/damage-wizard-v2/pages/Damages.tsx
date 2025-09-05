@@ -39,6 +39,12 @@ const Damages = () => {
     }
   }, [state.detectedDamages, state.status, isProcessing]);
 
+  useEffect(() => {
+    if (state.confirmedDamages?.length) {
+      setSelectedDamages(state.confirmedDamages.map((d) => d._id));
+    }
+  }, [state.confirmedDamages]);
+
   const toggleDamage = (id: string) => {
     if (isReadOnly) return;
     setSelectedDamages((prev) =>
@@ -57,6 +63,17 @@ const Damages = () => {
   const confirmSelected = async () => {
     if (isReadOnly) {
       continueFromHere();
+      return;
+    }
+
+    const confirmedIds = state.confirmedDamages?.map((d) => d._id) || [];
+    const noChangesInSelection =
+      confirmedIds.length === selectedDamages.length &&
+      confirmedIds.every((id) => selectedDamages.includes(id)) &&
+      selectedDamages.every((id) => confirmedIds.includes(id));
+
+    if (noChangesInSelection) {
+      navigate(`?step=operations`, { replace: true });
       return;
     }
 
@@ -100,18 +117,19 @@ const Damages = () => {
     return (
       <PageShell
         header={
-          <WizardStepperWithNav 
-            currentStep="damages" 
-            completedSteps={['intake']} 
+          <WizardStepperWithNav
+            currentStep="damages"
+            completedSteps={['intake']}
             loading={true}
-            isNavigationLocked={state.isGeneratingOperations} 
+            isNavigationLocked={state.isGeneratingOperations}
           />
         }
         loading={true}
-        loadingTitle={state.isGeneratingOperations ? "Generando operaciones" : "Detectando daños"}
-        loadingDescription={state.isGeneratingOperations 
-          ? "Estamos analizando los daños y generando las operaciones recomendadas..."
-          : "Estamos procesando las imágenes... esto puede tardar unos minutos."
+        loadingTitle={state.isGeneratingOperations ? 'Generando operaciones' : 'Detectando daños'}
+        loadingDescription={
+          state.isGeneratingOperations
+            ? 'Estamos analizando los daños y generando las operaciones recomendadas...'
+            : 'Estamos procesando las imágenes... esto puede tardar unos minutos.'
         }
         content={<div />}
       />
@@ -122,9 +140,9 @@ const Damages = () => {
     <>
       <PageShell
         header={
-          <WizardStepperWithNav 
-            currentStep="damages" 
-            completedSteps={['intake']} 
+          <WizardStepperWithNav
+            currentStep="damages"
+            completedSteps={['intake']}
             isNavigationLocked={state.isGeneratingOperations}
           />
         }
