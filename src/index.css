@@ -20,7 +20,7 @@ body {
   --color-card-foreground: hsl(215 25% 10%);
 
   /* Primary - Professional Blue */
-  --color-primary: #2a7de1;
+  --color-primary: #2753a2;
   --color-primary-foreground: #fafafa;
   --color-primary-muted: hsl(219 25% 85%);
 
@@ -56,3 +56,30 @@ body {
   /* Border radius */
   --radius: 0.5rem;
 }
+
+/*
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+html {
+  height: 100dvh;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@theme {
+  --color-background: #f9fafb;
+  --color-primary: #2753a2;
+  --color-primary-foreground: #fafafa;
+  --color-secondary: #e5e7eb;
+  --color-secondary-foreground: #374152;
+  --color-muted: #6b7280;
+  --color-muted-foreground: #fafafa;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fafafa;
+  --color-input: #6b7280;
+}
+*/
