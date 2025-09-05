@@ -247,7 +247,8 @@ export const WizardV2Provider = ({ children }: WizardV2ProviderProps) => {
 
   // Acciones de conveniencia
   const setLoading = (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading });
-  const setGeneratingOperations = (loading: boolean) => dispatch({ type: 'SET_GENERATING_OPERATIONS', payload: loading });
+  const setGeneratingOperations = (loading: boolean) =>
+    dispatch({ type: 'SET_GENERATING_OPERATIONS', payload: loading });
   const setError = (error?: string) => dispatch({ type: 'SET_ERROR', payload: error });
   const setCurrentStep = (step: WizardV2State['currentStep']) =>
     dispatch({ type: 'SET_CURRENT_STEP', payload: step });
