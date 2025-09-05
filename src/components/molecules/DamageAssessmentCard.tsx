@@ -5,7 +5,8 @@ import { es } from 'date-fns/locale';
 import { DamageAssessment, Damage, WorkflowStatus } from '@/types/DamageAssessment';
 import { WORKFLOW_STATUS_LABELS } from '@/constants';
 import { getDamageTypeLabel } from '@/types/DamageAssessment';
-import { User } from '@/types/User';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/atoms/Avatar';
+import { getInitials } from '@/utils';
 
 interface DamageAssessmentCardProps {
   assessment: DamageAssessment;
@@ -94,11 +95,20 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
 
         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
           <div className="flex items-center gap-2">
-            <img src="https://i.pravatar.cc/24" alt="Creator" className="h-6 w-6 rounded-full" />
-            <span className="text-sm text-gray-700">
-              {typeof assessment.createdBy === 'object'
-                ? (assessment.createdBy as User).name
-                : 'Usuario'}
+            <Avatar className="h-6 w-6 sm:h-9 sm:w-9">
+              <AvatarImage
+                alt={
+                  typeof assessment.createdBy === 'object' ? assessment.createdBy.name : 'Unknown'
+                }
+              />
+              <AvatarFallback className="text-xs sm:text-base">
+                {typeof assessment.createdBy === 'object'
+                  ? getInitials(assessment.createdBy.name)
+                  : 'NN'}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-medium sm:text-sm">
+              {typeof assessment.createdBy === 'object' ? assessment.createdBy.name : 'Sin asignar'}
             </span>
           </div>
           <span className="text-sm text-gray-500">
