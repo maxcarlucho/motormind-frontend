@@ -5,8 +5,7 @@ import { es } from 'date-fns/locale';
 import { DamageAssessment, Damage, WorkflowStatus } from '@/types/DamageAssessment';
 import { WORKFLOW_STATUS_LABELS } from '@/constants';
 import { getDamageTypeLabel } from '@/types/DamageAssessment';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atoms/Avatar';
-import { getInitials } from '@/utils';
+import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 
 interface DamageAssessmentCardProps {
   assessment: DamageAssessment;
@@ -94,23 +93,7 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-6 w-6 sm:h-9 sm:w-9">
-              <AvatarImage
-                alt={
-                  typeof assessment.createdBy === 'object' ? assessment.createdBy.name : 'Unknown'
-                }
-              />
-              <AvatarFallback className="text-xs sm:text-base">
-                {typeof assessment.createdBy === 'object'
-                  ? getInitials(assessment.createdBy.name)
-                  : 'NN'}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs font-medium sm:text-sm">
-              {typeof assessment.createdBy === 'object' ? assessment.createdBy.name : 'Sin asignar'}
-            </span>
-          </div>
+          <CreatedByUser user={assessment.createdBy} />
           <span className="text-sm text-gray-500">
             {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es })
               .charAt(0)
