@@ -156,11 +156,7 @@ const Damages = () => {
                 <DamageCard
                   key={damage._id}
                   damage={damage}
-                  isConfirmed={
-                    state.confirmedDamages?.some((d) => d._id === damage._id) ||
-                    selectedDamages.includes(damage._id) ||
-                    false
-                  }
+                  isConfirmed={selectedDamages.includes(damage._id)}
                   isUserCreated={
                     state.userCreatedDamages?.some((d) => d._id === damage._id) || false
                   }
