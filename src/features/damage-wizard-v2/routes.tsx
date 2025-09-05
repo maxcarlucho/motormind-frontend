@@ -12,7 +12,7 @@ import { Damage } from '@/types/DamageAssessment';
 import Damages from './pages/Damages';
 import Finalize from './pages/Finalize';
 import Intake from './pages/Intake';
-import Operations from './pages/Operations';
+import { Operations } from './pages/Operations';
 import Valuation from './pages/Valuation';
 
 const WIZARD_V2_ENABLED = import.meta.env.VITE_WIZARD_V2_ENABLED === 'true';

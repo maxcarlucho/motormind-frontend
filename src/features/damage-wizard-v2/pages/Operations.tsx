@@ -1,5 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 import { useMemo } from 'react';
+import damageAssessmentApi from '@/service/damageAssessmentApi.service';
 import { useNavigate } from 'react-router-dom';
 import { NoConfirmedDamagesMessage } from '../components/NoConfirmedDamagesMessage';
 import { OperationsInfoAlert } from '../components/OperationsInfoAlert';
@@ -13,7 +14,13 @@ import { DamageAction } from '@/types/DamageAssessment';
 import { Damage } from '@/types/DamageAssessment';
 import apiService from '@/service/api.service';
 
-const Operations = () => {
+// Función para comparar si las operaciones han cambiado
+// Función para verificar si las operaciones han sido modificadas
+const hasModifiedOperations = (modifiedOps?: Record<string, DamageAction>): boolean => {
+  return !!modifiedOps && Object.keys(modifiedOps).length > 0;
+};
+
+export const Operations = () => {
   const navigate = useNavigate();
 
   const { state } = useWizardV2();
@@ -84,33 +91,34 @@ const Operations = () => {
 
   const goValuation = async () => {
     try {
-      // ✅ NUEVO: Verificar si hay operaciones modificadas
-      const modifiedOperations = state.modifiedOperations;
-
-      if (modifiedOperations && Object.keys(modifiedOperations).length > 0) {
-        // ✅ NUEVO: Guardar todas las operaciones modificadas en paralelo
-        const updatePromises = Object.entries(modifiedOperations).map(([damageId, operation]) =>
-          apiService.updateDamage(state.assessmentId!, damageId, {
-            proposedOperation: {
-              operation: operation as DamageAction,
-              confidence: 0.85,
-              reason: `Operación actualizada manualmente a ${operation}`,
-              source: 'rule_engine',
-            },
-          }),
+      if (hasModifiedOperations(state.modifiedOperations)) {
+        // Guardar todas las operaciones modificadas en paralelo
+        const updatePromises = Object.entries(state.modifiedOperations || {}).map(
+          ([damageId, operation]) =>
+            apiService.updateDamage(state.assessmentId!, damageId, {
+              proposedOperation: {
+                operation: operation as DamageAction,
+                confidence: 0.85,
+                reason: `Operación actualizada manualmente a ${operation}`,
+                source: 'rule_engine',
+              },
+            }),
         );
 
-        // ✅ NUEVO: Esperar a que todas las actualizaciones terminen
         await Promise.all(updatePromises);
 
-        // ✅ NUEVO: Limpiar operaciones modificadas del estado
+        // Si hubo modificaciones, forzar generación de nueva valoración
+        const newValuation = await damageAssessmentApi.generateValuationNew(
+          state.assessmentId!,
+          true,
+        );
+        dispatch({ type: 'SET_VALUATION', payload: newValuation });
         dispatch({ type: 'CLEAR_MODIFIED_OPERATIONS' });
       }
 
       navigate(`?step=valuation`, { replace: true });
     } catch (error) {
       console.error('Error navegando a valuation:', error);
-
       navigate(`?step=valuation`, { replace: true });
     }
   };
@@ -205,5 +213,3 @@ const Operations = () => {
     />
   );
 };
-
-export default Operations;
