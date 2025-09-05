@@ -12,7 +12,7 @@ import { useWizardV2 } from '../hooks/useWizardV2';
 const Damages = () => {
   const navigate = useNavigate();
 
-  const { state, confirmDamages, createManualDamage } = useWizardV2();
+  const { state, confirmDamages, createManualDamage, setGeneratingOperations } = useWizardV2();
   const { mode, continueFromHere } = useWizardStepNav();
   const isReadOnly = mode === 'view';
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,11 +61,14 @@ const Damages = () => {
     }
 
     try {
+      setGeneratingOperations(true);
       await confirmDamages(selectedDamages);
       navigate(`?step=operations`, { replace: true });
     } catch (error) {
       console.error('Error confirming damages:', error);
       navigate(`?step=operations`, { replace: true });
+    } finally {
+      setGeneratingOperations(false);
     }
   };
 
@@ -93,15 +96,23 @@ const Damages = () => {
     ...(state.userCreatedDamages || []),
   ];
 
-  if (isProcessing) {
+  if (isProcessing || state.isGeneratingOperations) {
     return (
       <PageShell
         header={
-          <WizardStepperWithNav currentStep="damages" completedSteps={['intake']} loading={true} />
+          <WizardStepperWithNav 
+            currentStep="damages" 
+            completedSteps={['intake']} 
+            loading={true}
+            isNavigationLocked={state.isGeneratingOperations} 
+          />
         }
         loading={true}
-        loadingTitle="Detectando daños"
-        loadingDescription="Estamos procesando las imágenes... esto puede tardar unos minutos."
+        loadingTitle={state.isGeneratingOperations ? "Generando operaciones" : "Detectando daños"}
+        loadingDescription={state.isGeneratingOperations 
+          ? "Estamos analizando los daños y generando las operaciones recomendadas..."
+          : "Estamos procesando las imágenes... esto puede tardar unos minutos."
+        }
         content={<div />}
       />
     );
@@ -110,7 +121,13 @@ const Damages = () => {
   return (
     <>
       <PageShell
-        header={<WizardStepperWithNav currentStep="damages" completedSteps={['intake']} />}
+        header={
+          <WizardStepperWithNav 
+            currentStep="damages" 
+            completedSteps={['intake']} 
+            isNavigationLocked={state.isGeneratingOperations}
+          />
+        }
         title="Verificación de Daños"
         subtitle="Seleccioná los daños que se detectaron en las imágenes."
         content={

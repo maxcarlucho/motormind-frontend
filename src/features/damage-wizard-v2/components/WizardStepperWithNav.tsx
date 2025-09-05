@@ -6,16 +6,20 @@ interface WizardStepperWithNavProps {
   currentStep: WizardStepKey;
   completedSteps?: WizardStepKey[];
   loading?: boolean;
+  isNavigationLocked?: boolean;
 }
 
 export const WizardStepperWithNav: React.FC<WizardStepperWithNavProps> = ({
   currentStep,
   completedSteps = [],
   loading = false,
+  isNavigationLocked = false,
 }) => {
   const { canGoTo, goTo } = useWizardStepNav();
 
   const handleStepClick = (step: WizardStepKey) => {
+    if (isNavigationLocked) return;
+
     // Siempre permitir navegación hacia atrás
     const stepIndex = STEP_ORDER.indexOf(step);
     const currentIndex = STEP_ORDER.indexOf(currentStep);
@@ -32,6 +36,7 @@ export const WizardStepperWithNav: React.FC<WizardStepperWithNavProps> = ({
       completedSteps={completedSteps}
       onStepClick={handleStepClick}
       loading={loading}
+      isNavigationLocked={isNavigationLocked}
     />
   );
 };

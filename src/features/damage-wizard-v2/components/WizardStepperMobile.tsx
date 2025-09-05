@@ -25,6 +25,8 @@ interface WizardStepperMobileProps {
   completedSteps?: WizardStepKey[];
   /** Disable all interactions when loading */
   loading?: boolean;
+  /** Disable navigation when locked */
+  isNavigationLocked?: boolean;
 }
 
 export const WizardStepperMobile = ({
@@ -32,6 +34,7 @@ export const WizardStepperMobile = ({
   onStepClick,
   completedSteps = [],
   loading = false,
+  isNavigationLocked = false,
 }: WizardStepperMobileProps) => {
   const currentStepIndex = STEPS.findIndex((step) => step.key === currentStep);
   const currentStepData = STEPS[currentStepIndex];
@@ -104,6 +107,7 @@ export const WizardStepperMobile = ({
               const isClickable =
                 onStepClick &&
                 !loading &&
+                !isNavigationLocked &&
                 (status === 'completed' || status === 'current' || index < currentStepIndex);
 
               return (

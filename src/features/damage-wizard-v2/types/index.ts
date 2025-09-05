@@ -134,6 +134,15 @@ export type WizardStepKey =
   | 'valuation'
   | 'finalize';
 
+export type WorkflowStatus =
+  | 'processing'
+  | 'detected'
+  | 'damages_confirmed'
+  | 'operations_defined'
+  | 'valuated'
+  | 'completed'
+  | 'error';
+
 export type WizardStep = {
   key: WizardStepKey;
   title: string;

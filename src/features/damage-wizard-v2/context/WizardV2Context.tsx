@@ -38,6 +38,7 @@ export interface WizardV2State {
 
   // Estado de UI
   loading: boolean;
+  isGeneratingOperations?: boolean;
   error?: string;
 
   // Navegación
@@ -52,6 +53,7 @@ export interface WizardV2State {
 
 type WizardV2Action =
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_GENERATING_OPERATIONS'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | undefined }
   | { type: 'SET_STATUS'; payload: WorkflowStatus }
   | { type: 'SET_CURRENT_STEP'; payload: WizardV2State['currentStep'] }
@@ -86,6 +88,9 @@ function wizardV2Reducer(state: WizardV2State, action: WizardV2Action): WizardV2
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+
+    case 'SET_GENERATING_OPERATIONS':
+      return { ...state, isGeneratingOperations: action.payload };
 
     case 'SET_ERROR':
       return { ...state, error: action.payload, loading: false };
@@ -220,6 +225,7 @@ interface WizardV2ContextType {
 
   // Acciones de conveniencia
   setLoading: (loading: boolean) => void;
+  setGeneratingOperations: (loading: boolean) => void;
   setError: (error?: string) => void;
   setCurrentStep: (step: WizardV2State['currentStep']) => void;
   setCarId: (carId: string) => void;
@@ -241,6 +247,7 @@ export const WizardV2Provider = ({ children }: WizardV2ProviderProps) => {
 
   // Acciones de conveniencia
   const setLoading = (loading: boolean) => dispatch({ type: 'SET_LOADING', payload: loading });
+  const setGeneratingOperations = (loading: boolean) => dispatch({ type: 'SET_GENERATING_OPERATIONS', payload: loading });
   const setError = (error?: string) => dispatch({ type: 'SET_ERROR', payload: error });
   const setCurrentStep = (step: WizardV2State['currentStep']) =>
     dispatch({ type: 'SET_CURRENT_STEP', payload: step });
@@ -251,6 +258,7 @@ export const WizardV2Provider = ({ children }: WizardV2ProviderProps) => {
     state,
     dispatch,
     setLoading,
+    setGeneratingOperations,
     setError,
     setCurrentStep,
     setCarId,

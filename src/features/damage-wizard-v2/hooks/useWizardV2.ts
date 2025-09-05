@@ -29,6 +29,7 @@ export interface UseWizardV2Return {
 
   // Acciones básicas
   setLoading: (loading: boolean) => void;
+  setGeneratingOperations: (loading: boolean) => void;
   setError: (error?: string) => void;
   resetWizard: () => void;
 
@@ -75,7 +76,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
   const params = useParams();
   const [searchParams] = useSearchParams();
 
-  const { state, dispatch, setLoading, setError, resetWizard } = context;
+  const { state, dispatch, setLoading, setGeneratingOperations, setError, resetWizard } = context;
   const assessmentId = params.id || state.assessmentId;
 
   // ✅ ELIMINADO: convertApiResponse ya no es necesario - tipos unificados
@@ -485,6 +486,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
 
     // Acciones básicas
     setLoading,
+    setGeneratingOperations,
     setError,
     resetWizard,
 
