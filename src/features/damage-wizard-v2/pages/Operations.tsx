@@ -12,9 +12,7 @@ import { useWizardV2 } from '../hooks/useWizardV2';
 import { useWizardV2 as useWizardV2Context } from '../context/WizardV2Context';
 import { DamageAction } from '@/types/DamageAssessment';
 import { Damage } from '@/types/DamageAssessment';
-import apiService from '@/service/api.service';
 
-// Función para comparar si las operaciones han cambiado
 // Función para verificar si las operaciones han sido modificadas
 const hasModifiedOperations = (modifiedOps?: Record<string, DamageAction>): boolean => {
   return !!modifiedOps && Object.keys(modifiedOps).length > 0;
@@ -92,20 +90,21 @@ export const Operations = () => {
   const goValuation = async () => {
     try {
       if (hasModifiedOperations(state.modifiedOperations)) {
-        // Guardar todas las operaciones modificadas en paralelo
-        const updatePromises = Object.entries(state.modifiedOperations || {}).map(
-          ([damageId, operation]) =>
-            apiService.updateDamage(state.assessmentId!, damageId, {
-              proposedOperation: {
-                operation: operation as DamageAction,
-                confidence: 0.85,
-                reason: `Operación actualizada manualmente a ${operation}`,
-                source: 'rule_engine',
-              },
-            }),
+        // Preparar todas las operaciones modificadas para actualización atómica
+        const operations = Object.entries(state.modifiedOperations || {}).map(
+          ([damageId, operation]) => ({
+            damageId,
+            proposedOperation: {
+              operation: operation as DamageAction,
+              confidence: 0.85,
+              reason: `Operación actualizada manualmente a ${operation}`,
+              source: 'rule_engine',
+            },
+          }),
         );
 
-        await Promise.all(updatePromises);
+        // Actualizar todas las operaciones de una vez (operación atómica)
+        await damageAssessmentApi.batchUpdateOperations(state.assessmentId!, operations);
 
         // Si hubo modificaciones, forzar generación de nueva valoración
         const newValuation = await damageAssessmentApi.generateValuationNew(

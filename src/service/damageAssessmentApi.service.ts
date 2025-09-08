@@ -63,6 +63,11 @@ class DamageAssessmentApiService {
         return data;
     }
 
+    async batchUpdateOperations(assessmentId: string, operations: Array<{ damageId: string; proposedOperation: any }>) {
+        const { data } = await this.api.patch(`/damage-assessments/${assessmentId}/operations/batch-update`, { operations });
+        return data;
+    }
+
     async generateValuation(assessmentId: string) {
         const { data } = await this.api.post(`/damage-assessments/${assessmentId}/valuation/generate`, {});
         return data;

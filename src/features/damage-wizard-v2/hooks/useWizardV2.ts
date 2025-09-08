@@ -356,8 +356,7 @@ export const useWizardV2 = (): UseWizardV2Return => {
       setError(undefined);
 
 
-      // Por ahora, solo actualizamos el estado local
-      // TODO: Implementar guardado en backend cuando se necesite
+      // Actualizar estado local
       dispatch({ type: 'SET_OPERATIONS', payload: operations });
 
 
