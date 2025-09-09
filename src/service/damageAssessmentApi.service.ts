@@ -68,10 +68,6 @@ class DamageAssessmentApiService {
         return data;
     }
 
-    async generateValuation(assessmentId: string) {
-        const { data } = await this.api.post(`/damage-assessments/${assessmentId}/valuation/generate`, {});
-        return data;
-    }
     async generateValuationNew(assessmentId: string, force?: boolean) {
         const { data } = await this.api.post(`/damage-assessments/${assessmentId}/valuation/generate-new${force ? '?force=true' : ''}`, {});
         return data;
