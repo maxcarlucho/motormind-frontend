@@ -9,7 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/atoms/Select';
-import { Damage, DamageAction, DamageSeverity, DamageType } from '@/types/DamageAssessment';
+import {
+  Damage,
+  DamageAction,
+  DamageSeverity,
+  DamageType,
+  getDamageTypeLabel,
+  operationLabels,
+  severityLabels,
+} from '@/types/DamageAssessment';
 import { X } from 'lucide-react';
 
 interface AddDamageModalProps {
@@ -18,28 +26,6 @@ interface AddDamageModalProps {
   onAddDamage: (damageData: Partial<Damage>) => Promise<void>;
   isAdding: boolean;
 }
-
-const severityLabelMap: Record<DamageSeverity, string> = {
-  [DamageSeverity.SEV1]: 'Muy Leve (Pulido)',
-  [DamageSeverity.SEV2]: 'Leve (Reparación rápida)',
-  [DamageSeverity.SEV3]: 'Medio (Rayón)',
-  [DamageSeverity.SEV4]: 'Grave (Chapa y pintura)',
-  [DamageSeverity.SEV5]: 'Muy Grave (Reemplazo)',
-};
-
-const actionLabelMap: Record<DamageAction, string> = {
-  [DamageAction.POLISH]: 'Pulido',
-  [DamageAction.RENOVATE]: 'Renovación',
-  [DamageAction.QUICK_REPAIR]: 'Reparación rápida',
-  [DamageAction.PAINT]: 'Pintura',
-  [DamageAction.REPAIR_AND_PAINT]: 'Reparación y pintura',
-  [DamageAction.REPLACE]: 'Reemplazo',
-};
-
-const typeLabelMap: Record<DamageType, string> = {
-  [DamageType.SCRATCH]: 'Rayón',
-  [DamageType.DENT]: 'Abolladura',
-};
 
 export const AddDamageModal = ({ isOpen, onClose, onAddDamage, isAdding }: AddDamageModalProps) => {
   const [formData, setFormData] = useState<Partial<Damage>>({
@@ -203,7 +189,7 @@ export const AddDamageModal = ({ isOpen, onClose, onAddDamage, isAdding }: AddDa
               <SelectContent>
                 {Object.values(DamageType).map((type) => (
                   <SelectItem key={type} value={type}>
-                    {typeLabelMap[type]}
+                    {getDamageTypeLabel(type)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -231,7 +217,7 @@ export const AddDamageModal = ({ isOpen, onClose, onAddDamage, isAdding }: AddDa
               <SelectContent>
                 {Object.values(DamageSeverity).map((severity) => (
                   <SelectItem key={severity} value={severity}>
-                    {severityLabelMap[severity]}
+                    {severityLabels[severity]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -259,9 +245,9 @@ export const AddDamageModal = ({ isOpen, onClose, onAddDamage, isAdding }: AddDa
                 <SelectValue placeholder="Selecciona la operación" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(DamageAction).map((action) => (
+                {Object.values(DamageAction).map((action: DamageAction) => (
                   <SelectItem key={action} value={action}>
-                    {actionLabelMap[action]}
+                    {operationLabels[action]}
                   </SelectItem>
                 ))}
               </SelectContent>

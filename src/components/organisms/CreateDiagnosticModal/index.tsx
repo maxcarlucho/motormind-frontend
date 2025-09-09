@@ -171,10 +171,10 @@ export const CreateDiagnosticModal = ({
         vinCode: manualData.vinCode || '',
         brand: manualData.brand,
         model: manualData.model,
-        year: parseInt(manualData.year),
+        year: manualData.year,
         plate: manualData.licensePlate || '',
         kilometers: Number(manualData.kilometers) || 0,
-        lastRevision: manualData.lastRevision ? new Date(manualData.lastRevision) : new Date(),
+        lastRevision: manualData.lastRevision ? manualData.lastRevision : new Date().toISOString(),
         fuel: manualData.fuel || '',
       };
       addVehicleMutation.mutate(carData);

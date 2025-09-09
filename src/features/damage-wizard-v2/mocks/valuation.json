@@ -1,0 +1,92 @@
+{
+  "labor": [
+    {
+      "partName": "Paragolpes delantero",
+      "operation": "Reparar",
+      "hours": 2.5,
+      "rate": 38,
+      "total": 95,
+      "source": "autodata"
+    },
+    {
+      "partName": "Puerta delantera izq",
+      "operation": "Reparar",
+      "hours": 3.2,
+      "rate": 38,
+      "total": 121.6,
+      "source": "user_override"
+    },
+    {
+      "partName": "Capó",
+      "operation": "Pulir",
+      "hours": 1.8,
+      "rate": 38,
+      "total": 68.4,
+      "source": "calc"
+    },
+    {
+      "partName": "Aleta trasera der",
+      "operation": "Reparar",
+      "hours": 2.1,
+      "rate": 38,
+      "total": 79.8,
+      "source": "segment_lookup"
+    }
+  ],
+  "paint": [
+    {
+      "partName": "Paragolpes delantero",
+      "job": "Pintura daño medio",
+      "paintHours": 4.2,
+      "paintLaborTotal": 159.6,
+      "units": 1,
+      "unitPrice": 35,
+      "materialsTotal": 147,
+      "total": 306.6
+    },
+    {
+      "partName": "Puerta delantera izq",
+      "job": "Pintura daño grave",
+      "paintHours": 5.8,
+      "paintLaborTotal": 220.4,
+      "units": 1,
+      "unitPrice": 35,
+      "materialsTotal": 203,
+      "total": 423.4
+    },
+    {
+      "partName": "Capó",
+      "job": "Pintura daño leve",
+      "paintHours": 3.1,
+      "paintLaborTotal": 117.8,
+      "units": 1,
+      "unitPrice": 35,
+      "materialsTotal": 108.5,
+      "total": 226.3
+    }
+  ],
+  "parts": [
+    {
+      "ref": "ESP-001",
+      "partName": "Espejo retrovisor izq",
+      "unitPrice": 85.50,
+      "qty": 1,
+      "total": 85.50
+    },
+    {
+      "ref": "BUL-002",
+      "partName": "Bulón de fijación",
+      "unitPrice": 12.30,
+      "qty": 2,
+      "total": 24.60
+    }
+  ],
+  "totals": {
+    "labor": 364.8,
+    "paintLabor": 497.8,
+    "paintMaterials": 458.5,
+    "parts": 110.1,
+    "grandTotal": 1431.2,
+    "currency": "EUR"
+  }
+}

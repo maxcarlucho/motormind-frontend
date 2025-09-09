@@ -111,12 +111,12 @@ export const EditVehicleModal = ({ open, onOpenChange, car }: EditVehicleModalPr
     const updatedCar: CreateCar = {
       brand: carData.brand,
       model: carData.model,
-      year: Number(carData.year),
+      year: carData.year,
       plate: carData.licensePlate,
       vinCode: carData.vinCode,
       kilometers: Number(carData.kilometers),
       fuel: carData.fuel,
-      lastRevision: carData.lastRevision ? new Date(carData.lastRevision) : new Date(),
+      lastRevision: carData.lastRevision ? carData.lastRevision : new Date().toISOString(),
     };
     updateCarMutation.mutate(updatedCar);
   };

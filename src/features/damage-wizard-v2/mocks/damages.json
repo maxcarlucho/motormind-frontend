@@ -1,0 +1,44 @@
+{
+  "damages": [
+    {
+      "id": "dmg-1",
+      "imageUrl": "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
+      "title": "Paragolpes delantero",
+      "subtitle": "Arañazo profundo",
+      "severity": "medio",
+      "confidencePct": 92
+    },
+    {
+      "id": "dmg-2",
+      "imageUrl": "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
+      "title": "Puerta delantera izq",
+      "subtitle": "Panel inferior - Abolladura",
+      "severity": "grave",
+      "confidencePct": 87
+    },
+    {
+      "id": "dmg-3",
+      "imageUrl": "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
+      "title": "Capó",
+      "subtitle": "Rayado superficial",
+      "severity": "leve",
+      "confidencePct": 95
+    },
+    {
+      "id": "dmg-4",
+      "imageUrl": "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
+      "title": "Aleta trasera der",
+      "subtitle": "Golpe lateral",
+      "severity": "medio",
+      "confidencePct": 89
+    },
+    {
+      "id": "dmg-5",
+      "imageUrl": "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=400&h=300&fit=crop",
+      "title": "Espejo retrovisor izq",
+      "subtitle": "Fisura en carcasa",
+      "severity": "leve",
+      "confidencePct": 78
+    }
+  ]
+}

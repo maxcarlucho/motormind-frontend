@@ -1,0 +1,1 @@
+export { wizardV2Routes } from './routes';

@@ -2,9 +2,8 @@ import { CarIcon, Share2, MoreVertical, Trash2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { useState } from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atoms/Avatar';
+import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 import { cn } from '@/utils/cn';
-import { getInitials } from '@/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
@@ -193,15 +192,7 @@ export const DiagnosticListItem = ({
 
           <div className="flex items-center justify-between border-t border-gray-100 pt-3">
             <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6 sm:h-9 sm:w-9">
-                <AvatarImage alt={technician?.name || 'Unknown'} />
-                <AvatarFallback className="text-xs sm:text-base">
-                  {technician?.name ? getInitials(technician.name) : 'NN'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-medium sm:text-sm">
-                {technician?.name || 'Sin asignar'}
-              </span>
+              <CreatedByUser user={technician} />
             </div>
             <span className="text-xs text-gray-500">{timestamp}</span>
           </div>

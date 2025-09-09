@@ -9,7 +9,7 @@ import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
 import { DamageSparePartsTable } from '@/components/molecules/DamageSparePartsTable';
 import { DamageAdditionalActionsTable } from '@/components/molecules/DamageAdditionalActionsTable';
-import { DamageAction, Damage } from '@/types/DamageAssessment';
+import { DamageAction, Damage, operationLabels } from '@/types/DamageAssessment';
 import { useDamageAssessmentDetail } from '@/context/DamageAssessment.context';
 import { useState } from 'react';
 import { clsx } from 'clsx';
@@ -22,15 +22,6 @@ const severityLabelMap: Record<DamageSeverity, string> = {
   [DamageSeverity.SEV3]: 'Medio (Rayón)',
   [DamageSeverity.SEV4]: 'Grave (Chapa y pintura)',
   [DamageSeverity.SEV5]: 'Muy Grave (Reemplazo)',
-};
-
-const actionLabelMap: Record<DamageAction, string> = {
-  [DamageAction.POLISH]: 'Pulido',
-  [DamageAction.RENOVATE]: 'Renovación',
-  [DamageAction.QUICK_REPAIR]: 'Reparación rápida',
-  [DamageAction.PAINT]: 'Pintura',
-  [DamageAction.REPAIR_AND_PAINT]: 'Reparación y pintura',
-  [DamageAction.REPLACE]: 'Reemplazo',
 };
 
 interface DamageCardProps {
@@ -203,7 +194,7 @@ const DamageCard = ({
           <div className="mt-4 border-t border-gray-200 pt-4">
             <div className="flex items-center gap-2 text-sm">
               <Wrench className="h-4 w-4 text-gray-500" />
-              <span className="font-medium text-gray-700">{actionLabelMap[action]}</span>
+              <span className="font-medium text-gray-700">{operationLabels[action]}</span>
               <span className="text-gray-500">| Código: PDI-REP-M</span>
             </div>
             <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
@@ -281,9 +272,9 @@ const DamageCard = ({
                         <SelectValue placeholder="Selecciona una operación" />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(DamageAction).map((action) => (
+                        {Object.values(DamageAction).map((action: DamageAction) => (
                           <SelectItem key={action} value={action}>
-                            {actionLabelMap[action]}
+                            {operationLabels[action]}
                           </SelectItem>
                         ))}
                       </SelectContent>
