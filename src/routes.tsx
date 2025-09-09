@@ -131,6 +131,14 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: '/appointments/:appointmentId/cars/:carId/new-diagnosis',
+    element: (
+      <ErrorBoundary>
+        <NewDiagnosis />
+      </ErrorBoundary>
+    ),
+  },
+  {
     path: '/cars/:carId',
     element: (
       <ErrorBoundary>
