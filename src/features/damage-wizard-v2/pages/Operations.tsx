@@ -1,5 +1,5 @@
 import { Button } from '@/components/atoms/Button';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import damageAssessmentApi from '@/service/damageAssessmentApi.service';
 import { useNavigate } from 'react-router-dom';
 import { NoConfirmedDamagesMessage } from '../components/NoConfirmedDamagesMessage';
@@ -25,6 +25,9 @@ export const Operations = () => {
   const { dispatch } = useWizardV2Context();
 
   const confirmedDamages = useMemo(() => state.confirmedDamages || [], [state.confirmedDamages]);
+
+  // Estado local para el loading de actualización de operaciones
+  const [isUpdatingOperations, setIsUpdatingOperations] = useState(false);
 
   const handleUpdateOperation = async (damageId: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
@@ -90,6 +93,9 @@ export const Operations = () => {
   const goValuation = async () => {
     try {
       if (hasModifiedOperations(state.modifiedOperations)) {
+        // Mostrar progressCard solo cuando hay cambios y se van a hacer requests
+        setIsUpdatingOperations(true);
+
         // Preparar todas las operaciones modificadas para actualización atómica
         const operations = Object.entries(state.modifiedOperations || {}).map(
           ([damageId, operation]) => ({
@@ -113,11 +119,16 @@ export const Operations = () => {
         );
         dispatch({ type: 'SET_VALUATION', payload: newValuation });
         dispatch({ type: 'CLEAR_MODIFIED_OPERATIONS' });
+
+        // Ocultar progressCard después de completar las operaciones
+        setIsUpdatingOperations(false);
       }
 
       navigate(`?step=valuation`, { replace: true });
     } catch (error) {
       console.error('Error navegando a valuation:', error);
+      // Asegurar que se oculte el progressCard en caso de error
+      setIsUpdatingOperations(false);
       navigate(`?step=valuation`, { replace: true });
     }
   };
@@ -133,12 +144,12 @@ export const Operations = () => {
           <WizardStepperWithNav
             currentStep="operations"
             completedSteps={['intake', 'damages']}
-            loading={state.loading}
+            loading={state.loading || isUpdatingOperations}
           />
         }
         title="Operaciones de reparación"
         subtitle="Define las operaciones necesarias para cada daño confirmado"
-        loading={state.loading}
+        loading={state.loading || isUpdatingOperations}
         loadingTitle="Cargando operaciones"
         loadingDescription="Estamos cargando las operaciones de reparación"
         content={<NoConfirmedDamagesMessage onGoBack={handleGoBack} />}
@@ -152,14 +163,14 @@ export const Operations = () => {
         <WizardStepperWithNav
           currentStep="operations"
           completedSteps={['intake', 'damages']}
-          loading={state.loading}
+          loading={state.loading || isUpdatingOperations}
         />
       }
       title="Operaciones de reparación"
       subtitle="Define las operaciones necesarias para cada daño confirmado"
-      loading={state.loading}
-      loadingTitle="Guardando operaciones"
-      loadingDescription="Estamos guardando las operaciones de reparación definidas"
+      loading={state.loading || isUpdatingOperations}
+      loadingTitle="Actualizando operaciones"
+      loadingDescription="Estamos guardando las operaciones y generando la valoración"
       content={
         <>
           <OperationsInfoAlert />
