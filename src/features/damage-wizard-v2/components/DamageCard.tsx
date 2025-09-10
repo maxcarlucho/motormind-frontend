@@ -86,7 +86,7 @@ export const DamageCard = ({
               confidenceColor(damage.confidence || 0),
             )}
           >
-            {(damage.confidence || 0 * 100).toFixed(1)}% seguro
+            {(damage.confidence! * 100).toFixed(1)}% seguro
           </div>
         )}
 
