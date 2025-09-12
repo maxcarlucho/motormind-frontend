@@ -23,14 +23,16 @@ export const DamageOperationsGroup: React.FC<DamageOperationsGroupProps> = ({
           <h3 id={`group-${title}`} className="text-lg font-semibold text-gray-900">
             {title}
           </h3>
-          <Badge variant="secondary" className="w-fit text-xs">
-            {count} {count === 1 ? 'daño' : 'daños'}
-          </Badge>
-          {isSubstitutionActive && (
-            <Badge variant="destructive" className="text-xs">
-              Sustitución activa
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="w-fit text-xs">
+              {count} {count === 1 ? 'daño' : 'daños'}
             </Badge>
-          )}
+            {isSubstitutionActive && (
+              <Badge variant="destructive" className="w-fit text-xs">
+                Sustitución activa
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
