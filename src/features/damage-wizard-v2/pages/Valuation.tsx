@@ -10,6 +10,7 @@ import { ValuationTable } from '../components/ValuationTable';
 
 import { BackendLaborOutput, BackendPaintWork } from '../types/backend.types';
 import { operationLabels } from '@/types/DamageAssessment';
+import { ArrowLeftIcon } from 'lucide-react';
 
 const Valuation = () => {
   const navigate = useNavigate();
@@ -335,17 +336,15 @@ const Valuation = () => {
       }
       footer={
         <div className="flex w-full flex-col gap-3 md:flex-row md:justify-between">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate(`?step=operations`, { replace: true })}
             className="w-full md:w-auto"
           >
+            <ArrowLeftIcon className="h-4 w-4 sm:mr-2" />
             Volver a Operaciones
           </Button>
-          <Button 
-            onClick={handleFinalize} 
-            className="w-full px-6 md:w-auto"
-          >
+          <Button onClick={handleFinalize} className="w-full px-6 md:w-auto">
             Finalizar Peritaje
           </Button>
         </div>

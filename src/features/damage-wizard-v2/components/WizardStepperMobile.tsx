@@ -98,7 +98,7 @@ export const WizardStepperMobile = ({
         <div className="hidden md:block">
           <div
             className={cn(
-              'flex items-center justify-between transition-opacity',
+              'flex items-center justify-center transition-opacity',
               loading && 'pointer-events-none opacity-60',
             )}
           >
@@ -111,7 +111,7 @@ export const WizardStepperMobile = ({
                 (status === 'completed' || status === 'current' || index < currentStepIndex);
 
               return (
-                <div key={step.key} className="flex flex-1 items-center">
+                <div key={step.key} className="flex items-center">
                   <div
                     className={cn(
                       'flex items-center gap-3 rounded-lg p-3 transition-colors',

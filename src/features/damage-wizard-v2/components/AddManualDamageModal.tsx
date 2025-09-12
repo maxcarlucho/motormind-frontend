@@ -20,6 +20,7 @@ import { DamageType, DamageSeverity, getDamageTypeLabel } from '@/types/DamageAs
 import { Upload, Loader2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { severityLabels } from '@/types/DamageAssessment';
+import { ImagePreviewItem } from './ImagePreviewItem';
 
 interface AddManualDamageModalProps {
   isOpen: boolean;
@@ -51,10 +52,18 @@ export const AddManualDamageModal = ({
   });
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
+
+    if (!formData.area) {
+      errors.area = 'El área del daño es obligatoria';
+    }
+
+    if (!formData.subarea) {
+      errors.subarea = 'La subárea del daño es obligatoria';
+    }
 
     if (!formData.type) {
       errors.type = 'El tipo de daño es obligatorio';
@@ -77,13 +86,26 @@ export const AddManualDamageModal = ({
     }
 
     try {
+      // Convertir el primer archivo a base64 si existe
+      let imageUrl = formData.imageUrl;
+      if (imageFiles.length > 0) {
+        const file = imageFiles[0];
+        imageUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve(e.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
       await onAddDamage({
         area: formData.area || 'Carrocería',
         subarea: formData.subarea,
         type: formData.type,
         severity: formData.severity,
         description: formData.description,
-        imageUrl: imagePreview || formData.imageUrl,
+        imageUrl: imageUrl,
       });
 
       // Reset form on success
@@ -95,7 +117,7 @@ export const AddManualDamageModal = ({
         severity: DamageSeverity.SEV3,
         imageUrl: '',
       });
-      setImagePreview('');
+      setImageFiles([]);
       setValidationErrors({});
 
       onClose();
@@ -127,43 +149,13 @@ export const AddManualDamageModal = ({
         return;
       }
 
-      // Comprimir imagen antes de convertir a base64
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-
-          // Calcular nuevas dimensiones (máximo 800px de ancho o alto)
-          const maxDimension = 800;
-          let { width, height } = img;
-
-          if (width > height) {
-            if (width > maxDimension) {
-              height = (height * maxDimension) / width;
-              width = maxDimension;
-            }
-          } else {
-            if (height > maxDimension) {
-              width = (width * maxDimension) / height;
-              height = maxDimension;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          // Convertir a base64 con calidad reducida
-          const compressedImageUrl = canvas.toDataURL('image/jpeg', 0.7);
-          setImagePreview(compressedImageUrl);
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      // Solo permitir una imagen por ahora
+      setImageFiles([file]);
     }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -177,7 +169,9 @@ export const AddManualDamageModal = ({
           <div className="grid gap-2 py-0 sm:gap-4 sm:py-4">
             {/* Área */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">Área</p>
+              <p className="mb-1 text-xs font-medium sm:text-sm">
+                Área <span className="text-red-500">*</span>
+              </p>
               <Input
                 value={formData.area}
                 onChange={(e) => setFormData({ ...formData, area: e.target.value })}
@@ -188,7 +182,9 @@ export const AddManualDamageModal = ({
 
             {/* Subárea */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">Subárea</p>
+              <p className="mb-1 text-xs font-medium sm:text-sm">
+                Subárea <span className="text-red-500">*</span>
+              </p>
               <Input
                 value={formData.subarea}
                 onChange={(e) => setFormData({ ...formData, subarea: e.target.value })}
@@ -199,7 +195,7 @@ export const AddManualDamageModal = ({
 
             {/* Tipo de daño */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">
+              <p className="mb-1 text-xs font-medium sm:text-sm">
                 Tipo de daño <span className="text-red-500">*</span>
               </p>
               <Select
@@ -225,7 +221,7 @@ export const AddManualDamageModal = ({
 
             {/* Severidad */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">
+              <p className="mb-1 text-xs font-medium sm:text-sm">
                 Severidad <span className="text-red-500">*</span>
               </p>
               <Select
@@ -253,7 +249,7 @@ export const AddManualDamageModal = ({
 
             {/* Descripción */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">Descripción</p>
+              <p className="mb-1 text-xs font-medium sm:text-sm">Descripción</p>
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -265,7 +261,7 @@ export const AddManualDamageModal = ({
 
             {/* Imagen */}
             <div>
-              <p className="mb-0.5 text-xs font-medium sm:text-sm">Foto (opcional)</p>
+              <p className="mb-1 text-xs font-medium sm:text-sm">Foto (opcional)</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Button
@@ -287,26 +283,13 @@ export const AddManualDamageModal = ({
                     disabled={isAdding}
                   />
                 </div>
-                {imagePreview && (
-                  <div className="relative">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="h-32 w-full rounded border object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute top-1 right-1 bg-white/80 hover:bg-white"
-                      onClick={() => {
-                        setImagePreview('');
-                      }}
-                      disabled={isAdding}
-                    >
-                      ×
-                    </Button>
-                  </div>
+                {imageFiles.length > 0 && (
+                  <ImagePreviewItem
+                    file={imageFiles[0]}
+                    onRemove={() => handleRemoveImage(0)}
+                    showFileName={false}
+                    imageClassName="h-32"
+                  />
                 )}
               </div>
             </div>

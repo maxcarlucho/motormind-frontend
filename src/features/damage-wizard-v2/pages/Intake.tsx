@@ -158,7 +158,7 @@ const Intake = () => {
             {state.images && state.images.length > 0 && (
               <div className="mt-6">
                 <p className="mb-3 text-sm font-medium">
-                  Imágenes del assessment ({state.images.length})
+                  Imágenes del peritaje ({state.images.length})
                 </p>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   {state.images.map((imageUrl, index) => (

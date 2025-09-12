@@ -112,10 +112,10 @@ const Damages = () => {
     ...(state.detectedDamages?.detectedDamages || []),
     ...(state.userCreatedDamages || []),
   ].sort((a, b) => {
-    // Los daños creados por el usuario (sin confidence) van al final
+    // Los daños creados por el usuario (sin confidence) van al principio
     if (!a.confidence && !b.confidence) return 0;
-    if (!a.confidence) return 1;
-    if (!b.confidence) return -1;
+    if (!a.confidence) return -1;
+    if (!b.confidence) return 1;
 
     // Ordenar por confidence descendente (mayor a menor)
     return b.confidence - a.confidence;

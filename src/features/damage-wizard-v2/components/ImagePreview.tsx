@@ -1,5 +1,5 @@
 import { cn } from '@/utils/cn';
-import { ImageRemoveButton } from './ImageRemoveButton';
+import { ImagePreviewItem } from './ImagePreviewItem';
 
 interface ImagePreviewProps {
   files: File[];
@@ -31,18 +31,12 @@ export const ImagePreview = ({
       </p>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {files.map((file, index) => (
-          <div key={index} className="group relative cursor-pointer">
-            <img
-              src={URL.createObjectURL(file)}
-              alt={`Imagen ${index + 1}`}
-              className="border-border h-24 w-full rounded-lg border object-cover"
-            />
-            <ImageRemoveButton
-              onRemove={() => onRemoveImage(index)}
-              label={`Eliminar imagen ${index + 1}`}
-            />
-            <p className="text-muted-foreground mt-1 truncate text-xs">{file.name}</p>
-          </div>
+          <ImagePreviewItem
+            key={index}
+            file={file}
+            onRemove={() => onRemoveImage(index)}
+            imageClassName="h-24"
+          />
         ))}
       </div>
     </div>
