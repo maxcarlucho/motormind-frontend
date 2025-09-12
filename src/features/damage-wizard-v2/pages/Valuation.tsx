@@ -17,6 +17,7 @@ const Valuation = () => {
 
   const { state, generateValuation, finalizeAssessment } = useWizardV2();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const hasGeneratedValuation = useRef(false);
 
   const handleGenerateValuation = useCallback(async () => {
@@ -44,11 +45,14 @@ const Valuation = () => {
 
   const handleFinalize = async () => {
     try {
+      setIsFinalizing(true);
       await finalizeAssessment();
       navigate(`?step=finalize`, { replace: true });
     } catch (error) {
       console.error('Error finalizing assessment:', error);
       navigate(`?step=finalize`, { replace: true });
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -72,7 +76,7 @@ const Valuation = () => {
         state.valuation.laborOutput.forEach((item: BackendLaborOutput) => {
           const operation = item.mainOperation?.operation || '';
           const partName = item.partName || 'Pieza sin nombre';
-          const key = `${operation}-${partName}`;
+          const key = `${operation}|${partName}`;
           const hours = item.mainOperation?.estimatedHours || 0;
           const total = (item.mainOperation?.estimatedHours || 0) * 38;
           const source = item.mainOperation?.source || 'no_data';
@@ -88,7 +92,7 @@ const Valuation = () => {
 
         // Convertir a array con datos agrupados
         return Array.from(laborByOperationAndPart.entries()).map(([key, data]) => {
-          const [operation, partName] = key.split('-', 2);
+          const [operation, partName] = key.split('|', 2);
           return {
             operation: `${operationLabels[operation] || operation} ${partName}`,
             hours: `${data.hours.toFixed(2)} h`,
@@ -215,6 +219,27 @@ const Valuation = () => {
         loading={true}
         loadingTitle="Generando valoración"
         loadingDescription="Estamos calculando los costes y tiempos de reparación para tu peritaje"
+        content={<div />}
+      />
+    );
+  }
+
+  // Mostrar loading mientras se finaliza el peritaje
+  if (isFinalizing) {
+    return (
+      <PageShell
+        header={
+          <WizardStepperWithNav
+            currentStep="valuation"
+            completedSteps={['intake', 'damages', 'operations']}
+            loading={true}
+          />
+        }
+        title="Valoración del peritaje"
+        subtitle="Finalizando peritaje..."
+        loading={true}
+        loadingTitle="Finalizando peritaje"
+        loadingDescription="Estamos completando el peritaje y preparando el informe final"
         content={<div />}
       />
     );
