@@ -15,10 +15,10 @@ interface ImageRemoveButtonProps {
  * - Colores: bg-destructive text-destructive-foreground
  * - Símbolo: × (multiply symbol)
  */
-export const ImageRemoveButton = ({ 
-  onRemove, 
+export const ImageRemoveButton = ({
+  onRemove,
   label = 'Eliminar imagen',
-  className 
+  className,
 }: ImageRemoveButtonProps) => {
   return (
     <button
@@ -26,7 +26,7 @@ export const ImageRemoveButton = ({
       onClick={onRemove}
       className={cn(
         'bg-destructive text-destructive-foreground absolute -top-2 -right-2 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-xs opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100',
-        className
+        className,
       )}
       aria-label={label}
     >

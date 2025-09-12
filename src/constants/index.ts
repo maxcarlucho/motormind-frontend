@@ -53,7 +53,7 @@ export const WORKFLOW_STATUS_LABELS = {
   damages_confirmed: 'Daños confirmados',
   operations_defined: 'Operaciones definidas',
   valuated: 'Valoración completada',
-  completed: 'Wizard finalizado',
+  completed: 'Valoración finalizada',
   error: 'Error en proceso',
 } as const;
 

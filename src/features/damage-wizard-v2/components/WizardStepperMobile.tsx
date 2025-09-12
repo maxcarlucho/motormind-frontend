@@ -14,8 +14,8 @@ const STEPS: Step[] = [
   { key: 'valuation', label: 'Valoración', description: 'Revisar costes y precios finales' },
   {
     key: 'finalize',
-    label: 'Finalizar',
-    description: 'Completar evaluación y generar presupuesto',
+    label: 'Finalizado',
+    description: 'Valoración finalizada',
   },
 ];
 
@@ -60,7 +60,7 @@ export const WizardStepperMobile = ({
     <div className="bg-card border-border border-b">
       <div className="mx-auto max-w-7xl p-4">
         {/* Mobile: Show only current step */}
-        <div className="md:hidden">
+        <div className="xl:hidden">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
@@ -95,7 +95,7 @@ export const WizardStepperMobile = ({
         </div>
 
         {/* Desktop: Show full stepper (hidden on mobile) */}
-        <div className="hidden md:block">
+        <div className="hidden xl:block">
           <div
             className={cn(
               'flex items-center justify-center transition-opacity',
