@@ -28,6 +28,8 @@ export const Operations = () => {
 
   // Estado local para el loading de actualización de operaciones
   const [isUpdatingOperations, setIsUpdatingOperations] = useState(false);
+  // Estado local para el loading de navegación a valoración
+  const [isNavigatingToValuation, setIsNavigatingToValuation] = useState(false);
 
   const handleUpdateOperation = async (damageId: string, newOperation: DamageAction) => {
     if (!state.assessmentId) return;
@@ -92,6 +94,9 @@ export const Operations = () => {
 
   const goValuation = async () => {
     try {
+      // Mostrar progressCard durante toda la transición
+      setIsNavigatingToValuation(true);
+
       if (hasModifiedOperations(state.modifiedOperations)) {
         // Mostrar progressCard solo cuando hay cambios y se van a hacer requests
         setIsUpdatingOperations(true);
@@ -129,6 +134,7 @@ export const Operations = () => {
       console.error('Error navegando a valuation:', error);
       // Asegurar que se oculte el progressCard en caso de error
       setIsUpdatingOperations(false);
+      setIsNavigatingToValuation(false);
       navigate(`?step=valuation`, { replace: true });
     }
   };
@@ -153,6 +159,25 @@ export const Operations = () => {
         loadingTitle="Cargando operaciones"
         loadingDescription="Estamos cargando las operaciones de reparación"
         content={<NoConfirmedDamagesMessage onGoBack={handleGoBack} />}
+      />
+    );
+  }
+
+  // Mostrar progressCard cuando se está navegando a valoración
+  if (isNavigatingToValuation) {
+    return (
+      <PageShell
+        header={
+          <WizardStepperWithNav
+            currentStep="operations"
+            completedSteps={['intake', 'damages']}
+            loading={true}
+          />
+        }
+        loading={true}
+        loadingTitle="Preparando valoración"
+        loadingDescription="Estamos preparando la valoración del peritaje..."
+        content={<div />}
       />
     );
   }
