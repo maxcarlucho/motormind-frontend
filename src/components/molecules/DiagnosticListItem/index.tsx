@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 import { cn } from '@/utils/cn';
-import { getDiagnosisStatusLabel } from '@/utils';
+import { getDiagnosisStatusLabel, getDiagnosisStatusColor } from '@/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
@@ -78,22 +78,6 @@ export const DiagnosticListItem = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
 
   return (
     <>
@@ -123,7 +107,7 @@ export const DiagnosticListItem = ({
               {status && (
                 <Badge
                   variant="outline"
-                  className={`${getStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
+                  className={`${getDiagnosisStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
                 >
                   {getDiagnosisStatusLabel(status)}
                 </Badge>

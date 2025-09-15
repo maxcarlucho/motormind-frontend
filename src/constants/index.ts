@@ -77,6 +77,17 @@ export const DIAGNOSIS_STATUS_LABELS = {
   [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'Esperando Respuestas',
 } as const;
 
+// ✅ NUEVO: Mapeo de diagnosis status a colores CSS
+export const DIAGNOSIS_STATUS_COLORS = {
+  [DIAGNOSIS_STATUS.GUIDED_QUESTIONS]: 'bg-gray-100 text-gray-800 border-gray-200',
+  [DIAGNOSIS_STATUS.PRELIMINARY]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  [DIAGNOSIS_STATUS.ASSIGN_OBD_CODES]: 'bg-orange-100 text-orange-800 border-orange-200',
+  [DIAGNOSIS_STATUS.IN_REPARATION]: 'bg-blue-100 text-blue-800 border-blue-200',
+  [DIAGNOSIS_STATUS.REPAIRED]: 'bg-green-100 text-green-800 border-green-200',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM]: 'bg-purple-100 text-purple-800 border-purple-200',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+} as const;
+
 // ✅ NUEVO: Tipo para el mapeo de workflow status
 export type WorkflowStatus = keyof typeof WORKFLOW_STATUS_LABELS;
 

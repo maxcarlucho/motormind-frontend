@@ -1,4 +1,4 @@
-import { DIAGNOSIS_STATUS, DIAGNOSIS_STATUS_LABELS, DiagnosisStatus, ASSESSMENT_STATUS_LABELS, AssessmentStatus } from '@/constants';
+import { DIAGNOSIS_STATUS, DIAGNOSIS_STATUS_LABELS, DIAGNOSIS_STATUS_COLORS, DiagnosisStatus, ASSESSMENT_STATUS_LABELS, AssessmentStatus } from '@/constants';
 import { Diagnosis } from '@/types/Diagnosis';
 
 export const formatDate = (dateString: string | Date) => {
@@ -114,4 +114,13 @@ export const getDiagnosisStatusLabel = (status: string): string => {
  */
 export const getAssessmentStatusLabel = (status: string): string => {
   return ASSESSMENT_STATUS_LABELS[status as AssessmentStatus] || status;
+};
+
+/**
+ * Obtiene las clases CSS de color para un estado de diagnosis
+ * @param status - El estado del diagnosis
+ * @returns Las clases CSS de color o el color por defecto si no se encuentra
+ */
+export const getDiagnosisStatusColor = (status: string): string => {
+  return DIAGNOSIS_STATUS_COLORS[status as DiagnosisStatus] || 'bg-gray-100 text-gray-800 border-gray-200';
 };
