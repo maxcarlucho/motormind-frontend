@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { debounce } from 'lodash';
 import { FileSearch, PlusIcon, SearchIcon } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
-import { diagnosisLink, formatDate } from '@/utils';
+import { diagnosisLink, formatDate, getDiagnosisStatusLabel } from '@/utils';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
 import apiService from '@/service/api.service';
@@ -92,23 +92,6 @@ const Diagnoses = () => {
   //   }
   // };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'Preguntas Guíadas';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'Asignar Códigos OBD';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'Pre-Diagnóstico';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'En Reparación';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'Reparado';
-      default:
-        return status;
-    }
-  };
-
   const handleDeleteDiagnosis = async (diagnosisId: string) => {
     try {
       await apiService.deleteDiagnosis(diagnosisId);
@@ -154,19 +137,19 @@ const Diagnoses = () => {
               <SelectContent>
                 <SelectItem value="ALL">Todos los estados</SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.GUIDED_QUESTIONS}>
-                  {getStatusText(DIAGNOSIS_STATUS.GUIDED_QUESTIONS)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.GUIDED_QUESTIONS)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.ASSIGN_OBD_CODES}>
-                  {getStatusText(DIAGNOSIS_STATUS.ASSIGN_OBD_CODES)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.ASSIGN_OBD_CODES)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.PRELIMINARY}>
-                  {getStatusText(DIAGNOSIS_STATUS.PRELIMINARY)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.PRELIMINARY)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.IN_REPARATION}>
-                  {getStatusText(DIAGNOSIS_STATUS.IN_REPARATION)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.IN_REPARATION)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.REPAIRED}>
-                  {getStatusText(DIAGNOSIS_STATUS.REPAIRED)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.REPAIRED)}
                 </SelectItem>
               </SelectContent>
             </Select>

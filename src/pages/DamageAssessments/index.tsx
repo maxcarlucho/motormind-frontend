@@ -14,6 +14,7 @@ import Spinner from '@/components/atoms/Spinner';
 import { Select } from '@radix-ui/react-select';
 import { SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/atoms/Select';
 import { ASSESSMENT_STATUS } from '@/constants';
+import { getAssessmentStatusLabel } from '@/utils';
 
 const DamageAssessments = () => {
   const { user } = useAuth();
@@ -54,18 +55,6 @@ const DamageAssessments = () => {
     }
   }, [isError]);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case ASSESSMENT_STATUS.PENDING_REVIEW:
-        return 'Pendiente de Revisión';
-      case ASSESSMENT_STATUS.DAMAGES_CONFIRMED:
-        return 'Daños Confirmados';
-
-      default:
-        return status;
-    }
-  };
-
   const IS_ADMIN = [UserRole.ADMIN, UserRole.SUPER_ADMIN].includes(user.role);
 
   if (!IS_ADMIN) return <Navigate to="/" replace />;
@@ -88,10 +77,10 @@ const DamageAssessments = () => {
                 <SelectContent>
                   <SelectItem value="ALL">Todos</SelectItem>
                   <SelectItem value={ASSESSMENT_STATUS.PENDING_REVIEW}>
-                    {getStatusText(ASSESSMENT_STATUS.PENDING_REVIEW)}
+                    {getAssessmentStatusLabel(ASSESSMENT_STATUS.PENDING_REVIEW)}
                   </SelectItem>
                   <SelectItem value={ASSESSMENT_STATUS.DAMAGES_CONFIRMED}>
-                    {getStatusText(ASSESSMENT_STATUS.DAMAGES_CONFIRMED)}
+                    {getAssessmentStatusLabel(ASSESSMENT_STATUS.DAMAGES_CONFIRMED)}
                   </SelectItem>
                 </SelectContent>
               </Select>

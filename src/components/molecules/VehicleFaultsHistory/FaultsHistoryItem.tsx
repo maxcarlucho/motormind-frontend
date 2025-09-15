@@ -4,7 +4,7 @@ import { MoreVertical, Trash2, Share2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { Diagnosis } from '@/types/Diagnosis';
 import { useSymptom } from '@/hooks/useSymptom';
-import { diagnosisLink, formatToddmmyyyy } from '@/utils';
+import { diagnosisLink, formatToddmmyyyy, getDiagnosisStatusLabel } from '@/utils';
 import { Button } from '@/components/atoms/Button';
 import { Dropdown } from '@/components/atoms/Dropdown';
 import { DeleteDiagnosisModal } from '../DeleteDiagnosisModal';
@@ -31,23 +31,6 @@ const getStatusColor = (status: string) => {
       return 'bg-green-100 text-green-800 border-green-200';
     default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-      return 'Preguntas Guíadas';
-    case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-      return 'Asignar Códigos OBD';
-    case DIAGNOSIS_STATUS.PRELIMINARY:
-      return 'Pre-Diagnóstico';
-    case DIAGNOSIS_STATUS.IN_REPARATION:
-      return 'En Reparación';
-    case DIAGNOSIS_STATUS.REPAIRED:
-      return 'Reparado';
-    default:
-      return status;
   }
 };
 
@@ -104,7 +87,7 @@ export const FaultsHistoryItem = ({ diagnosis, index, onDelete }: FaultsHistoryI
                   variant="outline"
                   className={`${getStatusColor(diagnosis.status)} truncate px-2 py-0.5 text-xs font-medium`}
                 >
-                  {getStatusText(diagnosis.status)}
+                  {getDiagnosisStatusLabel(diagnosis.status)}
                 </Badge>
               </div>
 

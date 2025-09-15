@@ -1,4 +1,4 @@
-import { DIAGNOSIS_STATUS } from '@/constants';
+import { DIAGNOSIS_STATUS, DIAGNOSIS_STATUS_LABELS, DiagnosisStatus, ASSESSMENT_STATUS_LABELS, AssessmentStatus } from '@/constants';
 import { Diagnosis } from '@/types/Diagnosis';
 
 export const formatDate = (dateString: string | Date) => {
@@ -96,4 +96,22 @@ export const onChangePrice = (
   if (!isNaN(numValue) && numValue >= 0) {
     update(numValue);
   }
+};
+
+/**
+ * Obtiene el label amigable para un estado de diagnosis
+ * @param status - El estado del diagnosis
+ * @returns El label amigable o el estado original si no se encuentra
+ */
+export const getDiagnosisStatusLabel = (status: string): string => {
+  return DIAGNOSIS_STATUS_LABELS[status as DiagnosisStatus] || status;
+};
+
+/**
+ * Obtiene el label amigable para un estado de assessment
+ * @param status - El estado del assessment
+ * @returns El label amigable o el estado original si no se encuentra
+ */
+export const getAssessmentStatusLabel = (status: string): string => {
+  return ASSESSMENT_STATUS_LABELS[status as AssessmentStatus] || status;
 };

@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 import { cn } from '@/utils/cn';
+import { getDiagnosisStatusLabel } from '@/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
@@ -94,23 +95,6 @@ export const DiagnosticListItem = ({
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'Preguntas Guíadas';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'Asignar Códigos OBD';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'Pre-Diagnóstico';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'En Reparación';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'Reparado';
-      default:
-        return status;
-    }
-  };
-
   return (
     <>
       <Link to={`/cars${diagnosisLink.split('/cars')[1]}`}>
@@ -141,7 +125,7 @@ export const DiagnosticListItem = ({
                   variant="outline"
                   className={`${getStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
                 >
-                  {getStatusText(status)}
+                  {getDiagnosisStatusLabel(status)}
                 </Badge>
               )}
 
