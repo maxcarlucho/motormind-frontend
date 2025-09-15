@@ -73,8 +73,8 @@ export const DIAGNOSIS_STATUS_LABELS = {
   [DIAGNOSIS_STATUS.PRELIMINARY]: 'Pre-Diagnóstico',
   [DIAGNOSIS_STATUS.IN_REPARATION]: 'En Reparación',
   [DIAGNOSIS_STATUS.REPAIRED]: 'Reparado',
-  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM]: 'Esperando Síntoma',
-  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'Esperando Respuestas',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM]: 'Pre-Cita - Esperando Síntoma',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'Pre-Cita - Esperando Respuestas',
 } as const;
 
 // ✅ NUEVO: Mapeo de diagnosis status a colores CSS

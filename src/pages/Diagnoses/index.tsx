@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { debounce } from 'lodash';
-import { FileSearch, PlusIcon, SearchIcon } from 'lucide-react';
+import { FileSearch, PlusIcon, SearchIcon, CalendarPlus } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { diagnosisLink, formatDate, getDiagnosisStatusLabel } from '@/utils';
 import { useApi } from '@/hooks/useApi';
@@ -9,6 +9,7 @@ import apiService from '@/service/api.service';
 import Spinner from '@/components/atoms/Spinner';
 import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
+import { CreatePreAppointmentModal, PreAppointmentData } from '@/components/molecules/CreatePreAppointmentModal';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import {
   Select,
@@ -29,6 +30,7 @@ const Diagnoses = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const queryClient = useQueryClient();
   const { execute: getDiagnosesRequest } = useApi<{ data: Diagnosis[]; total: number }>(
@@ -108,6 +110,20 @@ const Diagnoses = () => {
     }
   };
 
+  const handlePreAppointmentSubmit = async (data: PreAppointmentData) => {
+    // Mock implementation - aquí se conectará con el backend
+    console.log('Pre-appointment data:', data);
+    
+    // Simular delay de API
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Por ahora solo logueamos los datos
+    console.log('Creating pre-appointment with:', {
+      customer: data.customer,
+      vehicle: data.vehicle,
+    });
+  };
+
   return (
     <div className="flex flex-grow flex-col">
       {/* Fixed Header */}
@@ -154,13 +170,23 @@ const Diagnoses = () => {
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
-          >
-            <PlusIcon className="!h-5 !w-5" />
-            <span className="hidden lg:inline">Nuevo diagnóstico</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsPreAppointmentModalOpen(true)}
+              variant="outline"
+              className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
+            >
+              <CalendarPlus className="!h-5 !w-5" />
+              <span className="hidden lg:inline">Crear pre-cita</span>
+            </Button>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
+            >
+              <PlusIcon className="!h-5 !w-5" />
+              <span className="hidden lg:inline">Nuevo diagnóstico</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -221,6 +247,13 @@ const Diagnoses = () => {
         onOpenChange={setIsCreateModalOpen}
         submitButtonText="Comenzar diagnóstico"
       />
+      
+      <CreatePreAppointmentModal
+        open={isPreAppointmentModalOpen}
+        onOpenChange={setIsPreAppointmentModalOpen}
+        onSubmit={handlePreAppointmentSubmit}
+      />
+      
       <div className="sm:hidden">
         <FloatingButton onClick={() => setIsCreateModalOpen(true)}>
           <PlusIcon className="!h-5 !w-5" />

@@ -78,7 +78,6 @@ export const DiagnosticListItem = ({
     }
   };
 
-
   return (
     <>
       <Link to={`/cars${diagnosisLink.split('/cars')[1]}`}>
