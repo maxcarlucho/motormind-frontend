@@ -1,6 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CalendarPlus, User, Car, Loader2 } from 'lucide-react';
+import {
+  CalendarPlus,
+  User,
+  Car as CarIcon,
+  Loader2,
+  CheckIcon,
+  XIcon,
+  FileTextIcon,
+} from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
+import { useMutation } from '@tanstack/react-query';
+import { AxiosResponse } from 'axios';
 
 import {
   Dialog,
@@ -13,56 +23,111 @@ import {
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
+import { PLATE_REGEX } from '@/constants';
+import { useApi } from '@/hooks/useApi';
+import { Car } from '@/types/Car';
 
 interface CreatePreAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: PreAppointmentData) => Promise<void>;
 }
 
 export interface PreAppointmentData {
-  customer: {
-    fullName: string;
-    phoneE164: string;
-    email?: string;
-  };
-  vehicle: {
-    plate: string;
-    notes?: string;
-  };
+  clientName: string;
+  clientPhone: string;
+  carPlate: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
+  notes?: string;
 }
 
 interface FormData {
-  fullName: string;
-  phone: string;
-  email: string;
-  plate: string;
+  clientName: string;
+  clientPhone: string;
+  carPlate: string;
+  appointmentDate: string;
+  appointmentTime: string;
   notes: string;
 }
 
 interface ValidationErrors {
-  fullName?: string;
-  phone?: string;
-  email?: string;
-  plate?: string;
+  clientName?: string;
+  clientPhone?: string;
+  carPlate?: string;
 }
 
 export const CreatePreAppointmentModal = ({
   open,
   onOpenChange,
-  onSubmit,
 }: CreatePreAppointmentModalProps) => {
   const [formData, setFormData] = useState<FormData>({
-    fullName: '',
-    phone: '+54',
-    email: '',
-    plate: '',
+    clientName: '',
+    clientPhone: '+54',
+    carPlate: '',
+    appointmentDate: '',
+    appointmentTime: '',
     notes: '',
   });
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isCarPlateValid, setIsCarPlateValid] = useState<boolean | null>(null);
+  const [validatedCar, setValidatedCar] = useState<Car | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // API hooks
+  const { execute: getOrCreateVehicleRequest } = useApi<Car>('get', '/cars/vin-or-plate');
+  const { execute: createAppointmentRequest } = useApi<any>('post', '/appointments/manual');
+
+  // Mutations
+  const validateVehicleMutation = useMutation<AxiosResponse<Car>, Error, { plate: string }>({
+    mutationFn: (params: { plate: string }) => getOrCreateVehicleRequest(undefined, params),
+    onSuccess: (response) => {
+      setValidatedCar(response.data);
+      enqueueSnackbar('Vehículo validado correctamente', { variant: 'success' });
+    },
+    onError: () => {
+      enqueueSnackbar('Error al validar el vehículo. Verificá que la matrícula exista.', {
+        variant: 'error',
+      });
+      setValidatedCar(null);
+    },
+  });
+
+  interface CreateAppointmentResponse {
+    success: boolean;
+    appointment: any;
+    carId: string;
+    diagnosisId: string;
+    link: string;
+    message: string;
+  }
+
+  const createAppointmentMutation = useMutation<
+    AxiosResponse<CreateAppointmentResponse>,
+    Error,
+    PreAppointmentData & { carId: string }
+  >({
+    mutationFn: (data: PreAppointmentData & { carId: string }) =>
+      createAppointmentRequest({
+        clientName: data.clientName,
+        clientPhone: data.clientPhone,
+        carPlate: data.carPlate,
+        appointmentDate: data.appointmentDate,
+        appointmentTime: data.appointmentTime,
+        notes: data.notes,
+      }),
+    onSuccess: () => {
+      enqueueSnackbar('Pre-cita creada. El cliente recibirá un WhatsApp con los próximos pasos.', {
+        variant: 'success',
+      });
+      onOpenChange(false);
+    },
+    onError: () => {
+      enqueueSnackbar('Error al crear la pre-cita. Intentalo nuevamente.', {
+        variant: 'error',
+      });
+    },
+  });
 
   // Focus en el primer campo cuando se abre el modal
   useEffect(() => {
@@ -75,14 +140,16 @@ export const CreatePreAppointmentModal = ({
   useEffect(() => {
     if (!open) {
       setFormData({
-        fullName: '',
-        phone: '+54',
-        email: '',
-        plate: '',
+        clientName: '',
+        clientPhone: '+54',
+        carPlate: '',
+        appointmentDate: '',
+        appointmentTime: '',
         notes: '',
       });
       setValidationErrors({});
-      setIsLoading(false);
+      setIsCarPlateValid(null);
+      setValidatedCar(null);
     }
   }, [open]);
 
@@ -90,38 +157,34 @@ export const CreatePreAppointmentModal = ({
     const errors: ValidationErrors = {};
 
     // Validar nombre
-    if (!formData.fullName.trim() || formData.fullName.trim().length < 2) {
-      errors.fullName = 'El nombre debe tener al menos 2 caracteres';
+    if (!formData.clientName.trim() || formData.clientName.trim().length < 2) {
+      errors.clientName = 'El nombre debe tener al menos 2 caracteres';
     }
 
     // Validar teléfono
     const phoneRegex = /^\+[1-9]\d{1,14}$/; // E.164 format
-    if (!formData.phone || !phoneRegex.test(formData.phone)) {
-      errors.phone = 'Ingresá un número válido con prefijo de país';
-    }
-
-    // Validar email si está presente
-    if (formData.email && formData.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        errors.email = 'Ingresá un email válido';
-      }
+    if (!formData.clientPhone || !phoneRegex.test(formData.clientPhone)) {
+      errors.clientPhone = 'Ingresá un número válido con prefijo de país';
     }
 
     // Validar matrícula
-    if (!formData.plate.trim()) {
-      errors.plate = 'La matrícula es obligatoria';
+    if (!formData.carPlate.trim()) {
+      errors.carPlate = 'La matrícula es obligatoria';
+    } else if (!PLATE_REGEX.test(formData.carPlate)) {
+      errors.carPlate = 'Formato de matrícula inválido';
+    } else if (!validatedCar) {
+      errors.carPlate = 'Debes validar la matrícula antes de continuar';
     }
 
     return errors;
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Limpiar error cuando el usuario empieza a escribir
     if (validationErrors[field as keyof ValidationErrors]) {
-      setValidationErrors(prev => ({ ...prev, [field]: undefined }));
+      setValidationErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -130,18 +193,39 @@ export const CreatePreAppointmentModal = ({
     const normalized = value.replace(/[^\d+]/g, '');
     // Asegurar que empiece con +
     const formatted = normalized.startsWith('+') ? normalized : `+${normalized}`;
-    handleInputChange('phone', formatted);
+    handleInputChange('clientPhone', formatted);
   };
 
-  const handlePlateChange = (value: string) => {
-    // Normalizar a mayúsculas y sin espacios
-    const normalized = value.toUpperCase().replace(/\s/g, '');
-    handleInputChange('plate', normalized);
+  const validateCarPlate = (value: string) => {
+    // Only allow letters, numbers, hyphen and space
+    const filteredValue = value.replace(/[^a-zA-Z0-9\s-]/g, '');
+    // Convert to uppercase
+    const upperValue = filteredValue.toUpperCase();
+
+    handleInputChange('carPlate', upperValue);
+
+    // Validate using regex pattern
+    if (upperValue.length > 0) {
+      setIsCarPlateValid(PLATE_REGEX.test(upperValue));
+    } else {
+      setIsCarPlateValid(null);
+    }
+
+    // Reset validated car when plate changes
+    if (validatedCar && validatedCar.plate !== upperValue) {
+      setValidatedCar(null);
+    }
+  };
+
+  const handleValidateVehicle = () => {
+    if (formData.carPlate.trim() && PLATE_REGEX.test(formData.carPlate)) {
+      validateVehicleMutation.mutate({ plate: formData.carPlate });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const errors = validateForm();
     setValidationErrors(errors);
 
@@ -149,36 +233,24 @@ export const CreatePreAppointmentModal = ({
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const preAppointmentData: PreAppointmentData = {
-        customer: {
-          fullName: formData.fullName.trim(),
-          phoneE164: formData.phone,
-          email: formData.email.trim() || undefined,
-        },
-        vehicle: {
-          plate: formData.plate.trim(),
-          notes: formData.notes.trim() || undefined,
-        },
-      };
-
-      await onSubmit(preAppointmentData);
-      
-      enqueueSnackbar('Pre-cita creada. El cliente recibirá un WhatsApp con los próximos pasos.', {
-        variant: 'success',
-      });
-      
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating pre-appointment:', error);
-      enqueueSnackbar('Error al crear la pre-cita. Intentalo nuevamente.', {
-        variant: 'error',
-      });
-    } finally {
-      setIsLoading(false);
+    if (!validatedCar) {
+      enqueueSnackbar('Debes validar la matrícula antes de continuar', { variant: 'error' });
+      return;
     }
+
+    const preAppointmentData: PreAppointmentData = {
+      clientName: formData.clientName.trim(),
+      clientPhone: formData.clientPhone,
+      carPlate: formData.carPlate.trim(),
+      appointmentDate: formData.appointmentDate.trim() || undefined,
+      appointmentTime: formData.appointmentTime.trim() || undefined,
+      notes: formData.notes.trim() || undefined,
+    };
+
+    createAppointmentMutation.mutate({
+      ...preAppointmentData,
+      carId: validatedCar._id!,
+    });
   };
 
   const handleClose = () => {
@@ -188,6 +260,7 @@ export const CreatePreAppointmentModal = ({
   };
 
   const isFormValid = Object.keys(validateForm()).length === 0;
+  const isLoading = validateVehicleMutation.isPending || createAppointmentMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -209,73 +282,95 @@ export const CreatePreAppointmentModal = ({
               <User className="h-4 w-4 text-gray-600" />
               <h3 className="text-sm font-semibold text-gray-900">Datos del cliente</h3>
             </div>
-            
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Nombre y apellido */}
               <div className="sm:col-span-2">
-                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="clientName"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Nombre y apellido <span className="text-red-500">*</span>
                 </label>
                 <Input
                   ref={nameInputRef}
-                  id="fullName"
+                  id="clientName"
                   type="text"
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
+                  value={formData.clientName}
+                  onChange={(e) => handleInputChange('clientName', e.target.value)}
                   placeholder="Ej: Juan Pérez"
                   disabled={isLoading}
-                  className={validationErrors.fullName ? 'border-red-500 focus:border-red-500' : ''}
-                  aria-describedby={validationErrors.fullName ? 'fullName-error' : undefined}
+                  className={
+                    validationErrors.clientName ? 'border-red-500 focus:border-red-500' : ''
+                  }
+                  aria-describedby={validationErrors.clientName ? 'clientName-error' : undefined}
                 />
-                {validationErrors.fullName && (
-                  <p id="fullName-error" className="mt-1 text-sm text-red-600" role="alert">
-                    {validationErrors.fullName}
+                {validationErrors.clientName && (
+                  <p id="clientName-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.clientName}
                   </p>
                 )}
               </div>
 
               {/* Teléfono */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="sm:col-span-2">
+                <label
+                  htmlFor="clientPhone"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
                   Teléfono (WhatsApp) <span className="text-red-500">*</span>
                 </label>
                 <Input
-                  id="phone"
+                  id="clientPhone"
                   type="tel"
-                  value={formData.phone}
+                  value={formData.clientPhone}
                   onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="+5491173659111"
                   disabled={isLoading}
-                  className={validationErrors.phone ? 'border-red-500 focus:border-red-500' : ''}
-                  aria-describedby={validationErrors.phone ? 'phone-error' : undefined}
+                  className={
+                    validationErrors.clientPhone ? 'border-red-500 focus:border-red-500' : ''
+                  }
+                  aria-describedby={validationErrors.clientPhone ? 'clientPhone-error' : undefined}
                 />
-                {validationErrors.phone && (
-                  <p id="phone-error" className="mt-1 text-sm text-red-600" role="alert">
-                    {validationErrors.phone}
+                {validationErrors.clientPhone && (
+                  <p id="clientPhone-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.clientPhone}
                   </p>
                 )}
               </div>
 
-              {/* Email */}
+              {/* Fecha de cita */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email (opcional)
+                <label
+                  htmlFor="appointmentDate"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Fecha de cita (opcional)
                 </label>
                 <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="correo@ejemplo.com"
+                  id="appointmentDate"
+                  type="date"
+                  value={formData.appointmentDate}
+                  onChange={(e) => handleInputChange('appointmentDate', e.target.value)}
                   disabled={isLoading}
-                  className={validationErrors.email ? 'border-red-500 focus:border-red-500' : ''}
-                  aria-describedby={validationErrors.email ? 'email-error' : undefined}
                 />
-                {validationErrors.email && (
-                  <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
-                    {validationErrors.email}
-                  </p>
-                )}
+              </div>
+
+              {/* Hora de cita */}
+              <div>
+                <label
+                  htmlFor="appointmentTime"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  Hora de cita (opcional)
+                </label>
+                <Input
+                  id="appointmentTime"
+                  type="time"
+                  value={formData.appointmentTime}
+                  onChange={(e) => handleInputChange('appointmentTime', e.target.value)}
+                  disabled={isLoading}
+                />
               </div>
             </div>
           </div>
@@ -286,36 +381,101 @@ export const CreatePreAppointmentModal = ({
           {/* Sección 2: Datos del vehículo */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Car className="h-4 w-4 text-gray-600" />
+              <CarIcon className="h-4 w-4 text-gray-600" />
               <h3 className="text-sm font-semibold text-gray-900">Datos del vehículo</h3>
             </div>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            <div className="grid grid-cols-1 gap-4">
               {/* Matrícula */}
               <div>
-                <label htmlFor="plate" className="block text-sm font-medium text-gray-700 mb-1">
-                  Matrícula/Patente <span className="text-red-500">*</span>
+                <label htmlFor="carPlate" className="mb-1 block text-sm font-medium text-gray-700">
+                  Matrícula <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  id="plate"
-                  type="text"
-                  value={formData.plate}
-                  onChange={(e) => handlePlateChange(e.target.value)}
-                  placeholder="ABC123"
-                  disabled={isLoading}
-                  className={validationErrors.plate ? 'border-red-500 focus:border-red-500' : ''}
-                  aria-describedby={validationErrors.plate ? 'plate-error' : undefined}
-                />
-                {validationErrors.plate && (
-                  <p id="plate-error" className="mt-1 text-sm text-red-600" role="alert">
-                    {validationErrors.plate}
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <FileTextIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="carPlate"
+                    type="text"
+                    value={formData.carPlate}
+                    onChange={(e) => validateCarPlate(e.target.value)}
+                    placeholder="Ej: 4859 JKL / M-1234-AB"
+                    disabled={isLoading}
+                    className={`pl-10 ${
+                      isCarPlateValid === true
+                        ? 'border-green-500 pr-10'
+                        : isCarPlateValid === false
+                          ? 'border-red-500 pr-10'
+                          : validationErrors.carPlate
+                            ? 'border-red-500'
+                            : ''
+                    }`}
+                    pattern={PLATE_REGEX.source}
+                    autoComplete="off"
+                    aria-describedby={validationErrors.carPlate ? 'carPlate-error' : undefined}
+                  />
+
+                  {isCarPlateValid !== null && (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                      {isCarPlateValid ? (
+                        <CheckIcon className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <XIcon className="h-5 w-5 text-red-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {validationErrors.carPlate && (
+                  <p id="carPlate-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.carPlate}
                   </p>
+                )}
+
+                {/* Botón de validación */}
+                {isCarPlateValid && !validatedCar && (
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleValidateVehicle}
+                      disabled={validateVehicleMutation.isPending}
+                      className="w-full"
+                    >
+                      {validateVehicleMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Validando...
+                        </>
+                      ) : (
+                        'Validar vehículo'
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Estado del vehículo validado */}
+                {validatedCar && (
+                  <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-3">
+                    <div className="flex items-center">
+                      <CheckIcon className="mr-2 h-5 w-5 text-green-500" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Vehículo validado: {validatedCar.brand} {validatedCar.model}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          Año: {validatedCar.year || 'No especificado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
               {/* Motivo/Notas */}
               <div className="sm:col-span-2">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
                   Motivo/Notas iniciales (opcional)
                 </label>
                 <Textarea
@@ -332,18 +492,10 @@ export const CreatePreAppointmentModal = ({
           </div>
 
           <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isLoading}
-            >
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              disabled={!isFormValid || isLoading}
-            >
+            <Button type="submit" disabled={!isFormValid || isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -9,7 +9,7 @@ import apiService from '@/service/api.service';
 import Spinner from '@/components/atoms/Spinner';
 import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
-import { CreatePreAppointmentModal, PreAppointmentData } from '@/components/molecules/CreatePreAppointmentModal';
+import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppointmentModal';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import {
   Select,
@@ -108,20 +108,6 @@ const Diagnoses = () => {
       console.error('Error deleting diagnosis:', error);
       enqueueSnackbar('Error al eliminar el diagnóstico', { variant: 'error' });
     }
-  };
-
-  const handlePreAppointmentSubmit = async (data: PreAppointmentData) => {
-    // Mock implementation - aquí se conectará con el backend
-    console.log('Pre-appointment data:', data);
-    
-    // Simular delay de API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Por ahora solo logueamos los datos
-    console.log('Creating pre-appointment with:', {
-      customer: data.customer,
-      vehicle: data.vehicle,
-    });
   };
 
   return (
@@ -247,16 +233,15 @@ const Diagnoses = () => {
         onOpenChange={setIsCreateModalOpen}
         submitButtonText="Comenzar diagnóstico"
       />
-      
+
       <CreatePreAppointmentModal
         open={isPreAppointmentModalOpen}
         onOpenChange={setIsPreAppointmentModalOpen}
-        onSubmit={handlePreAppointmentSubmit}
       />
-      
+
       <div className="sm:hidden">
-        <FloatingButton onClick={() => setIsCreateModalOpen(true)}>
-          <PlusIcon className="!h-5 !w-5" />
+        <FloatingButton onClick={() => setIsPreAppointmentModalOpen(true)}>
+          <CalendarPlus className="!h-5 !w-5" />
         </FloatingButton>
       </div>
     </div>
