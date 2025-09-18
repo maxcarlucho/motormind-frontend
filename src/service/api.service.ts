@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { apiUrl } from '@/constants/env';
 import { AiDiagnosisEvaluation } from '@/types/AiDiagnosisEvaluation';
 import { Damage, DamageAssessment } from '@/types/DamageAssessment';
+import { AppointmentsResponse } from '@/types/Appointment';
 
 export class ApiService {
   private static instance: ApiService;
@@ -152,6 +153,11 @@ export class ApiService {
     return response.data;
   }
 
+  // Método para obtener todas las citas
+  async getAllAppointments(): Promise<AppointmentsResponse> {
+    const response = await this.get<AppointmentsResponse>('/appointments');
+    return response.data;
+  }
 
 }
 
