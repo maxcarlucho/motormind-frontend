@@ -73,7 +73,9 @@ export const DiagnosticContextSection = ({
                 <div>
                   <h3 className="text-base font-medium">Respuestas a Preguntas Guiadas</h3>
                   <div className="space-y-3">
-                    <p className="text-muted">{answers}</p>
+                    <div className="text-muted whitespace-pre-line">
+                      {answers}
+                    </div>
                   </div>
                 </div>
               )}

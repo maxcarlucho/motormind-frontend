@@ -112,7 +112,10 @@ const Dashboard = () => {
                     problems={
                       diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
                     }
-                    summary={[diagnosis.fault, diagnosis.answers]}
+                    summary={[
+                      diagnosis.fault,
+                      ...(diagnosis.answers ? diagnosis.answers.split('\n').filter(answer => answer.trim()) : [])
+                    ]}
                     questions={diagnosis.questions || []}
                     technician={diagnosis.createdBy}
                     status={

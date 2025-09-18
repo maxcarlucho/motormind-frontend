@@ -189,7 +189,10 @@ const Diagnoses = () => {
                 <DiagnosticListItem
                   key={index}
                   vehicle={diagnosis.car}
-                  summary={[diagnosis.fault, diagnosis.answers]}
+                  summary={[
+                    diagnosis.fault,
+                    ...(diagnosis.answers ? diagnosis.answers.split('\n').filter(answer => answer.trim()) : [])
+                  ]}
                   problems={diagnosis.preliminary?.possibleReasons?.map(({ title }) => title) || []}
                   questions={diagnosis.questions || []}
                   technician={diagnosis.createdBy}
