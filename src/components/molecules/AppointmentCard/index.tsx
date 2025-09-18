@@ -1,5 +1,5 @@
 import { CalendarIcon, PhoneIcon, UserIcon, ClockIcon } from 'lucide-react';
-import { formatDate } from '@/utils';
+import { formatDate, getDiagnosisStatusLabel, getDiagnosisStatusColor } from '@/utils';
 import { Badge } from '@/components/atoms/Badge';
 import { cn } from '@/utils/cn';
 import { Appointment } from '@/types/Appointment';
@@ -10,7 +10,7 @@ interface AppointmentCardProps {
 }
 
 export const AppointmentCard = ({ appointment, className }: AppointmentCardProps) => {
-  const { client, reception, status, createdAt } = appointment;
+  const { client, reception, status, createdAt, diagnosisStatus } = appointment;
 
   // Formatear nombre del cliente
   const clientName = `${client.firstName || ''} ${client.lastName || ''}`.trim() || '—';
@@ -28,21 +28,10 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
   // Formatear timestamp relativo
   const timestamp = formatDate(createdAt);
 
-  // Determinar color del badge según el estado
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Usar el status del diagnóstico si está disponible, sino usar el status del appointment
+  const displayStatus = diagnosisStatus || status;
+  const statusLabel = getDiagnosisStatusLabel(displayStatus);
+  const statusColor = getDiagnosisStatusColor(displayStatus);
 
   return (
     <div
@@ -68,9 +57,9 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className={`${getStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
+            className={`${statusColor} truncate px-2 py-0.5 text-xs font-medium`}
           >
-            {status}
+            {statusLabel}
           </Badge>
         </div>
       </div>

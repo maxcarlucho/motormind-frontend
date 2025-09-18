@@ -20,13 +20,14 @@ export interface AppointmentTime {
 }
 
 export interface Appointment {
-    _id?: string;
-    status: string;
-    client: ClientInfo;
-    reception: AppointmentTime;
-    isDeleted?: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+  _id?: string;
+  status: string;
+  client: ClientInfo;
+  reception: AppointmentTime;
+  isDeleted?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  diagnosisStatus?: string | null;
 }
 
 export interface AppointmentsResponse {
