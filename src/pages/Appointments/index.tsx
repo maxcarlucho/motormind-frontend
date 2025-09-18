@@ -93,8 +93,8 @@ const Appointments = () => {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto bg-gray-50 p-6">
-        <div className="mx-auto max-w-4xl">
+      <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="px-4 py-4 sm:px-8">
           <div className="space-y-4">
             {appointments.map((appointment) => (
               <AppointmentCard key={appointment._id} appointment={appointment} />
