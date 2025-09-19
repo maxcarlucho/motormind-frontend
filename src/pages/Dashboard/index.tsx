@@ -70,14 +70,6 @@ const Dashboard = () => {
         </div>
         <div className="hidden items-center gap-2 sm:flex">
           <Button
-            onClick={() => setIsPreAppointmentModalOpen(true)}
-            variant="outline"
-            className="h-8 w-8 sm:h-auto sm:w-auto"
-          >
-            <CalendarPlus className="!h-5 !w-5" />
-            <span className="hidden lg:inline">Crear pre-cita</span>
-          </Button>
-          <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="h-8 w-8 sm:h-auto sm:w-auto"
           >

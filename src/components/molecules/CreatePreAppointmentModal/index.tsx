@@ -220,9 +220,7 @@ export const CreatePreAppointmentModal = ({
     } else {
       setIsCarPlateValid(null);
     }
-
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -306,12 +304,15 @@ export const CreatePreAppointmentModal = ({
                   Teléfono (WhatsApp) <span className="text-red-500">*</span>
                 </label>
                 <PhoneInputComponent
+                  id="clientPhone"
                   value={formData.clientPhone}
                   onChange={handlePhoneChange}
                   placeholder="11 1234-5678"
                   disabled={isLoading}
                   error={!!validationErrors.clientPhone}
                   defaultCountry="AR"
+                  aria-invalid={!!validationErrors.clientPhone}
+                  aria-describedby={validationErrors.clientPhone ? 'clientPhone-error' : undefined}
                 />
                 {validationErrors.clientPhone && (
                   <p id="clientPhone-error" className="mt-1 text-sm text-red-600" role="alert">
@@ -412,7 +413,6 @@ export const CreatePreAppointmentModal = ({
                     {validationErrors.carPlate}
                   </p>
                 )}
-
               </div>
 
               {/* Motivo/Notas */}
