@@ -1,7 +1,7 @@
 import { Appointment } from '@/types/Appointment';
 import { formatDate, formatAppointmentDateTime } from '@/utils';
 import { cn } from '@/utils/cn';
-import { CalendarIcon, ClockIcon, PhoneIcon } from 'lucide-react';
+import { CalendarIcon, ClockIcon, PhoneIcon, AlertTriangleIcon } from 'lucide-react';
 import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 import { Link } from 'react-router-dom';
 
@@ -11,12 +11,13 @@ interface AppointmentCardProps {
 }
 
 export const AppointmentCard = ({ appointment, className }: AppointmentCardProps) => {
-  const { client, reception, createdAt, createdBy } = appointment;
+  const { client, reception, createdAt, createdBy, diagnosis } = appointment;
 
   const clientName = `${client.firstName || ''} ${client.lastName || ''}`.trim() || '—';
   const phoneDisplay = client.phone || '—';
   const scheduledDate = formatAppointmentDateTime(reception.date || '', reception.time || '');
   const timestamp = formatDate(createdAt);
+  const symptom = diagnosis?.symptoms || null;
 
   const cardContent = (
     <div
@@ -46,6 +47,16 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
           <span className="font-medium">Fecha agendada:</span>
           <span>{scheduledDate}</span>
         </div>
+        
+        {symptom && (
+          <div className="flex items-start gap-2">
+            <AlertTriangleIcon className="h-4 w-4 text-orange-500 mt-0.5" />
+            <div className="flex-1">
+              <span className="font-medium">Síntoma:</span>
+              <span className="ml-1">{symptom}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-3">

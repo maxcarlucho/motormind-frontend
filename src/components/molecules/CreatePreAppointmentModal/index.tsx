@@ -27,6 +27,7 @@ import { PLATE_REGEX } from '@/constants';
 import { useApi } from '@/hooks/useApi';
 import { Car } from '@/types/Car';
 import { Appointment } from '@/types/Appointment';
+import { PhoneInputComponent, usePhoneValidation } from '@/components/atoms/PhoneInput';
 
 interface CreatePreAppointmentModalProps {
   open: boolean;
@@ -63,7 +64,7 @@ export const CreatePreAppointmentModal = ({
 }: CreatePreAppointmentModalProps) => {
   const [formData, setFormData] = useState<FormData>({
     clientName: '',
-    clientPhone: '+54',
+    clientPhone: '',
     carPlate: '',
     appointmentDate: '',
     appointmentTime: '',
@@ -73,6 +74,7 @@ export const CreatePreAppointmentModal = ({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isCarPlateValid, setIsCarPlateValid] = useState<boolean | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const { validatePhone } = usePhoneValidation();
 
   // API hooks
   const { execute: getOrCreateVehicleRequest } = useApi<Car>('get', '/cars/vin-or-plate');
@@ -155,7 +157,7 @@ export const CreatePreAppointmentModal = ({
     if (!open) {
       setFormData({
         clientName: '',
-        clientPhone: '+54',
+        clientPhone: '',
         carPlate: '',
         appointmentDate: '',
         appointmentTime: '',
@@ -175,9 +177,10 @@ export const CreatePreAppointmentModal = ({
     }
 
     // Validar teléfono
-    const phoneRegex = /^\+[1-9]\d{1,14}$/; // E.164 format
-    if (!formData.clientPhone || !phoneRegex.test(formData.clientPhone)) {
-      errors.clientPhone = 'Ingresá un número válido con prefijo de país';
+    if (!formData.clientPhone) {
+      errors.clientPhone = 'El teléfono es obligatorio';
+    } else if (!validatePhone(formData.clientPhone)) {
+      errors.clientPhone = 'Ingresá un número de teléfono válido';
     }
 
     // Validar matrícula
@@ -199,12 +202,8 @@ export const CreatePreAppointmentModal = ({
     }
   };
 
-  const handlePhoneChange = (value: string) => {
-    // Normalizar: solo números y + al inicio
-    const normalized = value.replace(/[^\d+]/g, '');
-    // Asegurar que empiece con +
-    const formatted = normalized.startsWith('+') ? normalized : `+${normalized}`;
-    handleInputChange('clientPhone', formatted);
+  const handlePhoneChange = (value: string | undefined) => {
+    handleInputChange('clientPhone', value || '');
   };
 
   const validateCarPlate = (value: string) => {
@@ -306,17 +305,13 @@ export const CreatePreAppointmentModal = ({
                 >
                   Teléfono (WhatsApp) <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  id="clientPhone"
-                  type="tel"
+                <PhoneInputComponent
                   value={formData.clientPhone}
-                  onChange={(e) => handlePhoneChange(e.target.value)}
-                  placeholder="+5491173659111"
+                  onChange={handlePhoneChange}
+                  placeholder="11 1234-5678"
                   disabled={isLoading}
-                  className={
-                    validationErrors.clientPhone ? 'border-red-500 focus:border-red-500' : ''
-                  }
-                  aria-describedby={validationErrors.clientPhone ? 'clientPhone-error' : undefined}
+                  error={!!validationErrors.clientPhone}
+                  defaultCountry="AR"
                 />
                 {validationErrors.clientPhone && (
                   <p id="clientPhone-error" className="mt-1 text-sm text-red-600" role="alert">

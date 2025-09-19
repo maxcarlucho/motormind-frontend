@@ -70,7 +70,7 @@ const Appointments = () => {
             </p>
           </div>
 
-          <Button 
+          <Button
             className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
             onClick={() => setIsPreAppointmentModalOpen(true)}
           >
@@ -112,7 +112,7 @@ const Appointments = () => {
           <p className="text-muted hidden xl:block">Gestiona y revisa todas las citas del taller</p>
         </div>
 
-        <Button 
+        <Button
           className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
           onClick={() => setIsPreAppointmentModalOpen(true)}
         >

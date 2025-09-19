@@ -43,6 +43,10 @@ export interface Appointment {
         vinCode: string;
         workshopId: string;
     };
+    diagnosis?: {
+        status: string;
+        symptoms: string;
+    } | null;
 }
 
 export interface AppointmentsResponse {
