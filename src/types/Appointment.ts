@@ -24,6 +24,8 @@ export interface AppointmentTime {
 
 export interface Appointment {
     _id?: string;
+    carId?: string | null;
+    diagnosisId?: string | null;
     status: string;
     client: ClientInfo;
     reception: AppointmentTime;
@@ -33,6 +35,14 @@ export interface Appointment {
     diagnosisStatus?: string | null;
     createdBy?: Partial<User>;
     workshopId?: Partial<Workshop>;
+    car?: {
+        _id: string;
+        brand: string;
+        model: string;
+        plate: string;
+        vinCode: string;
+        workshopId: string;
+    };
 }
 
 export interface AppointmentsResponse {
