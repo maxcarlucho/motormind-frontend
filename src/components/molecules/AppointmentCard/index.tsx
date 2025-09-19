@@ -3,6 +3,7 @@ import { formatDate, formatAppointmentDateTime } from '@/utils';
 import { cn } from '@/utils/cn';
 import { CalendarIcon, ClockIcon, PhoneIcon } from 'lucide-react';
 import { CreatedByUser } from '@/components/molecules/CreatedByUser';
+import { Link } from 'react-router-dom';
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -17,7 +18,7 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
   const scheduledDate = formatAppointmentDateTime(reception.date || '', reception.time || '');
   const timestamp = formatDate(createdAt);
 
-  return (
+  const cardContent = (
     <div
       className={cn(
         'mb-4 rounded-lg border border-gray-300 bg-white p-4 transition-colors duration-200 hover:bg-[#EAF2FD]',
@@ -53,4 +54,6 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
       </div>
     </div>
   );
+
+  return <Link to={`/appointments/${appointment._id}`}>{cardContent}</Link>;
 };
