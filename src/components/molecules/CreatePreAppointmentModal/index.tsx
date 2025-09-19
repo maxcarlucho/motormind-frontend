@@ -72,7 +72,6 @@ export const CreatePreAppointmentModal = ({
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isCarPlateValid, setIsCarPlateValid] = useState<boolean | null>(null);
-  const [validatedCar, setValidatedCar] = useState<Car | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // API hooks
@@ -83,17 +82,28 @@ export const CreatePreAppointmentModal = ({
   );
 
   // Mutations
-  const validateVehicleMutation = useMutation<AxiosResponse<Car>, Error, { plate: string }>({
+  const getOrCreateVehicleMutation = useMutation<AxiosResponse<Car>, Error, { plate: string }>({
     mutationFn: (params: { plate: string }) => getOrCreateVehicleRequest(undefined, params),
     onSuccess: (response) => {
-      setValidatedCar(response.data);
-      enqueueSnackbar('Vehículo validado correctamente', { variant: 'success' });
+      // Una vez que tenemos el carId, crear la appointment
+      const preAppointmentData: PreAppointmentData = {
+        clientName: formData.clientName.trim(),
+        clientPhone: formData.clientPhone,
+        carPlate: formData.carPlate.trim(),
+        appointmentDate: formData.appointmentDate.trim() || undefined,
+        appointmentTime: formData.appointmentTime.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
+      };
+
+      createAppointmentMutation.mutate({
+        ...preAppointmentData,
+        carId: response.data._id!,
+      });
     },
     onError: () => {
-      enqueueSnackbar('Error al validar el vehículo. Verificá que la matrícula exista.', {
+      enqueueSnackbar('Error al obtener el vehículo. Verificá que la matrícula exista.', {
         variant: 'error',
       });
-      setValidatedCar(null);
     },
   });
 
@@ -153,7 +163,6 @@ export const CreatePreAppointmentModal = ({
       });
       setValidationErrors({});
       setIsCarPlateValid(null);
-      setValidatedCar(null);
     }
   }, [open]);
 
@@ -176,8 +185,6 @@ export const CreatePreAppointmentModal = ({
       errors.carPlate = 'La matrícula es obligatoria';
     } else if (!PLATE_REGEX.test(formData.carPlate)) {
       errors.carPlate = 'Formato de matrícula inválido';
-    } else if (!validatedCar) {
-      errors.carPlate = 'Debes validar la matrícula antes de continuar';
     }
 
     return errors;
@@ -215,17 +222,8 @@ export const CreatePreAppointmentModal = ({
       setIsCarPlateValid(null);
     }
 
-    // Reset validated car when plate changes
-    if (validatedCar && validatedCar.plate !== upperValue) {
-      setValidatedCar(null);
-    }
   };
 
-  const handleValidateVehicle = () => {
-    if (formData.carPlate.trim() && PLATE_REGEX.test(formData.carPlate)) {
-      validateVehicleMutation.mutate({ plate: formData.carPlate });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,24 +235,8 @@ export const CreatePreAppointmentModal = ({
       return;
     }
 
-    if (!validatedCar) {
-      enqueueSnackbar('Debes validar la matrícula antes de continuar', { variant: 'error' });
-      return;
-    }
-
-    const preAppointmentData: PreAppointmentData = {
-      clientName: formData.clientName.trim(),
-      clientPhone: formData.clientPhone,
-      carPlate: formData.carPlate.trim(),
-      appointmentDate: formData.appointmentDate.trim() || undefined,
-      appointmentTime: formData.appointmentTime.trim() || undefined,
-      notes: formData.notes.trim() || undefined,
-    };
-
-    createAppointmentMutation.mutate({
-      ...preAppointmentData,
-      carId: validatedCar._id!,
-    });
+    // Hacer getOrCreate del vehículo y luego crear la appointment
+    getOrCreateVehicleMutation.mutate({ plate: formData.carPlate.trim() });
   };
 
   const handleClose = () => {
@@ -264,7 +246,7 @@ export const CreatePreAppointmentModal = ({
   };
 
   const isFormValid = Object.keys(validateForm()).length === 0;
-  const isLoading = validateVehicleMutation.isPending || createAppointmentMutation.isPending;
+  const isLoading = getOrCreateVehicleMutation.isPending || createAppointmentMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -436,45 +418,6 @@ export const CreatePreAppointmentModal = ({
                   </p>
                 )}
 
-                {/* Botón de validación */}
-                {isCarPlateValid && !validatedCar && (
-                  <div className="mt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleValidateVehicle}
-                      disabled={validateVehicleMutation.isPending}
-                      className="w-full"
-                    >
-                      {validateVehicleMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Validando...
-                        </>
-                      ) : (
-                        'Validar vehículo'
-                      )}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Estado del vehículo validado */}
-                {validatedCar && (
-                  <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-3">
-                    <div className="flex items-center">
-                      <CheckIcon className="mr-2 h-5 w-5 text-green-500" />
-                      <div>
-                        <p className="text-sm font-medium text-green-800">
-                          Vehículo validado: {validatedCar.brand} {validatedCar.model}
-                        </p>
-                        <p className="text-xs text-green-600">
-                          Año: {validatedCar.year || 'No especificado'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Motivo/Notas */}
