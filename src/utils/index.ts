@@ -28,6 +28,31 @@ export const formatToddmmyyyy = (date: Date) => {
   return `${day}/${month}/${year}`;
 };
 
+export const formatAppointmentDateTime = (date: string, time: string): string => {
+  if (!date || !time) return '—';
+
+  try {
+    // Parsear la fecha (formato YYYY-MM-DD)
+    const dateObj = new Date(date);
+
+    // Verificar que la fecha es válida
+    if (isNaN(dateObj.getTime())) {
+      return '—';
+    }
+
+    // Formatear fecha como dd/mm/yy
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const year = dateObj.getFullYear().toString().slice(-2); // Últimos 2 dígitos del año
+
+    // El time ya viene en formato HH:MM, solo necesitamos concatenar
+    return `${day}/${month}/${year} ${time}`;
+  } catch (error) {
+    console.error('Error formatting appointment date/time:', error);
+    return '—';
+  }
+};
+
 export const parseSpanishDate = (dateString: string): Date | undefined => {
   // Parse date in format DD/MM/YYYY
   const parts = dateString.split('/');

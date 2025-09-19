@@ -26,6 +26,7 @@ import { Textarea } from '@/components/atoms/Textarea';
 import { PLATE_REGEX } from '@/constants';
 import { useApi } from '@/hooks/useApi';
 import { Car } from '@/types/Car';
+import { Appointment } from '@/types/Appointment';
 
 interface CreatePreAppointmentModalProps {
   open: boolean;
@@ -76,7 +77,10 @@ export const CreatePreAppointmentModal = ({
 
   // API hooks
   const { execute: getOrCreateVehicleRequest } = useApi<Car>('get', '/cars/vin-or-plate');
-  const { execute: createAppointmentRequest } = useApi<any>('post', '/appointments/manual');
+  const { execute: createAppointmentRequest } = useApi<CreateAppointmentResponse>(
+    'post',
+    '/appointments',
+  );
 
   // Mutations
   const validateVehicleMutation = useMutation<AxiosResponse<Car>, Error, { plate: string }>({
@@ -95,7 +99,7 @@ export const CreatePreAppointmentModal = ({
 
   interface CreateAppointmentResponse {
     success: boolean;
-    appointment: any;
+    appointment: Appointment;
     carId: string;
     diagnosisId: string;
     link: string;

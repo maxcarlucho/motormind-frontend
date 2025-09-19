@@ -1,8 +1,8 @@
-import { CalendarIcon, PhoneIcon, UserIcon, ClockIcon } from 'lucide-react';
-import { formatDate, getDiagnosisStatusLabel, getDiagnosisStatusColor } from '@/utils';
-import { Badge } from '@/components/atoms/Badge';
-import { cn } from '@/utils/cn';
 import { Appointment } from '@/types/Appointment';
+import { formatDate, formatAppointmentDateTime } from '@/utils';
+import { cn } from '@/utils/cn';
+import { CalendarIcon, ClockIcon, PhoneIcon } from 'lucide-react';
+import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 
 interface AppointmentCardProps {
   appointment: Appointment;
@@ -10,28 +10,12 @@ interface AppointmentCardProps {
 }
 
 export const AppointmentCard = ({ appointment, className }: AppointmentCardProps) => {
-  const { client, reception, status, createdAt, diagnosisStatus } = appointment;
+  const { client, reception, createdAt, createdBy } = appointment;
 
-  // Formatear nombre del cliente
   const clientName = `${client.firstName || ''} ${client.lastName || ''}`.trim() || '—';
-
-  // Formatear teléfono
   const phoneDisplay = client.phone || '—';
-
-  // Formatear fecha agendada
-  const scheduledDate =
-    reception.date && reception.time ? `${reception.date} ${reception.time}` : '—';
-
-  // Formatear agente
-  const agentName = reception.agent?.name || '—';
-
-  // Formatear timestamp relativo
+  const scheduledDate = formatAppointmentDateTime(reception.date || '', reception.time || '');
   const timestamp = formatDate(createdAt);
-
-  // Usar el status del diagnóstico si está disponible, sino usar el status del appointment
-  const displayStatus = diagnosisStatus || status;
-  const statusLabel = getDiagnosisStatusLabel(displayStatus);
-  const statusColor = getDiagnosisStatusColor(displayStatus);
 
   return (
     <div
@@ -53,36 +37,19 @@ export const AppointmentCard = ({ appointment, className }: AppointmentCardProps
             </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={`${statusColor} truncate px-2 py-0.5 text-xs font-medium`}
-          >
-            {statusLabel}
-          </Badge>
-        </div>
       </div>
 
-      <div className="space-y-2 text-sm text-gray-600">
+      <div className="mb-2 space-y-2 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <ClockIcon className="h-4 w-4" />
           <span className="font-medium">Fecha agendada:</span>
           <span>{scheduledDate}</span>
         </div>
-
-        <div className="flex items-center gap-2">
-          <UserIcon className="h-4 w-4" />
-          <span className="font-medium">Agente:</span>
-          <span>{agentName}</span>
-        </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Creado</span>
-        </div>
-        <span className="text-xs text-gray-500">{timestamp}</span>
+        <CreatedByUser user={createdBy} />
+        <span className="ml-auto text-xs text-gray-500">{timestamp}</span>
       </div>
     </div>
   );

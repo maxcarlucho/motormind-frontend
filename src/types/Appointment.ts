@@ -1,3 +1,6 @@
+import { Workshop } from "./Workshop";
+import { User } from "./User";
+
 export interface ClientInfo {
     firstName: string | null;
     lastName: string | null;
@@ -20,14 +23,16 @@ export interface AppointmentTime {
 }
 
 export interface Appointment {
-  _id?: string;
-  status: string;
-  client: ClientInfo;
-  reception: AppointmentTime;
-  isDeleted?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  diagnosisStatus?: string | null;
+    _id?: string;
+    status: string;
+    client: ClientInfo;
+    reception: AppointmentTime;
+    isDeleted?: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    diagnosisStatus?: string | null;
+    createdBy?: Partial<User>;
+    workshopId?: Partial<Workshop>;
 }
 
 export interface AppointmentsResponse {
