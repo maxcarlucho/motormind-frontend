@@ -1,12 +1,17 @@
 import { AlertCircle, CalendarIcon, PlusIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/atoms/Button';
 import { AppointmentCard } from '@/components/molecules/AppointmentCard';
+import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppointmentModal';
 import Spinner from '@/components/atoms/Spinner';
 import apiService from '@/service/api.service';
 import { Appointment } from '@/types/Appointment';
+import { useState } from 'react';
 
 const Appointments = () => {
+  const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
   const {
     data: appointments = [],
     isLoading,
@@ -21,6 +26,15 @@ const Appointments = () => {
     staleTime: 60000, // 1 minute
     retry: false,
   });
+
+  const handlePreAppointmentModalChange = (open: boolean) => {
+    setIsPreAppointmentModalOpen(open);
+    // Si se cerró el modal, refrescar las queries
+    if (!open) {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -46,15 +60,22 @@ const Appointments = () => {
 
   if (appointments.length === 0) {
     return (
-      <div className="flex h-full flex-grow flex-col">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="text-primary h-6 w-6" />
-            <h1 className="text-xl font-semibold text-gray-900">Citas</h1>
+      <div className="flex flex-grow flex-col">
+        {/* Fixed Header */}
+        <div className="sticky top-0 z-10 flex w-full flex-col items-center justify-between bg-white px-6 py-2 shadow-xs sm:flex-row sm:px-8 sm:py-4 lg:flex-row">
+          <div className="lg:w-1/3">
+            <h1 className="py-0.5 text-xl font-semibold sm:py-0 lg:text-2xl">Citas</h1>
+            <p className="text-muted hidden xl:block">
+              Gestiona y revisa todas las citas del taller
+            </p>
           </div>
-          <Button>
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Crear pre-cita
+
+          <Button 
+            className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
+            onClick={() => setIsPreAppointmentModalOpen(true)}
+          >
+            <PlusIcon className="!h-5 !w-5" />
+            <span className="hidden lg:inline">Crear pre-cita</span>
           </Button>
         </div>
 
@@ -67,31 +88,42 @@ const Appointments = () => {
             <p className="text-muted mb-4">
               No se encontraron citas agendadas. Crea una nueva cita para comenzar.
             </p>
-            <Button>
+            <Button onClick={() => setIsPreAppointmentModalOpen(true)}>
               <PlusIcon className="mr-2 h-4 w-4" />
               Crear pre-cita
             </Button>
           </div>
         </div>
+
+        <CreatePreAppointmentModal
+          open={isPreAppointmentModalOpen}
+          onOpenChange={handlePreAppointmentModalChange}
+        />
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-grow flex-col bg-white">
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-3">
-          <CalendarIcon className="text-primary h-6 w-6" />
-          <h1 className="text-xl font-semibold text-gray-900">Citas</h1>
+    <div className="flex flex-grow flex-col">
+      {/* Fixed Header */}
+      <div className="sticky top-0 z-10 flex flex-col items-center justify-between bg-white px-6 py-2 shadow-xs sm:flex-row sm:px-8 sm:py-4 lg:flex-row">
+        <div className="lg:w-1/3">
+          <h1 className="py-0.5 text-xl font-semibold sm:py-0 lg:text-2xl">Citas</h1>
+          <p className="text-muted hidden xl:block">Gestiona y revisa todas las citas del taller</p>
         </div>
-        <Button>
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Crear pre-cita
+
+        <Button 
+          className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
+          onClick={() => setIsPreAppointmentModalOpen(true)}
+        >
+          <PlusIcon className="!h-5 !w-5" />
+          <span className="hidden lg:inline">Crear pre-cita</span>
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="bg-white px-4 py-4 sm:px-8">
+      {/* Scrollable Content */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-8">
           <div className="space-y-4">
             {appointments.map((appointment) => (
               <AppointmentCard key={appointment._id} appointment={appointment} />
@@ -99,6 +131,11 @@ const Appointments = () => {
           </div>
         </div>
       </div>
+
+      <CreatePreAppointmentModal
+        open={isPreAppointmentModalOpen}
+        onOpenChange={handlePreAppointmentModalChange}
+      />
     </div>
   );
 };
