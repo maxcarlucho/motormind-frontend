@@ -103,28 +103,36 @@ const Dashboard = () => {
               </div>
             ) : diagnoses.length > 0 ? (
               <div className="mt-5 sm:mt-0">
-                {diagnoses.map((diagnosis, index) => (
-                  <DiagnosticListItem
-                    key={index}
-                    diagnosisId={diagnosis._id || ''}
-                    diagnosisLink={diagnosisLink(diagnosis, true)}
-                    vehicle={diagnosis.car}
-                    problems={
-                      diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
-                    }
-                    summary={[
-                      diagnosis.fault,
-                      ...(diagnosis.answers ? diagnosis.answers.split('\n').filter(answer => answer.trim()) : [])
-                    ]}
-                    questions={diagnosis.questions || []}
-                    technician={diagnosis.createdBy}
-                    status={
-                      diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
-                    }
-                    timestamp={formatDate(diagnosis.createdAt)}
-                    onDelete={handleDeleteDiagnosis}
-                  />
-                ))}
+                {diagnoses
+                  .filter(
+                    (diagnosis) =>
+                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS &&
+                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM,
+                  )
+                  .map((diagnosis, index) => (
+                    <DiagnosticListItem
+                      key={index}
+                      diagnosisId={diagnosis._id || ''}
+                      diagnosisLink={diagnosisLink(diagnosis, true)}
+                      vehicle={diagnosis.car}
+                      problems={
+                        diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
+                      }
+                      summary={[
+                        diagnosis.fault,
+                        ...(diagnosis.answers
+                          ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                          : []),
+                      ]}
+                      questions={diagnosis.questions || []}
+                      technician={diagnosis.createdBy}
+                      status={
+                        diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
+                      }
+                      timestamp={formatDate(diagnosis.createdAt)}
+                      onDelete={handleDeleteDiagnosis}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="flex h-64 flex-col items-center justify-center text-center">

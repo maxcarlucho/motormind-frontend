@@ -78,14 +78,11 @@ const Appointments = () => {
   }
 
   return (
-    <div className="flex h-full flex-grow flex-col">
+    <div className="flex h-full flex-grow flex-col bg-white">
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center gap-3">
           <CalendarIcon className="text-primary h-6 w-6" />
           <h1 className="text-xl font-semibold text-gray-900">Citas</h1>
-          <span className="rounded-full bg-gray-100 px-2 py-1 text-sm text-gray-600">
-            {appointments.length}
-          </span>
         </div>
         <Button>
           <PlusIcon className="mr-2 h-4 w-4" />
@@ -93,8 +90,8 @@ const Appointments = () => {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto bg-gray-50">
-        <div className="px-4 py-4 sm:px-8">
+      <div className="flex-1 overflow-auto">
+        <div className="bg-white px-4 py-4 sm:px-8">
           <div className="space-y-4">
             {appointments.map((appointment) => (
               <AppointmentCard key={appointment._id} appointment={appointment} />
