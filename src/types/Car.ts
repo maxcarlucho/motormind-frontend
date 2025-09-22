@@ -13,6 +13,7 @@ export type Car = {
   fuel?: string;
   lastRevision?: string;
   data?: Record<string, unknown>;
+  tecDocId?: string; // KType de TecDoc para futuras integraciones
 
   // Campos del backend
   description?: string;

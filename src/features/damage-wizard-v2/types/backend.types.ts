@@ -53,6 +53,7 @@ export interface BackendCar {
   fuel: string;
   lastRevision: string;
   plate: string;
+  tecDocId?: string; // KType de TecDoc para futuras integraciones
   workshopId: string;
   description: string;
   isDeleted: boolean;
