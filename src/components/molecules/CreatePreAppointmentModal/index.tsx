@@ -41,6 +41,7 @@ export interface PreAppointmentData {
   appointmentDate?: string;
   appointmentTime?: string;
   notes?: string;
+  symptom: string;
 }
 
 interface FormData {
@@ -50,12 +51,14 @@ interface FormData {
   appointmentDate: string;
   appointmentTime: string;
   notes: string;
+  symptom: string;
 }
 
 interface ValidationErrors {
   clientName?: string;
   clientPhone?: string;
   carPlate?: string;
+  symptom?: string;
 }
 
 export const CreatePreAppointmentModal = ({
@@ -69,6 +72,7 @@ export const CreatePreAppointmentModal = ({
     appointmentDate: '',
     appointmentTime: '',
     notes: '',
+    symptom: '',
   });
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -95,6 +99,7 @@ export const CreatePreAppointmentModal = ({
         appointmentDate: formData.appointmentDate.trim() || undefined,
         appointmentTime: formData.appointmentTime.trim() || undefined,
         notes: formData.notes.trim() || undefined,
+        symptom: formData.symptom.trim(),
       };
 
       createAppointmentMutation.mutate({
@@ -131,6 +136,7 @@ export const CreatePreAppointmentModal = ({
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,
         notes: data.notes,
+        symptom: data.symptom,
       }),
     onSuccess: () => {
       enqueueSnackbar('Pre-cita creada. El cliente recibirá un WhatsApp con los próximos pasos.', {
@@ -162,6 +168,7 @@ export const CreatePreAppointmentModal = ({
         appointmentDate: '',
         appointmentTime: '',
         notes: '',
+        symptom: '',
       });
       setValidationErrors({});
       setIsCarPlateValid(null);
@@ -188,6 +195,15 @@ export const CreatePreAppointmentModal = ({
       errors.carPlate = 'La matrícula es obligatoria';
     } else if (!PLATE_REGEX.test(formData.carPlate)) {
       errors.carPlate = 'Formato de matrícula inválido';
+    }
+
+    // Validar síntoma
+    if (!formData.symptom.trim()) {
+      errors.symptom = 'El síntoma es obligatorio';
+    } else if (formData.symptom.trim().length < 5) {
+      errors.symptom = 'El síntoma debe tener al menos 5 caracteres';
+    } else if (formData.symptom.trim().length > 500) {
+      errors.symptom = 'El síntoma no puede exceder 500 caracteres';
     }
 
     return errors;
@@ -254,7 +270,8 @@ export const CreatePreAppointmentModal = ({
             Nueva pre-cita
           </DialogTitle>
           <DialogDescription>
-            Cargá los datos del cliente y del vehículo para iniciar el diagnóstico por WhatsApp.
+            Cargá los datos del cliente, vehículo y síntoma para crear la pre-cita. El cliente
+            recibirá inmediatamente la primera pregunta de diagnóstico por WhatsApp.
           </DialogDescription>
         </DialogHeader>
 
@@ -415,18 +432,42 @@ export const CreatePreAppointmentModal = ({
                 )}
               </div>
 
-              {/* Motivo/Notas */}
+              {/* Síntoma */}
+              <div className="sm:col-span-2">
+                <label htmlFor="symptom" className="mb-1 block text-sm font-medium text-gray-700">
+                  Síntoma del vehículo <span className="text-red-500">*</span>
+                </label>
+                <Textarea
+                  id="symptom"
+                  value={formData.symptom}
+                  onChange={(e) => handleInputChange('symptom', e.target.value)}
+                  placeholder="Describí el problema o síntoma que presenta el vehículo..."
+                  disabled={isLoading}
+                  rows={3}
+                  className={`resize-none ${
+                    validationErrors.symptom ? 'border-red-500 focus:border-red-500' : ''
+                  }`}
+                  aria-describedby={validationErrors.symptom ? 'symptom-error' : undefined}
+                />
+                {validationErrors.symptom && (
+                  <p id="symptom-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.symptom}
+                  </p>
+                )}
+              </div>
+
+              {/* Notas adicionales (opcional) */}
               <div className="sm:col-span-2">
                 <label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
-                  Motivo/Notas iniciales (opcional)
+                  Notas adicionales (opcional)
                 </label>
                 <Textarea
                   id="notes"
                   value={formData.notes}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder="Breve descripción del problema o motivo de la consulta..."
+                  placeholder="Información adicional que pueda ser útil..."
                   disabled={isLoading}
-                  rows={3}
+                  rows={2}
                   className="resize-none"
                 />
               </div>

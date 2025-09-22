@@ -36,7 +36,6 @@ export const DIAGNOSIS_STATUS = {
   IN_REPARATION: 'IN_REPARATION',
   REPAIRED: 'REPAIRED',
   // Estados específicos para WhatsApp (pre-citas)
-  WHATSAPP_AWAITING_SYMPTOM: 'WHATSAPP_AWAITING_SYMPTOM',
   WHATSAPP_AWAITING_QUESTIONS: 'WHATSAPP_AWAITING_QUESTIONS',
 } as const;
 
@@ -73,7 +72,6 @@ export const DIAGNOSIS_STATUS_LABELS = {
   [DIAGNOSIS_STATUS.PRELIMINARY]: 'Pre-Diagnóstico',
   [DIAGNOSIS_STATUS.IN_REPARATION]: 'En Reparación',
   [DIAGNOSIS_STATUS.REPAIRED]: 'Reparado',
-  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM]: 'Pre-Cita - Esperando Síntoma',
   [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'Pre-Cita - Esperando Respuestas',
 } as const;
 
@@ -84,7 +82,6 @@ export const DIAGNOSIS_STATUS_COLORS = {
   [DIAGNOSIS_STATUS.ASSIGN_OBD_CODES]: 'bg-orange-100 text-orange-800 border-orange-200',
   [DIAGNOSIS_STATUS.IN_REPARATION]: 'bg-blue-100 text-blue-800 border-blue-200',
   [DIAGNOSIS_STATUS.REPAIRED]: 'bg-green-100 text-green-800 border-green-200',
-  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM]: 'bg-purple-100 text-purple-800 border-purple-200',
   [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'bg-indigo-100 text-indigo-800 border-indigo-200',
 } as const;
 
