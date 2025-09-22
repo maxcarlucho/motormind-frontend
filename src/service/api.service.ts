@@ -165,6 +165,15 @@ export class ApiService {
     return response.data;
   }
 
+  // Método para obtener diagnósticos recientes (excluyendo pre-citas)
+  async getRecentDiagnoses(limit?: number): Promise<{ success: boolean; data: any[]; total: number }> {
+    const params = limit ? { limit } : {};
+    const response = await this.get<{ success: boolean; data: any[]; total: number }>('/diagnoses/recents', {
+      params
+    });
+    return response.data;
+  }
+
 }
 
 // Exporta la instancia singleton por defecto

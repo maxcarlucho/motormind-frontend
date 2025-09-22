@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileSearch, PlusIcon, CalendarPlus } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { diagnosisLink, formatDate } from '@/utils';
-import { Diagnosis } from '@/types/Diagnosis';
-import { useApi } from '@/hooks/useApi';
 import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import Spinner from '@/components/atoms/Spinner';
@@ -14,29 +12,21 @@ import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppoi
 import { Button } from '@/components/atoms/Button';
 import { FloatingButton } from '@/components/atoms/FloatingButton';
 import apiService from '@/service/api.service';
+import { useRecentDiagnoses } from '@/hooks/useRecentDiagnoses';
 
 const Dashboard = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { execute: getDiagnosesRequest } = useApi<{ data: Diagnosis[] }>('get', '/diagnoses');
-
+  // Usar el nuevo hook para obtener diagnósticos recientes (ya filtrados sin pre-citas)
   const {
-    data: { data: diagnoses = [] } = { data: [] },
+    data: recentDiagnosesData,
     isLoading: isLoadingDiagnoses,
     isError,
     error,
-  } = useQuery<{ data: Diagnosis[] }>({
-    queryKey: ['diagnoses'],
-    queryFn: async () => {
-      const response = await getDiagnosesRequest(undefined, { totalLimit: 5 }, undefined);
+  } = useRecentDiagnoses({ limit: 5 });
 
-      return response.data;
-    },
-    enabled: true,
-    staleTime: 60000,
-    retry: false,
-  });
+  const diagnoses = recentDiagnosesData?.data || [];
 
   useEffect(() => {
     if (isError && error) {
@@ -51,6 +41,7 @@ const Dashboard = () => {
 
       // Invalidar múltiples queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+      queryClient.invalidateQueries({ queryKey: ['recentDiagnoses'] });
       queryClient.invalidateQueries({ queryKey: ['getDiagnosesByCarId'] });
       queryClient.removeQueries({ queryKey: ['getDiagnosisById', diagnosisId] });
       queryClient.removeQueries({ queryKey: ['diagnosis', diagnosisId] });
@@ -95,35 +86,32 @@ const Dashboard = () => {
               </div>
             ) : diagnoses.length > 0 ? (
               <div className="mt-5 sm:mt-0">
-                {diagnoses
-                  .filter(
-                    (diagnosis) =>
-                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS,
-                  )
-                  .map((diagnosis, index) => (
-                    <DiagnosticListItem
-                      key={index}
-                      diagnosisId={diagnosis._id || ''}
-                      diagnosisLink={diagnosisLink(diagnosis, true)}
-                      vehicle={diagnosis.car}
-                      problems={
-                        diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
-                      }
-                      summary={[
-                        diagnosis.fault,
-                        ...(diagnosis.answers
-                          ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
-                          : []),
-                      ]}
-                      questions={diagnosis.questions || []}
-                      technician={diagnosis.createdBy}
-                      status={
-                        diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
-                      }
-                      timestamp={formatDate(diagnosis.createdAt)}
-                      onDelete={handleDeleteDiagnosis}
-                    />
-                  ))}
+                {diagnoses.map((diagnosis, index) => (
+                  <DiagnosticListItem
+                    key={index}
+                    diagnosisId={diagnosis._id || ''}
+                    diagnosisLink={diagnosisLink(diagnosis, true)}
+                    vehicle={diagnosis.car}
+                    problems={
+                      diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
+                    }
+                    summary={[
+                      diagnosis.fault,
+                      ...(diagnosis.answers
+                        ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                        : []),
+                    ]}
+                    // Para ASSIGN_OBD_CODES, mostrar síntoma procesado o ingresado
+                    processedSymptom={diagnosis.processedFault?.symptomCleaned || diagnosis.fault}
+                    questions={diagnosis.questions || []}
+                    technician={diagnosis.createdBy}
+                    status={
+                      diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
+                    }
+                    timestamp={formatDate(diagnosis.createdAt)}
+                    onDelete={handleDeleteDiagnosis}
+                  />
+                ))}
               </div>
             ) : (
               <div className="flex h-64 flex-col items-center justify-center text-center">

@@ -28,6 +28,7 @@ interface DiagnosticListItemProps {
     avatar?: string;
   };
   summary: string[];
+  processedSymptom?: string;
   status: (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS];
   timestamp: string;
   className?: string;
@@ -47,6 +48,7 @@ export const DiagnosticListItem = ({
   status,
   diagnosisId,
   summary = [],
+  processedSymptom,
   onDelete,
 }: DiagnosticListItemProps) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -155,7 +157,11 @@ export const DiagnosticListItem = ({
       {status === DIAGNOSIS_STATUS.GUIDED_QUESTIONS ? (
         <TitledStringList title="Preguntas guiadas:" items={questions} />
       ) : status === DIAGNOSIS_STATUS.ASSIGN_OBD_CODES ? (
-        <TitledStringList title="Asignar Códigos OBD:" items={summary} />
+        <TitledStringList
+          title="Síntomas:"
+          items={processedSymptom ? [processedSymptom] : summary}
+          showBullets={false}
+        />
       ) : status === DIAGNOSIS_STATUS.PRELIMINARY ? (
         <TitledStringList title="Potenciales averías:" items={problems} />
       ) : (
