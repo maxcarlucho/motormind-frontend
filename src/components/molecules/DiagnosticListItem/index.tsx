@@ -162,6 +162,12 @@ export const DiagnosticListItem = ({
           items={processedSymptom ? [processedSymptom] : summary}
           showBullets={false}
         />
+      ) : status === DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS ? (
+        <TitledStringList
+          title="Síntomas:"
+          items={processedSymptom ? [processedSymptom] : summary}
+          showBullets={false}
+        />
       ) : status === DIAGNOSIS_STATUS.PRELIMINARY ? (
         <TitledStringList title="Potenciales averías:" items={problems} />
       ) : (

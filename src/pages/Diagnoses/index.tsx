@@ -159,14 +159,6 @@ const Diagnoses = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => setIsPreAppointmentModalOpen(true)}
-              variant="outline"
-              className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
-            >
-              <CalendarPlus className="!h-5 !w-5" />
-              <span className="hidden lg:inline">Crear pre-cita</span>
-            </Button>
-            <Button
               onClick={() => setIsCreateModalOpen(true)}
               className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
             >
@@ -192,12 +184,12 @@ const Diagnoses = () => {
                   vehicle={diagnosis.car}
                   summary={[
                     diagnosis.fault,
-                    ...(diagnosis.answers ? diagnosis.answers.split('\n').filter(answer => answer.trim()) : [])
+                    ...(diagnosis.answers
+                      ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                      : []),
                   ]}
                   // Para ASSIGN_OBD_CODES, mostrar síntoma procesado o ingresado
-                  processedSymptom={
-                    diagnosis.processedFault?.symptomCleaned || diagnosis.fault
-                  }
+                  processedSymptom={diagnosis.processedFault?.symptomCleaned || diagnosis.fault}
                   problems={diagnosis.preliminary?.possibleReasons?.map(({ title }) => title) || []}
                   questions={diagnosis.questions || []}
                   technician={diagnosis.createdBy}
