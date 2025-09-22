@@ -40,7 +40,6 @@ export interface PreAppointmentData {
   carPlate: string;
   appointmentDate?: string;
   appointmentTime?: string;
-  notes?: string;
   symptom: string;
 }
 
@@ -50,7 +49,6 @@ interface FormData {
   carPlate: string;
   appointmentDate: string;
   appointmentTime: string;
-  notes: string;
   symptom: string;
 }
 
@@ -71,7 +69,6 @@ export const CreatePreAppointmentModal = ({
     carPlate: '',
     appointmentDate: '',
     appointmentTime: '',
-    notes: '',
     symptom: '',
   });
 
@@ -98,7 +95,6 @@ export const CreatePreAppointmentModal = ({
         carPlate: formData.carPlate.trim(),
         appointmentDate: formData.appointmentDate.trim() || undefined,
         appointmentTime: formData.appointmentTime.trim() || undefined,
-        notes: formData.notes.trim() || undefined,
         symptom: formData.symptom.trim(),
       };
 
@@ -135,7 +131,6 @@ export const CreatePreAppointmentModal = ({
         carPlate: data.carPlate,
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,
-        notes: data.notes,
         symptom: data.symptom,
       }),
     onSuccess: () => {
@@ -167,7 +162,6 @@ export const CreatePreAppointmentModal = ({
         carPlate: '',
         appointmentDate: '',
         appointmentTime: '',
-        notes: '',
         symptom: '',
       });
       setValidationErrors({});
@@ -211,10 +205,6 @@ export const CreatePreAppointmentModal = ({
     if (!formData.carPlate.trim()) {
       errors.carPlate = 'La matrícula es obligatoria';
     } else if (!PLATE_REGEX.test(formData.carPlate)) {
-      // Debug: log plate validation details
-      console.log('Plate validation failed for:', formData.carPlate);
-      console.log('Plate regex test result:', PLATE_REGEX.test(formData.carPlate));
-      console.log('Plate length:', formData.carPlate.length);
       errors.carPlate = 'Formato de matrícula inválido';
     }
 
@@ -279,14 +269,7 @@ export const CreatePreAppointmentModal = ({
     }
   };
 
-  const formValidationErrors = validateForm();
-  const isFormValid = Object.keys(formValidationErrors).length === 0;
-  
-  // Debug: log validation errors
-  if (!isFormValid) {
-    console.log('Form validation errors:', formValidationErrors);
-    console.log('Form data:', formData);
-  }
+  const isFormValid = Object.keys(validateForm()).length === 0;
   const isLoading = getOrCreateVehicleMutation.isPending || createAppointmentMutation.isPending;
 
   return (
@@ -484,21 +467,6 @@ export const CreatePreAppointmentModal = ({
                 )}
               </div>
 
-              {/* Notas adicionales (opcional) */}
-              <div className="sm:col-span-2">
-                <label htmlFor="notes" className="mb-1 block text-sm font-medium text-gray-700">
-                  Notas adicionales (opcional)
-                </label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder="Información adicional que pueda ser útil..."
-                  disabled={isLoading}
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
             </div>
           </div>
 
