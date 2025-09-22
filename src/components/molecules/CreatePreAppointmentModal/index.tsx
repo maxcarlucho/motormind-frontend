@@ -77,7 +77,7 @@ export const CreatePreAppointmentModal = ({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isCarPlateValid, setIsCarPlateValid] = useState<boolean | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const { validatePhone } = usePhoneValidation();
+  const { getValidationError } = usePhoneValidation();
 
   // API hooks
   const { execute: getOrCreateVehicleRequest } = useApi<Car>('get', '/cars/vin-or-plate');
@@ -179,28 +179,10 @@ export const CreatePreAppointmentModal = ({
       errors.clientName = 'El nombre debe tener al menos 2 caracteres';
     }
 
-    // Validar teléfono
-    if (!formData.clientPhone) {
-      errors.clientPhone = 'El teléfono es obligatorio';
-    } else {
-      // Validación más permisiva para números argentinos
-      const phone = formData.clientPhone.trim();
-      const isArgentinePhone = phone.startsWith('+54') || phone.startsWith('54');
-      const hasMinimumDigits = phone.length >= 10; // Mínimo 10 dígitos
-      const hasValidFormat = /^\+?[0-9\s\-\(\)]+$/.test(phone); // Solo números, espacios, guiones y paréntesis
-      
-      if (!hasMinimumDigits || !hasValidFormat) {
-        errors.clientPhone = 'Ingresá un número de teléfono válido';
-      } else if (isArgentinePhone && phone.length < 12) {
-        // Para números argentinos, permitir números incompletos pero válidos
-        const digitsOnly = phone.replace(/\D/g, '');
-        if (digitsOnly.length < 10) {
-          errors.clientPhone = 'El número argentino debe tener al menos 10 dígitos';
-        }
-      } else if (!isArgentinePhone && !validatePhone(phone)) {
-        // Para otros países, usar validación estricta
-        errors.clientPhone = 'Ingresá un número de teléfono válido';
-      }
+    // Validar teléfono usando validación endurecida
+    const phoneError = getValidationError(formData.clientPhone);
+    if (phoneError) {
+      errors.clientPhone = phoneError;
     }
 
     // Validar matrícula
@@ -243,6 +225,16 @@ export const CreatePreAppointmentModal = ({
 
   const handlePhoneChange = (value: string | undefined) => {
     handleInputChange('clientPhone', value || '');
+  };
+
+  const handlePhoneBlur = () => {
+    // Validar en tiempo real al perder el foco
+    if (formData.clientPhone) {
+      const phoneError = getValidationError(formData.clientPhone);
+      if (phoneError) {
+        setValidationErrors((prev) => ({ ...prev, clientPhone: phoneError }));
+      }
+    }
   };
 
   const validateCarPlate = (value: string) => {
@@ -347,6 +339,7 @@ export const CreatePreAppointmentModal = ({
                   id="clientPhone"
                   value={formData.clientPhone}
                   onChange={handlePhoneChange}
+                  onBlur={handlePhoneBlur}
                   placeholder="11 1234-5678"
                   disabled={isLoading}
                   error={!!validationErrors.clientPhone}
@@ -490,7 +483,6 @@ export const CreatePreAppointmentModal = ({
                   </p>
                 )}
               </div>
-
             </div>
           </div>
 

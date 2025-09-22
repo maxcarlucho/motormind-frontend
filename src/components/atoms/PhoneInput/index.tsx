@@ -1,5 +1,6 @@
+import React, { useCallback, useMemo } from 'react';
 import PhoneInput from 'react-phone-number-input';
-import { isValidPhoneNumber, Country, parsePhoneNumber } from 'react-phone-number-input';
+import { Country } from 'react-phone-number-input';
 import { cn } from '@/utils/cn';
 
 // Importamos los estilos base y nuestros estilos personalizados
@@ -20,80 +21,137 @@ interface PhoneInputProps {
   id?: string;
   'aria-invalid'?: boolean;
   'aria-describedby'?: string;
+  onBlur?: () => void;
 }
-
-// Función para obtener la longitud máxima de dígitos por país
-const getMaxDigitsForCountry = (country: Country): number => {
-  const maxDigitsByCountry: Record<string, number> = {
-    AR: 10, // Argentina: 11 1234-5678 (10 dígitos)
-    US: 10, // Estados Unidos: (555) 123-4567 (10 dígitos)
-    ES: 9, // España: 612 345 678 (9 dígitos)
-    MX: 10, // México: 55 1234 5678 (10 dígitos)
-    BR: 11, // Brasil: 11 91234-5678 (11 dígitos)
-    CL: 9, // Chile: 9 1234 5678 (9 dígitos)
-    CO: 10, // Colombia: 300 123 4567 (10 dígitos)
-    PE: 9, // Perú: 987 654 321 (9 dígitos)
-    UY: 8, // Uruguay: 99 123 456 (8 dígitos)
-    PY: 9, // Paraguay: 981 123 456 (9 dígitos)
-    BO: 8, // Bolivia: 7 123 4567 (8 dígitos)
-    EC: 9, // Ecuador: 99 123 4567 (9 dígitos)
-    VE: 10, // Venezuela: 412 123 4567 (10 dígitos)
-    GT: 8, // Guatemala: 5 123 4567 (8 dígitos)
-    CR: 8, // Costa Rica: 8 123 4567 (8 dígitos)
-    PA: 8, // Panamá: 6 123 4567 (8 dígitos)
-    DO: 10, // República Dominicana: 809 123 4567 (10 dígitos)
-    CU: 8, // Cuba: 5 123 4567 (8 dígitos)
-    HN: 8, // Honduras: 9 123 4567 (8 dígitos)
-    NI: 8, // Nicaragua: 8 123 4567 (8 dígitos)
-    SV: 8, // El Salvador: 7 123 4567 (8 dígitos)
-  };
-
-  return maxDigitsByCountry[country] || 15; // Default a 15 si no está definido
-};
 
 export const PhoneInputComponent = ({
   value,
   onChange,
-  placeholder = 'Ingrese número de teléfono',
+  placeholder,
   disabled = false,
   className,
-  defaultCountry = 'AR', // Argentina por defecto
+  defaultCountry = 'AR',
   error = false,
   id,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedby,
+  onBlur,
 }: PhoneInputProps) => {
-  const handleChange = (phoneValue: string | undefined) => {
-    if (!phoneValue) {
-      onChange(phoneValue);
-      return;
+  // Generar placeholder dinámico basado en el país
+  const dynamicPlaceholder = useMemo(() => {
+    if (placeholder) return placeholder;
+
+    // Placeholders específicos por país
+    const countryPlaceholders: Record<string, string> = {
+      AR: '11 1234-5678',
+      US: '(555) 123-4567',
+      ES: '612 345 678',
+      MX: '55 1234 5678',
+      BR: '11 91234-5678',
+      CL: '9 1234 5678',
+      CO: '300 123 4567',
+      PE: '987 654 321',
+      UY: '99 123 456',
+      PY: '981 123 456',
+      BO: '7 123 4567',
+      EC: '99 123 4567',
+      VE: '412 123 4567',
+      GT: '5 123 4567',
+      CR: '8 123 4567',
+      PA: '6 123 4567',
+      DO: '809 123 4567',
+      CU: '5 123 4567',
+      HN: '9 123 4567',
+      NI: '8 123 4567',
+      SV: '7 123 4567',
+    };
+
+    return countryPlaceholders[defaultCountry] || 'Ej: +54911...';
+  }, [defaultCountry, placeholder]);
+
+  // Sanitizar valor pegado
+  const sanitizePastedValue = useCallback((pastedValue: string): string => {
+    // Mantener solo + inicial y dígitos
+    const sanitized = pastedValue.replace(/[^\d+]/g, '');
+
+    // Asegurar que solo hay un + al inicio
+    if (sanitized.startsWith('+')) {
+      return '+' + sanitized.slice(1).replace(/[^\d]/g, '');
     }
 
-    // Extraer solo los dígitos del número
-    const digitsOnly = phoneValue.replace(/\D/g, '');
+    return sanitized.replace(/[^\d]/g, '');
+  }, []);
 
-    // Obtener el país del número o usar el default
-    let country: Country = defaultCountry;
-    try {
-      const phoneNumber = parsePhoneNumber(phoneValue);
-      if (phoneNumber?.country) {
-        country = phoneNumber.country;
+  // Manejar cambio de valor
+  const handleChange = useCallback(
+    (phoneValue: string | undefined) => {
+      if (!phoneValue) {
+        onChange(phoneValue);
+        return;
       }
-    } catch {
-      // Si no se puede parsear, usar el país por defecto
-    }
 
-    // Obtener la longitud máxima para el país
-    const maxDigits = getMaxDigitsForCountry(country);
+      // El componente ya maneja la limitación de longitud con limitMaxLength
+      // Solo sanitizamos si es necesario
+      const sanitized = sanitizePastedValue(phoneValue);
+      onChange(sanitized || phoneValue);
+    },
+    [onChange, sanitizePastedValue],
+  );
 
-    // Limitar a la longitud máxima
-    if (digitsOnly.length > maxDigits) {
-      // No permitir más dígitos de los permitidos
+  // Manejar pegado
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault();
+      const pastedText = e.clipboardData.getData('text');
+      const sanitized = sanitizePastedValue(pastedText);
+
+      if (sanitized) {
+        handleChange(sanitized);
+      }
+    },
+    [handleChange, sanitizePastedValue],
+  );
+
+  // Manejar teclas
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const { key, ctrlKey, metaKey } = e;
+
+    // Permitir teclas de control
+    if (
+      ctrlKey ||
+      metaKey ||
+      [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Enter',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+      ].includes(key)
+    ) {
       return;
     }
 
-    onChange(phoneValue);
-  };
+    // Permitir + solo al inicio
+    if (key === '+') {
+      const input = e.target as HTMLInputElement;
+      const cursorPosition = input.selectionStart || 0;
+      const currentValue = input.value || '';
+
+      if (cursorPosition === 0 && !currentValue.startsWith('+')) {
+        return;
+      }
+    }
+
+    // Permitir solo dígitos
+    if (!/^\d$/.test(key)) {
+      e.preventDefault();
+    }
+  }, []);
 
   return (
     <div className={cn('phone-field', className)}>
@@ -102,50 +160,28 @@ export const PhoneInputComponent = ({
         defaultCountry={defaultCountry}
         value={value}
         onChange={handleChange}
-        placeholder={placeholder}
+        placeholder={dynamicPlaceholder}
         disabled={disabled}
         countryCallingCodeEditable={false}
+        smartCaret
+        limitMaxLength
         labels={es}
         className={cn('phone-input', error && 'phone-input--error')}
-        // Formateo automático mientras el usuario escribe
-        format={(value: string, country: Country) => {
-          if (!value) return '';
-          try {
-            const phoneNumber = parsePhoneNumber(value, country);
-            if (phoneNumber) {
-              // Formatear según el país seleccionado
-              return phoneNumber.formatNational();
-            }
-          } catch {
-            // Si hay error en el parsing, devolver el valor original
-          }
-          return value;
-        }}
-        inputProps={{
+        numberInputProps={{
           id,
-          type: 'tel',
+          inputMode: 'numeric',
           autoComplete: 'tel',
+          'aria-label': 'Teléfono (WhatsApp)',
           'aria-invalid': ariaInvalid || error,
           'aria-describedby': ariaDescribedby,
-          // Limitar caracteres a solo números y algunos símbolos
-          pattern: '[0-9+\\s\\-\\(\\)]*',
+          onPaste: handlePaste,
+          onKeyDown: handleKeyDown,
+          onBlur,
         }}
       />
     </div>
   );
 };
 
-// Hook de validación
-export const usePhoneValidation = () => {
-  const validatePhone = (phone: string | undefined): boolean => {
-    if (!phone) return false;
-    return isValidPhoneNumber(phone);
-  };
-
-  const formatPhone = (phone: string | undefined): string | undefined => {
-    if (!phone) return undefined;
-    return phone; // react-phone-number-input ya formatea automáticamente
-  };
-
-  return { validatePhone, formatPhone };
-};
+// Re-exportar el hook desde el archivo separado
+export { usePhoneValidation } from './usePhoneValidation';
