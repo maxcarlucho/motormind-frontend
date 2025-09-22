@@ -186,14 +186,35 @@ export const CreatePreAppointmentModal = ({
     // Validar teléfono
     if (!formData.clientPhone) {
       errors.clientPhone = 'El teléfono es obligatorio';
-    } else if (!validatePhone(formData.clientPhone)) {
-      errors.clientPhone = 'Ingresá un número de teléfono válido';
+    } else {
+      // Validación más permisiva para números argentinos
+      const phone = formData.clientPhone.trim();
+      const isArgentinePhone = phone.startsWith('+54') || phone.startsWith('54');
+      const hasMinimumDigits = phone.length >= 10; // Mínimo 10 dígitos
+      const hasValidFormat = /^\+?[0-9\s\-\(\)]+$/.test(phone); // Solo números, espacios, guiones y paréntesis
+      
+      if (!hasMinimumDigits || !hasValidFormat) {
+        errors.clientPhone = 'Ingresá un número de teléfono válido';
+      } else if (isArgentinePhone && phone.length < 12) {
+        // Para números argentinos, permitir números incompletos pero válidos
+        const digitsOnly = phone.replace(/\D/g, '');
+        if (digitsOnly.length < 10) {
+          errors.clientPhone = 'El número argentino debe tener al menos 10 dígitos';
+        }
+      } else if (!isArgentinePhone && !validatePhone(phone)) {
+        // Para otros países, usar validación estricta
+        errors.clientPhone = 'Ingresá un número de teléfono válido';
+      }
     }
 
     // Validar matrícula
     if (!formData.carPlate.trim()) {
       errors.carPlate = 'La matrícula es obligatoria';
     } else if (!PLATE_REGEX.test(formData.carPlate)) {
+      // Debug: log plate validation details
+      console.log('Plate validation failed for:', formData.carPlate);
+      console.log('Plate regex test result:', PLATE_REGEX.test(formData.carPlate));
+      console.log('Plate length:', formData.carPlate.length);
       errors.carPlate = 'Formato de matrícula inválido';
     }
 
