@@ -101,6 +101,7 @@ const Diagnoses = () => {
 
       // Invalidar múltiples queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+      queryClient.invalidateQueries({ queryKey: ['recentDiagnoses'] });
       queryClient.invalidateQueries({ queryKey: ['getDiagnosesByCarId'] });
       queryClient.removeQueries({ queryKey: ['getDiagnosisById', diagnosisId] });
       queryClient.removeQueries({ queryKey: ['diagnosis', diagnosisId] });
@@ -193,6 +194,10 @@ const Diagnoses = () => {
                     diagnosis.fault,
                     ...(diagnosis.answers ? diagnosis.answers.split('\n').filter(answer => answer.trim()) : [])
                   ]}
+                  // Para ASSIGN_OBD_CODES, mostrar síntoma procesado o ingresado
+                  processedSymptom={
+                    diagnosis.processedFault?.symptomCleaned || diagnosis.fault
+                  }
                   problems={diagnosis.preliminary?.possibleReasons?.map(({ title }) => title) || []}
                   questions={diagnosis.questions || []}
                   technician={diagnosis.createdBy}
