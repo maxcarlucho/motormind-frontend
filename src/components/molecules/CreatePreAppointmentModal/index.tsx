@@ -258,7 +258,14 @@ export const CreatePreAppointmentModal = ({
     }
   };
 
-  const isFormValid = Object.keys(validateForm()).length === 0;
+  const formValidationErrors = validateForm();
+  const isFormValid = Object.keys(formValidationErrors).length === 0;
+  
+  // Debug: log validation errors
+  if (!isFormValid) {
+    console.log('Form validation errors:', formValidationErrors);
+    console.log('Form data:', formData);
+  }
   const isLoading = getOrCreateVehicleMutation.isPending || createAppointmentMutation.isPending;
 
   return (
