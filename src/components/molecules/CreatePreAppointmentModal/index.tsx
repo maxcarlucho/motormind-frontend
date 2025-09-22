@@ -38,8 +38,8 @@ export interface PreAppointmentData {
   clientName: string;
   clientPhone: string;
   carPlate: string;
-  appointmentDate?: string;
-  appointmentTime?: string;
+  appointmentDate: string;
+  appointmentTime: string;
   symptom: string;
 }
 
@@ -56,6 +56,8 @@ interface ValidationErrors {
   clientName?: string;
   clientPhone?: string;
   carPlate?: string;
+  appointmentDate?: string;
+  appointmentTime?: string;
   symptom?: string;
 }
 
@@ -93,8 +95,8 @@ export const CreatePreAppointmentModal = ({
         clientName: formData.clientName.trim(),
         clientPhone: formData.clientPhone,
         carPlate: formData.carPlate.trim(),
-        appointmentDate: formData.appointmentDate.trim() || undefined,
-        appointmentTime: formData.appointmentTime.trim() || undefined,
+        appointmentDate: formData.appointmentDate.trim(),
+        appointmentTime: formData.appointmentTime.trim(),
         symptom: formData.symptom.trim(),
       };
 
@@ -215,6 +217,16 @@ export const CreatePreAppointmentModal = ({
       errors.symptom = 'El síntoma debe tener al menos 5 caracteres';
     } else if (formData.symptom.trim().length > 500) {
       errors.symptom = 'El síntoma no puede exceder 500 caracteres';
+    }
+
+    // Validar fecha de cita
+    if (!formData.appointmentDate.trim()) {
+      errors.appointmentDate = 'La fecha de cita es obligatoria';
+    }
+
+    // Validar hora de cita
+    if (!formData.appointmentTime.trim()) {
+      errors.appointmentTime = 'La hora de cita es obligatoria';
     }
 
     return errors;
@@ -355,7 +367,7 @@ export const CreatePreAppointmentModal = ({
                   htmlFor="appointmentDate"
                   className="mb-1 block text-sm font-medium text-gray-700"
                 >
-                  Fecha de cita (opcional)
+                  Fecha de cita <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="appointmentDate"
@@ -363,7 +375,13 @@ export const CreatePreAppointmentModal = ({
                   value={formData.appointmentDate}
                   onChange={(e) => handleInputChange('appointmentDate', e.target.value)}
                   disabled={isLoading}
+                  className={validationErrors.appointmentDate ? 'border-red-500' : ''}
                 />
+                {validationErrors.appointmentDate && (
+                  <p className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.appointmentDate}
+                  </p>
+                )}
               </div>
 
               {/* Hora de cita */}
@@ -372,7 +390,7 @@ export const CreatePreAppointmentModal = ({
                   htmlFor="appointmentTime"
                   className="mb-1 block text-sm font-medium text-gray-700"
                 >
-                  Hora de cita (opcional)
+                  Hora de cita <span className="text-red-500">*</span>
                 </label>
                 <Input
                   id="appointmentTime"
@@ -380,7 +398,13 @@ export const CreatePreAppointmentModal = ({
                   value={formData.appointmentTime}
                   onChange={(e) => handleInputChange('appointmentTime', e.target.value)}
                   disabled={isLoading}
+                  className={validationErrors.appointmentTime ? 'border-red-500' : ''}
                 />
+                {validationErrors.appointmentTime && (
+                  <p className="mt-1 text-sm text-red-600" role="alert">
+                    {validationErrors.appointmentTime}
+                  </p>
+                )}
               </div>
             </div>
           </div>
