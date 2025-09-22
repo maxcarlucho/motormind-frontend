@@ -1,4 +1,4 @@
-import { DIAGNOSIS_STATUS } from '@/constants';
+import { DIAGNOSIS_STATUS, DIAGNOSIS_STATUS_LABELS, DIAGNOSIS_STATUS_COLORS, DiagnosisStatus, ASSESSMENT_STATUS_LABELS, AssessmentStatus } from '@/constants';
 import { Diagnosis } from '@/types/Diagnosis';
 
 export const formatDate = (dateString: string | Date) => {
@@ -26,6 +26,31 @@ export const formatToddmmyyyy = (date: Date) => {
   const year = date.getFullYear();
 
   return `${day}/${month}/${year}`;
+};
+
+export const formatAppointmentDateTime = (date: string, time: string): string => {
+  if (!date || !time) return '—';
+
+  try {
+    // Parsear la fecha (formato YYYY-MM-DD)
+    const dateObj = new Date(date);
+
+    // Verificar que la fecha es válida
+    if (isNaN(dateObj.getTime())) {
+      return '—';
+    }
+
+    // Formatear fecha como dd/mm/yy
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const year = dateObj.getFullYear().toString().slice(-2); // Últimos 2 dígitos del año
+
+    // El time ya viene en formato HH:MM, solo necesitamos concatenar
+    return `${day}/${month}/${year} ${time}`;
+  } catch (error) {
+    console.error('Error formatting appointment date/time:', error);
+    return '—';
+  }
 };
 
 export const parseSpanishDate = (dateString: string): Date | undefined => {
@@ -96,4 +121,31 @@ export const onChangePrice = (
   if (!isNaN(numValue) && numValue >= 0) {
     update(numValue);
   }
+};
+
+/**
+ * Obtiene el label amigable para un estado de diagnosis
+ * @param status - El estado del diagnosis
+ * @returns El label amigable o el estado original si no se encuentra
+ */
+export const getDiagnosisStatusLabel = (status: string): string => {
+  return DIAGNOSIS_STATUS_LABELS[status as DiagnosisStatus] || status;
+};
+
+/**
+ * Obtiene el label amigable para un estado de assessment
+ * @param status - El estado del assessment
+ * @returns El label amigable o el estado original si no se encuentra
+ */
+export const getAssessmentStatusLabel = (status: string): string => {
+  return ASSESSMENT_STATUS_LABELS[status as AssessmentStatus] || status;
+};
+
+/**
+ * Obtiene las clases CSS de color para un estado de diagnosis
+ * @param status - El estado del diagnosis
+ * @returns Las clases CSS de color o el color por defecto si no se encuentra
+ */
+export const getDiagnosisStatusColor = (status: string): string => {
+  return DIAGNOSIS_STATUS_COLORS[status as DiagnosisStatus] || 'bg-gray-100 text-gray-800 border-gray-200';
 };

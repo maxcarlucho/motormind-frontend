@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSearch, PlusIcon } from 'lucide-react';
+import { FileSearch, PlusIcon, CalendarPlus } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { diagnosisLink, formatDate } from '@/utils';
@@ -10,12 +10,14 @@ import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import Spinner from '@/components/atoms/Spinner';
 import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
+import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppointmentModal';
 import { Button } from '@/components/atoms/Button';
 import { FloatingButton } from '@/components/atoms/FloatingButton';
 import apiService from '@/service/api.service';
 
 const Dashboard = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
   const queryClient = useQueryClient();
   const { execute: getDiagnosesRequest } = useApi<{ data: Diagnosis[] }>('get', '/diagnoses');
 
@@ -66,7 +68,7 @@ const Dashboard = () => {
           <h1 className="truncate py-0.5 text-xl font-semibold sm:py-0 lg:text-2xl">Panel</h1>
           <p className="text-muted hidden xl:block">Gestiona y revisa el estado del taller</p>
         </div>
-        <div className="hidden items-center sm:flex">
+        <div className="hidden items-center gap-2 sm:flex">
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="h-8 w-8 sm:h-auto sm:w-auto"
@@ -93,25 +95,36 @@ const Dashboard = () => {
               </div>
             ) : diagnoses.length > 0 ? (
               <div className="mt-5 sm:mt-0">
-                {diagnoses.map((diagnosis, index) => (
-                  <DiagnosticListItem
-                    key={index}
-                    diagnosisId={diagnosis._id || ''}
-                    diagnosisLink={diagnosisLink(diagnosis, true)}
-                    vehicle={diagnosis.car}
-                    problems={
-                      diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
-                    }
-                    summary={[diagnosis.fault, diagnosis.answers]}
-                    questions={diagnosis.questions || []}
-                    technician={diagnosis.createdBy}
-                    status={
-                      diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
-                    }
-                    timestamp={formatDate(diagnosis.createdAt)}
-                    onDelete={handleDeleteDiagnosis}
-                  />
-                ))}
+                {diagnoses
+                  .filter(
+                    (diagnosis) =>
+                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS &&
+                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM,
+                  )
+                  .map((diagnosis, index) => (
+                    <DiagnosticListItem
+                      key={index}
+                      diagnosisId={diagnosis._id || ''}
+                      diagnosisLink={diagnosisLink(diagnosis, true)}
+                      vehicle={diagnosis.car}
+                      problems={
+                        diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
+                      }
+                      summary={[
+                        diagnosis.fault,
+                        ...(diagnosis.answers
+                          ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                          : []),
+                      ]}
+                      questions={diagnosis.questions || []}
+                      technician={diagnosis.createdBy}
+                      status={
+                        diagnosis.status as (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS]
+                      }
+                      timestamp={formatDate(diagnosis.createdAt)}
+                      onDelete={handleDeleteDiagnosis}
+                    />
+                  ))}
               </div>
             ) : (
               <div className="flex h-64 flex-col items-center justify-center text-center">
@@ -135,9 +148,15 @@ const Dashboard = () => {
         onOpenChange={setIsCreateModalOpen}
         submitButtonText="Comenzar diagnóstico"
       />
+
+      <CreatePreAppointmentModal
+        open={isPreAppointmentModalOpen}
+        onOpenChange={setIsPreAppointmentModalOpen}
+      />
+
       <div className="sm:hidden">
-        <FloatingButton onClick={() => setIsCreateModalOpen(true)}>
-          <PlusIcon className="!h-5 !w-5" />
+        <FloatingButton onClick={() => setIsPreAppointmentModalOpen(true)}>
+          <CalendarPlus className="!h-5 !w-5" />
         </FloatingButton>
       </div>
     </div>

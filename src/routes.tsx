@@ -21,6 +21,8 @@ import Metrics from '@/pages/Metrics';
 import DamageAssessments from '@/pages/DamageAssessments';
 import DamageAssessmentReport from '@/pages/DamageAssessments/DamageAssessmentReport';
 import DiagnosisOBDCodes from '@/pages/DiagnosisOBDCodes';
+import Appointments from '@/pages/Appointments';
+import AppointmentDetails from '@/pages/AppointmentDetails';
 import { WizardV2Entry, WizardV2NewEntry } from '@/features/damage-wizard-v2/routes';
 
 const router = createBrowserRouter([
@@ -53,6 +55,22 @@ const router = createBrowserRouter([
         element: (
           <ErrorBoundary>
             <Diagnoses />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/appointments',
+        element: (
+          <ErrorBoundary>
+            <Appointments />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/appointments/:appointmentId',
+        element: (
+          <ErrorBoundary>
+            <AppointmentDetails />
           </ErrorBoundary>
         ),
       },
@@ -124,6 +142,14 @@ const router = createBrowserRouter([
   },
   {
     path: '/cars/:carId/new-diagnosis',
+    element: (
+      <ErrorBoundary>
+        <NewDiagnosis />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/appointments/:appointmentId/cars/:carId/new-diagnosis',
     element: (
       <ErrorBoundary>
         <NewDiagnosis />

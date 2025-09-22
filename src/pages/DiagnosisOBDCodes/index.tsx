@@ -118,7 +118,10 @@ const DiagnosisOBDCodes = () => {
         <VehicleInformation
           car={
             diagnosis.car
-              ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+              ? ({ 
+                  ...diagnosis.car, 
+                  lastRevision: diagnosis.car.lastRevision ? new Date(diagnosis.car.lastRevision) : undefined 
+                } as Car)
               : undefined
           }
           editMode={false}
