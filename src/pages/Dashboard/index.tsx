@@ -98,8 +98,7 @@ const Dashboard = () => {
                 {diagnoses
                   .filter(
                     (diagnosis) =>
-                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS &&
-                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_SYMPTOM,
+                      diagnosis.status !== DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS,
                   )
                   .map((diagnosis, index) => (
                     <DiagnosticListItem
