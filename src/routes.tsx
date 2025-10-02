@@ -23,6 +23,7 @@ import DamageAssessmentReport from '@/pages/DamageAssessments/DamageAssessmentRe
 import DiagnosisOBDCodes from '@/pages/DiagnosisOBDCodes';
 import Appointments from '@/pages/Appointments';
 import AppointmentDetails from '@/pages/AppointmentDetails';
+import BrowserbaseStreaming from '@/pages/BrowserbaseStreaming';
 import { WizardV2Entry, WizardV2NewEntry } from '@/features/damage-wizard-v2/routes';
 
 const router = createBrowserRouter([
@@ -79,6 +80,14 @@ const router = createBrowserRouter([
         element: (
           <ErrorBoundary>
             <Metrics />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/browserbase-streaming',
+        element: (
+          <ErrorBoundary>
+            <BrowserbaseStreaming />
           </ErrorBoundary>
         ),
       },
