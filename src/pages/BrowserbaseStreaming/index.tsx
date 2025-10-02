@@ -29,6 +29,7 @@ const BrowserbaseStreamingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [liveViewUrl, setLiveViewUrl] = useState<string | null>(null);
   const [isLiveViewConnected, setIsLiveViewConnected] = useState<boolean>(true);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
   const logIdRef = useRef(0);
 
   const addLog = (
@@ -584,27 +585,69 @@ const BrowserbaseStreamingPage: React.FC = () => {
                   {isLiveViewConnected ? 'Solo Vista' : 'Interactivo'}
                 </button>
               </div>
+              
+              {/* Control de zoom opcional */}
+              <div className="mt-2 flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Zoom:</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="2"
+                  step="0.1"
+                  value={zoomLevel}
+                  onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+                  className="h-2 w-24 rounded-lg bg-gray-200 appearance-none cursor-pointer"
+                />
+                <span className="text-sm text-gray-600 min-w-[3rem]">{Math.round(zoomLevel * 100)}%</span>
+                <button
+                  onClick={() => setZoomLevel(1)}
+                  className="rounded bg-gray-500 px-2 py-1 text-xs text-white hover:bg-gray-600"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
 
-            <div className="h-96 overflow-hidden rounded-lg border">
+            {/* Contenedor full-bleed para Live View */}
+            <div 
+              className="relative w-full overflow-hidden"
+              style={{ 
+                height: 'calc(100vh - 200px)', // Restar espacio para header y controles
+                minHeight: '600px'
+              }}
+            >
+              {/* Wrapper con zoom aplicado */}
+              <div
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: 'top left',
+                  width: `${100 / zoomLevel}%`,
+                  height: `${100 / zoomLevel}%`,
+                }}
+              >
               <iframe
                 src={liveViewUrl || undefined}
-                className="h-full w-full"
                 title="Browserbase Live View"
                 sandbox="allow-same-origin allow-scripts"
                 allow="clipboard-read; clipboard-write"
+                allowFullScreen
                 onLoad={() => {
                   console.log('✅ [FRONTEND] Iframe cargado exitosamente');
                   console.log('✅ [FRONTEND] URL del iframe:', liveViewUrl);
+                  console.log('✅ [FRONTEND] Dimensiones del iframe: full-bleed');
                 }}
                 onError={(e) => {
                   console.error('❌ [FRONTEND] Error cargando iframe:', e);
                   console.error('❌ [FRONTEND] URL del iframe:', liveViewUrl);
                 }}
                 style={{
-                  border: 'none',
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  border: '0',
                 }}
               />
+              </div>
             </div>
 
             {!isLiveViewConnected && (
