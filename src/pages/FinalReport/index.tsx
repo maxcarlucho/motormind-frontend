@@ -31,6 +31,8 @@ import {
 } from '@/components/atoms/Dialog';
 import { useCarPlateOrVin } from '@/hooks/useCarPlateOrVin';
 import DetailsContainer from '@/components/atoms/DetailsContainer';
+import { LiveViewSessionsProvider } from '@/context/LiveViewSessions.context';
+import { LiveViewSessionsFloater } from '@/components/molecules/LiveViewSessionsFloater';
 const FinalReport = () => {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -206,7 +208,8 @@ const FinalReport = () => {
   };
 
   return (
-    <div className="bg-background min-h-screen pb-56 sm:pb-24">
+    <LiveViewSessionsProvider>
+      <div className="bg-background min-h-screen pb-56 sm:pb-24">
       <HeaderPage
         onBack={onBack}
         data={{
@@ -239,6 +242,8 @@ const FinalReport = () => {
         <EstimatedResources
           diagnosisId={params.diagnosisId as string}
           estimatedResources={diagnosis.diagnosis?.estimatedBudget || {}}
+          electricalDiagrams={diagnosis.electricalDiagrams}
+          carId={diagnosis.carId}
         />
 
         <Conclusion
@@ -357,13 +362,17 @@ const FinalReport = () => {
         </DialogContent>
       </Dialog>
 
-      <RatingModal
-        isOpen={isRatingModalOpen}
-        onClose={() => setIsRatingModalOpen(false)}
-        onSubmit={handleRatingSubmit}
-        isLoading={isLoadingDiagnosisRating}
-      />
-    </div>
+        <RatingModal
+          isOpen={isRatingModalOpen}
+          onClose={() => setIsRatingModalOpen(false)}
+          onSubmit={handleRatingSubmit}
+          isLoading={isLoadingDiagnosisRating}
+        />
+        
+        {/* Componente flotante de sesiones Live View */}
+        <LiveViewSessionsFloater />
+      </div>
+    </LiveViewSessionsProvider>
   );
 };
 
