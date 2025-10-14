@@ -1,17 +1,14 @@
 import { BarChartIcon, X } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { enqueueSnackbar } from 'notistack';
 import { DocumentLink } from '@/types/Diagnosis';
 import PartDiagramItem from '@/components/molecules/PartDiagramItem';
 import { useAuth } from '@/context/Auth.context';
-import { useLiveViewSessions } from '@/context/LiveViewSessions.context';
-// import { useBrowserbaseDisconnect } from '@/hooks/useBrowserbaseDisconnect';
 import { SearchResourceButton } from '@/components/atoms/SearchResourceButton';
 import { ApiService } from '@/service/api.service';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/atoms/Dialog';
 import Spinner from '@/components/atoms/Spinner';
-// import { LiveViewSession } from '@/types/LiveViewSession';
+import { useLiveViewSessions } from '@/context/LiveViewSessions.context';
 
 const diagramLoadingMessages = [
   'Buscando diagramas... esta operación puede tardar varios segundos',
@@ -21,13 +18,7 @@ const diagramLoadingMessages = [
   'Preparando recursos visuales para facilitar la reparación...',
 ];
 
-const electricalDiagramLoadingMessages = [
-  'Buscando diagramas eléctricos... esta operación puede tardar varios segundos',
-  'Accediendo a HaynesPro WorkshopData...',
-  'Navegando a sección de esquemas eléctricos...',
-  'Extrayendo enlaces de documentación técnica...',
-  'Preparando diagramas de cableado para facilitar la reparación...',
-];
+// REMOVED: electricalDiagramLoadingMessages - electrical diagrams now fetched in preliminary diagnosis
 
 type EstimatedResourcesProps = {
   estimatedResources: {
@@ -42,8 +33,7 @@ type EstimatedResourcesProps = {
     partsDiagrams?: DocumentLink[];
   };
   diagnosisId: string;
-  electricalDiagrams?: DocumentLink[];
-  carId: string;
+  // REMOVED: electricalDiagrams and carId - now at fault level
 };
 
 // Componente interno para el modal de Live View (temporalmente comentado)
@@ -55,27 +45,22 @@ type EstimatedResourcesProps = {
 export const EstimatedResources = ({
   estimatedResources,
   diagnosisId,
-  electricalDiagrams,
-  carId,
 }: EstimatedResourcesProps) => {
   const { user } = useAuth();
   const apiService = ApiService.getInstance();
-  const { addSession, updateSession, removeSession, minimizeSession, sessions } =
-    useLiveViewSessions();
+  const { minimizeSession, sessions } = useLiveViewSessions();
 
   const [diagramResults, setDiagramResults] = useState<DocumentLink[] | null>(
     estimatedResources.partsDiagrams || null,
   );
 
-  const [electricalResults, setElectricalResults] = useState<DocumentLink[] | null>(
-    electricalDiagrams || null,
-  );
+  // REMOVED: electricalResults state - electrical diagrams now fetched in preliminary diagnosis
+  // const [electricalResults, setElectricalResults] = useState<DocumentLink[] | null>(
+  //   electricalDiagrams || null,
+  // );
 
   // Estado local para el modal
   const [currentModalTitle, setCurrentModalTitle] = useState<string>('');
-
-  // Ref para guardar el sessionId de la sesión en proceso
-  const currentSessionIdRef = useRef<string | null>(null);
 
   // Obtener la sesión activa del contexto para determinar qué mostrar
   const activeSession = sessions.find((session) => session.isActive);
@@ -110,64 +95,54 @@ export const EstimatedResources = ({
     },
   });
 
-  const fetchElectricalDiagramsMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiService.get<{ data: { diagrams: DocumentLink[] } }>(
-        `/diagnoses/${diagnosisId}/electrical-diagrams?carId=${carId}`,
-      );
-      if (res.status !== 200) throw new Error('No se pudo buscar diagramas eléctricos');
-      return res.data?.data?.diagrams || [];
-    },
-    onSuccess: (data) => {
-      setElectricalResults(data);
-    },
-    onError: (error) => {
-      console.error('Error fetching electrical diagrams:', error);
-      setElectricalResults([]);
-    },
-  });
+  // REMOVED: fetchElectricalDiagramsMutation - electrical diagrams now fetched in preliminary diagnosis
+  // const fetchElectricalDiagramsMutation = useMutation({
+  //   mutationFn: async () => {
+  //     const res = await apiService.get<{ data: { diagrams: DocumentLink[] } }>(
+  //       `/diagnoses/${diagnosisId}/electrical-diagrams?carId=${carId}`,
+  //     );
+  //     if (res.status !== 200) throw new Error('No se pudo buscar diagramas eléctricos');
+  //     return res.data?.data?.diagrams || [];
+  //   },
+  //   onSuccess: (data) => {
+  //     setElectricalResults(data);
+  //   },
+  //   onError: (error) => {
+  //     console.error('Error fetching electrical diagrams:', error);
+  //     setElectricalResults([]);
+  //   },
+  // });
 
-  const initiateLiveViewMutation = useMutation({
-    mutationFn: async (linkUrl: string) => {
-      const res = await apiService.post<{ success: boolean; liveViewUrl?: string; error?: string }>(
-        `/diagnoses/${diagnosisId}/initiate-live-view`,
-        { linkUrl, linkLabel: 'Diagrama Eléctrico' }, // Usar un label genérico por ahora
-      );
-      if (res.status !== 200 || !res.data?.success) {
-        throw new Error(res.data?.error || 'No se pudo iniciar Live View');
-      }
-      return res.data.liveViewUrl!;
-    },
-    onSuccess: (url) => {
-      console.log('[initiateLiveViewMutation] onSuccess - URL recibida:', url);
-
-      if (currentSessionIdRef.current) {
-        console.log('[initiateLiveViewMutation] Actualizando sesión:', currentSessionIdRef.current);
-
-        updateSession(currentSessionIdRef.current, {
-          liveViewUrl: url,
-        });
-
-        console.log('[initiateLiveViewMutation] Sesión actualizada con liveViewUrl');
-
-        // Limpiar la ref
-        currentSessionIdRef.current = null;
-      }
-
-      // El modal ya está abierto, solo actualizamos la sesión en el contexto
-      // El renderizado del modal se actualizará automáticamente
-    },
-    onError: (error) => {
-      console.error('Error initiating live view:', error);
-      enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
-
-      // Remover la sesión si hay error
-      if (currentSessionIdRef.current) {
-        removeSession(currentSessionIdRef.current);
-        currentSessionIdRef.current = null;
-      }
-    },
-  });
+  // REMOVED: initiateLiveViewMutation - no longer needed for electrical diagrams
+  // const initiateLiveViewMutation = useMutation({
+  //   mutationFn: async (linkUrl: string) => {
+  //     const res = await apiService.post<{ success: boolean; liveViewUrl?: string; error?: string }>(
+  //       `/diagnoses/${diagnosisId}/initiate-live-view`,
+  //       { linkUrl, linkLabel: 'Diagrama Eléctrico' },
+  //     );
+  //     if (res.status !== 200 || !res.data?.success) {
+  //       throw new Error(res.data?.error || 'No se pudo iniciar Live View');
+  //     }
+  //     return res.data.liveViewUrl!;
+  //   },
+  //   onSuccess: (url) => {
+  //     console.log('[initiateLiveViewMutation] onSuccess - URL recibida:', url);
+  //     if (currentSessionIdRef.current) {
+  //       console.log('[initiateLiveViewMutation] Actualizando sesión:', currentSessionIdRef.current);
+  //       updateSession(currentSessionIdRef.current, { liveViewUrl: url });
+  //       console.log('[initiateLiveViewMutation] Sesión actualizada con liveViewUrl');
+  //       currentSessionIdRef.current = null;
+  //     }
+  //   },
+  //   onError: (error) => {
+  //     console.error('Error initiating live view:', error);
+  //     enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
+  //     if (currentSessionIdRef.current) {
+  //       removeSession(currentSessionIdRef.current);
+  //       currentSessionIdRef.current = null;
+  //     }
+  //   },
+  // });
 
   // Escuchar cuando una sesión se activa desde el floater
   useEffect(() => {
@@ -177,30 +152,22 @@ export const EstimatedResources = ({
     }
   }, [activeSession]);
 
-  const handleElectricalDiagramClick = (linkUrl: string, linkLabel: string) => {
-    console.log('[handleElectricalDiagramClick] Click en diagrama:', linkLabel);
-
-    // Agregar sesión al context
-    const sessionId = addSession({
-      linkUrl,
-      liveViewUrl: '', // Se actualizará cuando llegue la respuesta
-      label: linkLabel,
-      isActive: true,
-      isConnected: true,
-      diagnosisId,
-    });
-
-    // Guardar el sessionId en la ref para usarlo en el onSuccess/onError de la mutación
-    currentSessionIdRef.current = sessionId;
-
-    console.log('[handleElectricalDiagramClick] Sesión creada con ID:', sessionId);
-
-    // La sesión se crea como activa, el modal se abrirá automáticamente
-    setCurrentModalTitle(linkLabel);
-
-    // Iniciar la mutación para obtener la Live View URL
-    initiateLiveViewMutation.mutate(linkUrl);
-  };
+  // REMOVED: handleElectricalDiagramClick - no longer needed for electrical diagrams
+  // const handleElectricalDiagramClick = (linkUrl: string, linkLabel: string) => {
+  //   console.log('[handleElectricalDiagramClick] Click en diagrama:', linkLabel);
+  //   const sessionId = addSession({
+  //     linkUrl,
+  //     liveViewUrl: '',
+  //     label: linkLabel,
+  //     isActive: true,
+  //     isConnected: true,
+  //     diagnosisId,
+  //   });
+  //   currentSessionIdRef.current = sessionId;
+  //   console.log('[handleElectricalDiagramClick] Sesión creada con ID:', sessionId);
+  //   setCurrentModalTitle(linkLabel);
+  //   initiateLiveViewMutation.mutate(linkUrl);
+  // };
 
   // const activeSessions = getActiveSessions();
 
@@ -261,7 +228,8 @@ export const EstimatedResources = ({
         />
       </div>
 
-      <div className="mt-8">
+      {/* REMOVED: Search electrical diagrams button - diagrams now fetched in preliminary diagnosis */}
+      {/* <div className="mt-8">
         <SearchResourceButton
           buttonText="Buscar diagramas eléctricos"
           resourceName="diagramas eléctricos"
@@ -279,7 +247,7 @@ export const EstimatedResources = ({
             />
           )}
         />
-      </div>
+      </div> */}
 
       <Dialog
         open={!!activeSession}

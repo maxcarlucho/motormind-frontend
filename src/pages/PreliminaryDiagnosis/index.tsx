@@ -322,6 +322,7 @@ const PreliminaryDiagnosis = () => {
                     reasoning={fault.reasonDetails}
                     recommendations={fault.diagnosticRecommendations || []}
                     tools={fault.requiredTools || []}
+                    electricalDiagrams={fault.electricalDiagrams}
                   />
                 ))}
               </>

@@ -248,8 +248,6 @@ const FinalReport = () => {
           <EstimatedResources
             diagnosisId={params.diagnosisId as string}
             estimatedResources={diagnosis.diagnosis?.estimatedBudget || {}}
-            electricalDiagrams={diagnosis.electricalDiagrams}
-            carId={diagnosis.carId}
           />
 
           <Conclusion

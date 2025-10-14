@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { Badge } from '@/components/atoms/Badge';
-import { LightbulbIcon, ChevronDownIcon, ChevronUpIcon, WrenchIcon, BoxIcon } from 'lucide-react';
+import {
+  LightbulbIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  WrenchIcon,
+  BoxIcon,
+  FileTextIcon,
+} from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { PROBABILITY_LEVELS } from '@/constants';
 import { ProbabilityLevel } from '@/types/Probability';
+import { DocumentLink } from '@/types/Diagnosis';
 
 interface FaultCardCollapsibleProps {
   title: string;
@@ -11,6 +19,7 @@ interface FaultCardCollapsibleProps {
   reasoning: string;
   recommendations: string[];
   tools: string[];
+  electricalDiagrams?: DocumentLink[];
 }
 
 export default function FaultCardCollapsible({
@@ -19,6 +28,7 @@ export default function FaultCardCollapsible({
   reasoning,
   recommendations,
   tools,
+  electricalDiagrams,
 }: FaultCardCollapsibleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -101,6 +111,30 @@ export default function FaultCardCollapsible({
               <ul className="text-muted list-disc space-y-1 pl-6 text-xs sm:pl-12 sm:text-base">
                 {tools.map((tool, index) => (
                   <li key={index}>{tool}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Electrical Diagrams Section */}
+          {electricalDiagrams && electricalDiagrams.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FileTextIcon className="h-5 w-5 text-blue-600" />
+                <h4 className="text-sm font-medium sm:text-base">Diagramas Eléctricos</h4>
+              </div>
+              <ul className="space-y-1 pl-6 sm:pl-12">
+                {electricalDiagrams.map((diagram, index) => (
+                  <li key={index}>
+                    <a
+                      href={diagram.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline sm:text-base"
+                    >
+                      {diagram.label}
+                    </a>
+                  </li>
                 ))}
               </ul>
             </div>
