@@ -35,59 +35,65 @@ export const LiveViewSessionsProvider: React.FC<LiveViewSessionsProviderProps> =
     return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }, []);
 
-  const addSession = useCallback((sessionData: Omit<LiveViewSession, 'id'>) => {
-    const id = generateTempId();
-    const newSession: LiveViewSession = {
-      ...sessionData,
-      id,
-    };
+  const addSession = useCallback(
+    (sessionData: Omit<LiveViewSession, 'id'>) => {
+      const id = generateTempId();
+      const newSession: LiveViewSession = {
+        ...sessionData,
+        id,
+      };
 
-    setSessions(prev => [...prev, newSession]);
-    return id;
-  }, [generateTempId]);
+      setSessions((prev) => [...prev, newSession]);
+      return id;
+    },
+    [generateTempId],
+  );
 
   const removeSession = useCallback((sessionId: string) => {
-    setSessions(prev => prev.filter(session => session.id !== sessionId));
+    setSessions((prev) => prev.filter((session) => session.id !== sessionId));
   }, []);
 
   const setActiveSession = useCallback((sessionId: string) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, isActive: true }
-        : { ...session, isActive: false }
-    ));
+    setSessions((prev) =>
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, isActive: true } : { ...session, isActive: false },
+      ),
+    );
   }, []);
 
   const minimizeSession = useCallback((sessionId: string) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, isActive: false }
-        : session
-    ));
+    setSessions((prev) =>
+      prev.map((session) => (session.id === sessionId ? { ...session, isActive: false } : session)),
+    );
   }, []);
 
   const markSessionDisconnected = useCallback((sessionId: string) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, isConnected: false }
-        : session
-    ));
+    setSessions((prev) =>
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, isConnected: false } : session,
+      ),
+    );
   }, []);
 
   const updateSession = useCallback((sessionId: string, updates: Partial<LiveViewSession>) => {
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, ...updates }
-        : session
-    ));
+    console.log('[LiveViewSessionsContext] updateSession llamado:', { sessionId, updates });
+
+    setSessions((prev) => {
+      const updated = prev.map((session) =>
+        session.id === sessionId ? { ...session, ...updates } : session,
+      );
+
+      console.log('[LiveViewSessionsContext] Sesiones actualizadas:', updated);
+      return updated;
+    });
   }, []);
 
   const getMinimizedSessions = useCallback(() => {
-    return sessions.filter(session => !session.isActive && session.isConnected);
+    return sessions.filter((session) => !session.isActive && session.isConnected);
   }, [sessions]);
 
   const getActiveSessions = useCallback(() => {
-    return sessions.filter(session => session.isActive);
+    return sessions.filter((session) => session.isActive);
   }, [sessions]);
 
   const contextValue: LiveViewSessionsContextType = {

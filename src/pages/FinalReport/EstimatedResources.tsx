@@ -1,5 +1,5 @@
 import { BarChartIcon, X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { DocumentLink } from '@/types/Diagnosis';
@@ -60,7 +60,7 @@ export const EstimatedResources = ({
 }: EstimatedResourcesProps) => {
   const { user } = useAuth();
   const apiService = ApiService.getInstance();
-  const { addSession, updateSession, getActiveSessions, removeSession, minimizeSession, sessions } =
+  const { addSession, updateSession, removeSession, minimizeSession, sessions } =
     useLiveViewSessions();
 
   const [diagramResults, setDiagramResults] = useState<DocumentLink[] | null>(
@@ -71,10 +71,27 @@ export const EstimatedResources = ({
     electricalDiagrams || null,
   );
 
-  // Estado local temporal para mantener funcionamiento
-  const [currentLiveViewUrl, setCurrentLiveViewUrl] = useState<string | null>(null);
-  const [isCurrentModalOpen, setIsCurrentModalOpen] = useState(false);
+  // Estado local para el modal
   const [currentModalTitle, setCurrentModalTitle] = useState<string>('');
+
+  // Ref para guardar el sessionId de la sesión en proceso
+  const currentSessionIdRef = useRef<string | null>(null);
+
+  // Obtener la sesión activa del contexto para determinar qué mostrar
+  const activeSession = sessions.find((session) => session.isActive);
+
+  // Debug: Log cuando cambia activeSession
+  console.log('[EstimatedResources] Render:', {
+    sessionsCount: sessions.length,
+    activeSession: activeSession
+      ? {
+          id: activeSession.id,
+          label: activeSession.label,
+          liveViewUrl: activeSession.liveViewUrl,
+          isActive: activeSession.isActive,
+        }
+      : null,
+  });
 
   const fetchDiagramsMutation = useMutation({
     mutationFn: async () => {
@@ -122,49 +139,49 @@ export const EstimatedResources = ({
       return res.data.liveViewUrl!;
     },
     onSuccess: (url) => {
-      setCurrentLiveViewUrl(url);
-      setIsCurrentModalOpen(true);
+      console.log('[initiateLiveViewMutation] onSuccess - URL recibida:', url);
 
-      // Actualizar la sesión más reciente con la URL
-      const activeSessions = getActiveSessions();
-      if (activeSessions.length > 0) {
-        const latestSession = activeSessions[activeSessions.length - 1];
-        updateSession(latestSession.id, {
+      if (currentSessionIdRef.current) {
+        console.log('[initiateLiveViewMutation] Actualizando sesión:', currentSessionIdRef.current);
+
+        updateSession(currentSessionIdRef.current, {
           liveViewUrl: url,
         });
+
+        console.log('[initiateLiveViewMutation] Sesión actualizada con liveViewUrl');
+
+        // Limpiar la ref
+        currentSessionIdRef.current = null;
       }
+
+      // El modal ya está abierto, solo actualizamos la sesión en el contexto
+      // El renderizado del modal se actualizará automáticamente
     },
     onError: (error) => {
       console.error('Error initiating live view:', error);
       enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
 
-      // Remover la sesión más reciente si hay error
-      const activeSessions = getActiveSessions();
-      if (activeSessions.length > 0) {
-        const latestSession = activeSessions[activeSessions.length - 1];
-        removeSession(latestSession.id);
+      // Remover la sesión si hay error
+      if (currentSessionIdRef.current) {
+        removeSession(currentSessionIdRef.current);
+        currentSessionIdRef.current = null;
       }
     },
   });
 
   // Escuchar cuando una sesión se activa desde el floater
   useEffect(() => {
-    const activeSession = sessions.find((session) => session.isActive);
-
     if (activeSession) {
-      // Abrir el modal si hay una sesión activa (con o sin URL)
-      setCurrentLiveViewUrl(activeSession.liveViewUrl || null);
+      // Actualizar el título cuando se activa una sesión
       setCurrentModalTitle(activeSession.label);
-      setIsCurrentModalOpen(true);
-
-      // Si la sesión no tiene URL pero está activa, significa que está cargando
-      // No necesitamos hacer nada más, el spinner ya se mostrará
     }
-  }, [sessions]);
+  }, [activeSession]);
 
   const handleElectricalDiagramClick = (linkUrl: string, linkLabel: string) => {
+    console.log('[handleElectricalDiagramClick] Click en diagrama:', linkLabel);
+
     // Agregar sesión al context
-    addSession({
+    const sessionId = addSession({
       linkUrl,
       liveViewUrl: '', // Se actualizará cuando llegue la respuesta
       label: linkLabel,
@@ -173,10 +190,13 @@ export const EstimatedResources = ({
       diagnosisId,
     });
 
-    // Abrir modal inmediatamente con spinner
+    // Guardar el sessionId en la ref para usarlo en el onSuccess/onError de la mutación
+    currentSessionIdRef.current = sessionId;
+
+    console.log('[handleElectricalDiagramClick] Sesión creada con ID:', sessionId);
+
+    // La sesión se crea como activa, el modal se abrirá automáticamente
     setCurrentModalTitle(linkLabel);
-    setIsCurrentModalOpen(true);
-    setCurrentLiveViewUrl(null); // Limpiar URL anterior
 
     // Iniciar la mutación para obtener la Live View URL
     initiateLiveViewMutation.mutate(linkUrl);
@@ -262,17 +282,12 @@ export const EstimatedResources = ({
       </div>
 
       <Dialog
-        open={isCurrentModalOpen}
+        open={!!activeSession}
         onOpenChange={(open) => {
-          if (!open) {
-            // Al cerrar el modal, minimizar la sesión más reciente
-            const activeSessions = getActiveSessions();
-            if (activeSessions.length > 0) {
-              const latestSession = activeSessions[activeSessions.length - 1];
-              minimizeSession(latestSession.id);
-            }
+          if (!open && activeSession) {
+            // Al cerrar el modal, minimizar la sesión activa
+            minimizeSession(activeSession.id);
           }
-          setIsCurrentModalOpen(open);
         }}
       >
         <DialogContent
@@ -292,28 +307,41 @@ export const EstimatedResources = ({
 
           {/* Body del modal */}
           <div className="relative overflow-hidden bg-white">
-            {(initiateLiveViewMutation.isPending || !currentLiveViewUrl) && (
-              <div className="flex h-full items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <Spinner label="Iniciando sesión remota..." />
-                  <p className="mt-4 text-sm text-gray-600">
-                    Conectando con HaynesPro WorkshopData...
-                  </p>
-                  {initiateLiveViewMutation.isPending && (
-                    <p className="mt-2 text-xs text-gray-500">Esto puede tomar unos segundos</p>
-                  )}
-                </div>
-              </div>
-            )}
-            {currentLiveViewUrl && !initiateLiveViewMutation.isPending && (
-              <iframe
-                src={currentLiveViewUrl}
-                className="absolute inset-0 h-full w-full border-0 bg-white"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
-                allow="clipboard-read; clipboard-write; fullscreen"
-                title="Diagrama Eléctrico - HaynesPro Live View"
-              />
-            )}
+            {(() => {
+              const liveViewUrl = activeSession?.liveViewUrl;
+
+              console.log('[Modal Render] liveViewUrl:', liveViewUrl);
+
+              // Mostrar spinner si no hay URL todavía (basado solo en el estado de la sesión)
+              if (!liveViewUrl || liveViewUrl === '') {
+                console.log('[Modal Render] Mostrando SPINNER');
+
+                return (
+                  <div className="flex h-full items-center justify-center bg-gray-50">
+                    <div className="text-center">
+                      <Spinner label="Iniciando sesión remota..." />
+                      <p className="mt-4 text-sm text-gray-600">
+                        Conectando con HaynesPro WorkshopData...
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">Esto puede tomar unos segundos</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Mostrar iframe si hay URL válida
+              console.log('[Modal Render] Mostrando IFRAME con URL:', liveViewUrl);
+
+              return (
+                <iframe
+                  src={liveViewUrl}
+                  className="absolute inset-0 h-full w-full border-0 bg-white"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
+                  allow="clipboard-read; clipboard-write; fullscreen"
+                  title="Diagrama Eléctrico - HaynesPro Live View"
+                />
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>
