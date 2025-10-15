@@ -12,6 +12,7 @@ import { Button } from '@/components/atoms/Button';
 import { PROBABILITY_LEVELS } from '@/constants';
 import { ProbabilityLevel } from '@/types/Probability';
 import { DocumentLink } from '@/types/Diagnosis';
+import PartDiagramItem from '@/components/molecules/PartDiagramItem';
 
 interface FaultCardCollapsibleProps {
   title: string;
@@ -125,29 +126,22 @@ export default function FaultCardCollapsible({
                 <FileTextIcon className="h-5 w-5 text-blue-600" />
                 <h4 className="text-sm font-medium sm:text-base">Diagramas Eléctricos</h4>
               </div>
-              <ul className="space-y-1 pl-6 sm:pl-12">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {electricalDiagrams.map((diagram, index) => (
-                  <li key={index}>
-                    {onElectricalDiagramClick ? (
-                      <button
-                        onClick={() => onElectricalDiagramClick(diagram.url, diagram.label)}
-                        className="text-xs text-blue-600 hover:underline sm:text-base text-left"
-                      >
-                        {diagram.label}
-                      </button>
-                    ) : (
-                      <a
-                        href={diagram.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline sm:text-base"
-                      >
-                        {diagram.label}
-                      </a>
-                    )}
-                  </li>
+                  <PartDiagramItem
+                    key={index}
+                    title={diagram.label}
+                    type="document"
+                    onClick={() => {
+                      if (onElectricalDiagramClick) {
+                        onElectricalDiagramClick(diagram.url, diagram.label);
+                      } else {
+                        window.open(diagram.url, '_blank');
+                      }
+                    }}
+                  />
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
