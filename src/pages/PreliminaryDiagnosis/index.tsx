@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeftIcon, BrainCircuitIcon, FileTextIcon, PlusIcon, X } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeftIcon,
+  BrainCircuitIcon,
+  FileTextIcon,
+  PlusIcon,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@/components/atoms/Button';
 import Spinner from '@/components/atoms/Spinner';
@@ -39,7 +46,8 @@ const PreliminaryDiagnosisContent = () => {
   const [showOldReasons, setShowOldReasons] = useState(false);
   const [currentModalTitle, setCurrentModalTitle] = useState<string>('');
   const currentSessionIdRef = useRef<string | null>(null);
-  const { addSession, updateSession, removeSession, sessions, minimizeSession } = useLiveViewSessions();
+  const { addSession, updateSession, removeSession, sessions, minimizeSession } =
+    useLiveViewSessions();
   const activeSession = sessions.find((session) => session.isActive);
   const { execute: getDiagnosisById } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
   const { execute: createFinalReportRequest } = useApi<Diagnosis>(
