@@ -20,6 +20,7 @@ interface FaultCardCollapsibleProps {
   recommendations: string[];
   tools: string[];
   electricalDiagrams?: DocumentLink[];
+  onElectricalDiagramClick?: (url: string, label: string) => void;
 }
 
 export default function FaultCardCollapsible({
@@ -29,6 +30,7 @@ export default function FaultCardCollapsible({
   recommendations,
   tools,
   electricalDiagrams,
+  onElectricalDiagramClick,
 }: FaultCardCollapsibleProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -126,14 +128,23 @@ export default function FaultCardCollapsible({
               <ul className="space-y-1 pl-6 sm:pl-12">
                 {electricalDiagrams.map((diagram, index) => (
                   <li key={index}>
-                    <a
-                      href={diagram.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:underline sm:text-base"
-                    >
-                      {diagram.label}
-                    </a>
+                    {onElectricalDiagramClick ? (
+                      <button
+                        onClick={() => onElectricalDiagramClick(diagram.url, diagram.label)}
+                        className="text-xs text-blue-600 hover:underline sm:text-base text-left"
+                      >
+                        {diagram.label}
+                      </button>
+                    ) : (
+                      <a
+                        href={diagram.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline sm:text-base"
+                      >
+                        {diagram.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

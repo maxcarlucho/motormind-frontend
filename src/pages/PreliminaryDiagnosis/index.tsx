@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle, ArrowLeftIcon, BrainCircuitIcon, FileTextIcon, PlusIcon } from 'lucide-react';
 
@@ -21,8 +21,11 @@ import { ProbabilityLevel } from '@/types/Probability';
 import { ConfirmFaultModal } from './ConfirmFaultModal';
 import { useCarPlateOrVin } from '@/hooks/useCarPlateOrVin';
 import DetailsContainer from '@/components/atoms/DetailsContainer';
+import { LiveViewSessionsProvider, useLiveViewSessions } from '@/context/LiveViewSessions.context';
+import { LiveViewSessionsFloater } from '@/components/molecules/LiveViewSessionsFloater';
+import apiService from '@/service/api.service';
 
-const PreliminaryDiagnosis = () => {
+const PreliminaryDiagnosisContent = () => {
   const params = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -33,6 +36,8 @@ const PreliminaryDiagnosis = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingMorePossibleReasons, setIsLoadingMorePossibleReasons] = useState(false);
   const [showOldReasons, setShowOldReasons] = useState(false);
+  const currentSessionIdRef = useRef<string | null>(null);
+  const { addSession, updateSession, removeSession } = useLiveViewSessions();
   const { execute: getDiagnosisById } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
   const { execute: createFinalReportRequest } = useApi<Diagnosis>(
     'post',
@@ -106,6 +111,48 @@ const PreliminaryDiagnosis = () => {
       });
     },
   });
+
+  // LiveView mutation
+  const initiateLiveViewMutation = useMutation({
+    mutationFn: async (linkUrl: string) => {
+      const res = await apiService.post<{ success: boolean; liveViewUrl?: string; error?: string }>(
+        `/diagnoses/${params.diagnosisId}/initiate-live-view`,
+        { linkUrl, linkLabel: 'Diagrama Eléctrico' },
+      );
+      if (res.status !== 200 || !res.data?.success) {
+        throw new Error(res.data?.error || 'No se pudo iniciar Live View');
+      }
+      return res.data.liveViewUrl!;
+    },
+    onSuccess: (url) => {
+      if (currentSessionIdRef.current) {
+        updateSession(currentSessionIdRef.current, { liveViewUrl: url });
+        currentSessionIdRef.current = null;
+      }
+    },
+    onError: (error) => {
+      console.error('Error initiating live view:', error);
+      enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
+      if (currentSessionIdRef.current) {
+        removeSession(currentSessionIdRef.current);
+        currentSessionIdRef.current = null;
+      }
+    },
+  });
+
+  // Handler for electrical diagram click
+  const handleElectricalDiagramClick = (linkUrl: string, linkLabel: string) => {
+    const sessionId = addSession({
+      linkUrl,
+      liveViewUrl: '',
+      label: linkLabel,
+      isActive: true,
+      isConnected: true,
+      diagnosisId: params.diagnosisId as string,
+    });
+    currentSessionIdRef.current = sessionId;
+    initiateLiveViewMutation.mutate(linkUrl);
+  };
 
   const carDescription = useCarPlateOrVin(
     diagnosis.car
@@ -323,6 +370,7 @@ const PreliminaryDiagnosis = () => {
                     recommendations={fault.diagnosticRecommendations || []}
                     tools={fault.requiredTools || []}
                     electricalDiagrams={fault.electricalDiagrams}
+                    onElectricalDiagramClick={handleElectricalDiagramClick}
                   />
                 ))}
               </>
@@ -401,7 +449,18 @@ const PreliminaryDiagnosis = () => {
         onConfirm={handleConfirmFault}
         possibleReasons={diagnosis.preliminary?.possibleReasons || []}
       />
+
+      {/* Componente flotante de sesiones Live View */}
+      <LiveViewSessionsFloater />
     </div>
+  );
+};
+
+const PreliminaryDiagnosis = () => {
+  return (
+    <LiveViewSessionsProvider>
+      <PreliminaryDiagnosisContent />
+    </LiveViewSessionsProvider>
   );
 };
 
