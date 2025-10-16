@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { X, FileText } from 'lucide-react';
 import { useLiveViewSessions } from '@/context/LiveViewSessions.context';
+import { LiveViewSession } from '@/types/LiveViewSession';
 import { SessionItem } from './SessionItem';
 
 export const LiveViewSessionsFloater: React.FC = () => {
-  const { getMinimizedSessions, setActiveSession, removeSession } = useLiveViewSessions();
+  const { getMinimizedSessions, setActiveSession, closeLiveViewSession } = useLiveViewSessions();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const minimizedSessions = getMinimizedSessions();
@@ -18,8 +19,8 @@ export const LiveViewSessionsFloater: React.FC = () => {
     setActiveSession(sessionId);
   };
 
-  const handleSessionClose = (sessionId: string) => {
-    removeSession(sessionId);
+  const handleSessionClose = (session: LiveViewSession) => {
+    closeLiveViewSession(session.id, session.diagnosisId, session.browserbaseSessionId);
   };
 
   return (
@@ -55,7 +56,7 @@ export const LiveViewSessionsFloater: React.FC = () => {
                 key={session.id}
                 session={session}
                 onOpen={() => handleSessionOpen(session.id)}
-                onClose={() => handleSessionClose(session.id)}
+                onClose={() => handleSessionClose(session)}
               />
             ))}
           </div>

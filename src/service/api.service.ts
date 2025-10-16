@@ -174,6 +174,11 @@ export class ApiService {
     return response.data;
   }
 
+  // Método para cerrar una sesión de Live View
+  async closeLiveViewSession(sessionId: string, diagnosisId: string): Promise<void> {
+    await this.post(`/diagnoses/${diagnosisId}/close-live-view`, { sessionId });
+  }
+
 }
 
 // Exporta la instancia singleton por defecto

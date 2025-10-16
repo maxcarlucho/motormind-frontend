@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -45,10 +45,17 @@ const PreliminaryDiagnosisContent = () => {
   const [isLoadingMorePossibleReasons, setIsLoadingMorePossibleReasons] = useState(false);
   const [showOldReasons, setShowOldReasons] = useState(false);
   const [currentModalTitle, setCurrentModalTitle] = useState<string>('');
-  const currentSessionIdRef = useRef<string | null>(null);
   const { addSession, updateSession, removeSession, sessions, minimizeSession } =
     useLiveViewSessions();
   const activeSession = sessions.find((session) => session.isActive);
+
+  // Sincronizar el título del modal con la sesión activa
+  useEffect(() => {
+    if (activeSession) {
+      setCurrentModalTitle(activeSession.label);
+    }
+  }, [activeSession]);
+
   const { execute: getDiagnosisById } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
   const { execute: createFinalReportRequest } = useApi<Diagnosis>(
     'post',
@@ -125,29 +132,40 @@ const PreliminaryDiagnosisContent = () => {
 
   // LiveView mutation
   const initiateLiveViewMutation = useMutation({
-    mutationFn: async (linkUrl: string) => {
-      const res = await apiService.post<{ success: boolean; liveViewUrl?: string; error?: string }>(
-        `/diagnoses/${params.diagnosisId}/initiate-live-view`,
-        { linkUrl, linkLabel: 'Diagrama Eléctrico' },
-      );
+    mutationFn: async ({
+      linkUrl,
+      linkLabel,
+      sessionId,
+    }: {
+      linkUrl: string;
+      linkLabel: string;
+      sessionId: string;
+    }) => {
+      const res = await apiService.post<{
+        success: boolean;
+        liveViewUrl?: string;
+        sessionId?: string;
+        error?: string;
+      }>(`/diagnoses/${params.diagnosisId}/initiate-live-view`, { linkUrl, linkLabel });
       if (res.status !== 200 || !res.data?.success) {
         throw new Error(res.data?.error || 'No se pudo iniciar Live View');
       }
-      return res.data.liveViewUrl!;
+      return {
+        liveViewUrl: res.data.liveViewUrl!,
+        sessionId, // sessionId temporal del frontend
+        browserbaseSessionId: res.data.sessionId, // sessionId de Browserbase
+      };
     },
-    onSuccess: (url) => {
-      if (currentSessionIdRef.current) {
-        updateSession(currentSessionIdRef.current, { liveViewUrl: url });
-        currentSessionIdRef.current = null;
-      }
+    onSuccess: ({ liveViewUrl, sessionId, browserbaseSessionId }) => {
+      updateSession(sessionId, {
+        liveViewUrl,
+        browserbaseSessionId, // Guardar sessionId de Browserbase
+      });
     },
-    onError: (error) => {
+    onError: (error, { sessionId }) => {
       console.error('Error initiating live view:', error);
       enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
-      if (currentSessionIdRef.current) {
-        removeSession(currentSessionIdRef.current);
-        currentSessionIdRef.current = null;
-      }
+      removeSession(sessionId);
     },
   });
 
@@ -162,8 +180,7 @@ const PreliminaryDiagnosisContent = () => {
       isConnected: true,
       diagnosisId: params.diagnosisId as string,
     });
-    currentSessionIdRef.current = sessionId;
-    initiateLiveViewMutation.mutate(linkUrl);
+    initiateLiveViewMutation.mutate({ linkUrl, linkLabel, sessionId });
   };
 
   const carDescription = useCarPlateOrVin(

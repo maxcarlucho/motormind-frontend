@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { LiveViewSession } from '@/types/LiveViewSession';
+import apiService from '@/service/api.service';
 
 interface LiveViewSessionsContextType {
   sessions: LiveViewSession[];
@@ -11,6 +12,11 @@ interface LiveViewSessionsContextType {
   updateSession: (sessionId: string, updates: Partial<LiveViewSession>) => void;
   getMinimizedSessions: () => LiveViewSession[];
   getActiveSessions: () => LiveViewSession[];
+  closeLiveViewSession: (
+    sessionId: string,
+    diagnosisId: string,
+    browserbaseSessionId?: string,
+  ) => Promise<void>;
 }
 
 const LiveViewSessionsContext = createContext<LiveViewSessionsContextType | undefined>(undefined);
@@ -96,6 +102,25 @@ export const LiveViewSessionsProvider: React.FC<LiveViewSessionsProviderProps> =
     return sessions.filter((session) => session.isActive);
   }, [sessions]);
 
+  const closeLiveViewSession = useCallback(
+    async (sessionId: string, diagnosisId: string, browserbaseSessionId?: string) => {
+      // Primero eliminar del estado local
+      removeSession(sessionId);
+
+      // Si hay browserbaseSessionId, notificar al backend (sin esperar respuesta)
+      if (browserbaseSessionId) {
+        try {
+          await apiService.closeLiveViewSession(browserbaseSessionId, diagnosisId);
+          console.log(`✅ [LiveViewSessions] Sesión ${browserbaseSessionId} cerrada en backend`);
+        } catch (error) {
+          console.error(`⚠️ [LiveViewSessions] Error cerrando sesión en backend:`, error);
+          // No hacer nada, la sesión ya se eliminó del frontend
+        }
+      }
+    },
+    [removeSession],
+  );
+
   const contextValue: LiveViewSessionsContextType = {
     sessions,
     addSession,
@@ -106,6 +131,7 @@ export const LiveViewSessionsProvider: React.FC<LiveViewSessionsProviderProps> =
     updateSession,
     getMinimizedSessions,
     getActiveSessions,
+    closeLiveViewSession,
   };
 
   return (
