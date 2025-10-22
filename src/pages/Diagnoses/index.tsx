@@ -23,7 +23,7 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
 
-const LIMIT = 1000;
+const LIMIT = 50;
 
 const Diagnoses = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
