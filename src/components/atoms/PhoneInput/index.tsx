@@ -30,7 +30,7 @@ export const PhoneInputComponent = ({
   placeholder,
   disabled = false,
   className,
-  defaultCountry = 'AR',
+  defaultCountry = 'ES',
   error = false,
   id,
   'aria-invalid': ariaInvalid,

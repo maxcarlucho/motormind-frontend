@@ -343,7 +343,6 @@ export const CreatePreAppointmentModal = ({
                   placeholder="11 1234-5678"
                   disabled={isLoading}
                   error={!!validationErrors.clientPhone}
-                  defaultCountry="AR"
                   aria-invalid={!!validationErrors.clientPhone}
                   aria-describedby={validationErrors.clientPhone ? 'clientPhone-error' : undefined}
                 />
