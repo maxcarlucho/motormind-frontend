@@ -19,10 +19,12 @@ import PromptManager from '@/pages/PromptManager';
 import PromptDetail from '@/pages/PromptDetails';
 import Metrics from '@/pages/Metrics';
 import DamageAssessments from '@/pages/DamageAssessments';
-import CreateDamageAssessment from '@/pages/DamageAssessments/CreateDamageAssessment';
-import DamageAssessmentDetail from '@/pages/DamageAssessments/DamageAssessmentDetail';
 import DamageAssessmentReport from '@/pages/DamageAssessments/DamageAssessmentReport';
 import DiagnosisOBDCodes from '@/pages/DiagnosisOBDCodes';
+import Appointments from '@/pages/Appointments';
+import AppointmentDetails from '@/pages/AppointmentDetails';
+import BrowserbaseStreaming from '@/pages/BrowserbaseStreaming';
+import { WizardV2Entry, WizardV2NewEntry } from '@/features/damage-wizard-v2/routes';
 
 const router = createBrowserRouter([
   {
@@ -58,10 +60,34 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: '/appointments',
+        element: (
+          <ErrorBoundary>
+            <Appointments />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/appointments/:appointmentId',
+        element: (
+          <ErrorBoundary>
+            <AppointmentDetails />
+          </ErrorBoundary>
+        ),
+      },
+      {
         path: '/metrics',
         element: (
           <ErrorBoundary>
             <Metrics />
+          </ErrorBoundary>
+        ),
+      },
+      {
+        path: '/browserbase-streaming',
+        element: (
+          <ErrorBoundary>
+            <BrowserbaseStreaming />
           </ErrorBoundary>
         ),
       },
@@ -132,6 +158,14 @@ const router = createBrowserRouter([
     ),
   },
   {
+    path: '/appointments/:appointmentId/cars/:carId/new-diagnosis',
+    element: (
+      <ErrorBoundary>
+        <NewDiagnosis />
+      </ErrorBoundary>
+    ),
+  },
+  {
     path: '/cars/:carId',
     element: (
       <ErrorBoundary>
@@ -180,18 +214,27 @@ const router = createBrowserRouter([
     ),
   },
   {
-    path: '/damage-assessments/create',
+    path: '/damage-assessments/new',
     element: (
       <ErrorBoundary>
-        <CreateDamageAssessment />
+        <WizardV2NewEntry />
       </ErrorBoundary>
     ),
   },
   {
+    path: '/damage-assessments/create',
+    element: (
+      <ErrorBoundary>
+        <WizardV2NewEntry />
+      </ErrorBoundary>
+    ),
+  },
+
+  {
     path: '/damage-assessments/:damageAssessmentId',
     element: (
       <ErrorBoundary>
-        <DamageAssessmentDetail />
+        <WizardV2Entry />
       </ErrorBoundary>
     ),
   },
@@ -200,6 +243,14 @@ const router = createBrowserRouter([
     element: (
       <ErrorBoundary>
         <DamageAssessmentReport />
+      </ErrorBoundary>
+    ),
+  },
+  {
+    path: '/damage-assessments/:id/wizard-v2',
+    element: (
+      <ErrorBoundary>
+        <WizardV2Entry />
       </ErrorBoundary>
     ),
   },

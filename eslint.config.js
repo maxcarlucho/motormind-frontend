@@ -23,6 +23,17 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../motormind-design/*', '../motormind-design/**'],
+              message: 'Imports from design reference repo are prohibited. Use it only as visual reference.',
+            },
+          ],
+        },
+      ],
     },
   },
 )

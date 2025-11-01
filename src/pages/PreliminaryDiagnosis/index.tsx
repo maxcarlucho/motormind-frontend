@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeftIcon, BrainCircuitIcon, FileTextIcon, PlusIcon } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeftIcon,
+  BrainCircuitIcon,
+  FileTextIcon,
+  PlusIcon,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@/components/atoms/Button';
 import Spinner from '@/components/atoms/Spinner';
@@ -21,8 +28,12 @@ import { ProbabilityLevel } from '@/types/Probability';
 import { ConfirmFaultModal } from './ConfirmFaultModal';
 import { useCarPlateOrVin } from '@/hooks/useCarPlateOrVin';
 import DetailsContainer from '@/components/atoms/DetailsContainer';
+import { LiveViewSessionsProvider, useLiveViewSessions } from '@/context/LiveViewSessions.context';
+import { LiveViewSessionsFloater } from '@/components/molecules/LiveViewSessionsFloater';
+import apiService from '@/service/api.service';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/atoms/Dialog';
 
-const PreliminaryDiagnosis = () => {
+const PreliminaryDiagnosisContent = () => {
   const params = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -33,6 +44,18 @@ const PreliminaryDiagnosis = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoadingMorePossibleReasons, setIsLoadingMorePossibleReasons] = useState(false);
   const [showOldReasons, setShowOldReasons] = useState(false);
+  const [currentModalTitle, setCurrentModalTitle] = useState<string>('');
+  const { addSession, updateSession, removeSession, sessions, minimizeSession } =
+    useLiveViewSessions();
+  const activeSession = sessions.find((session) => session.isActive);
+
+  // Sincronizar el título del modal con la sesión activa
+  useEffect(() => {
+    if (activeSession) {
+      setCurrentModalTitle(activeSession.label);
+    }
+  }, [activeSession]);
+
   const { execute: getDiagnosisById } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
   const { execute: createFinalReportRequest } = useApi<Diagnosis>(
     'post',
@@ -107,7 +130,64 @@ const PreliminaryDiagnosis = () => {
     },
   });
 
-  const carDescription = useCarPlateOrVin(diagnosis.car);
+  // LiveView mutation
+  const initiateLiveViewMutation = useMutation({
+    mutationFn: async ({
+      linkUrl,
+      linkLabel,
+      sessionId,
+    }: {
+      linkUrl: string;
+      linkLabel: string;
+      sessionId: string;
+    }) => {
+      const res = await apiService.post<{
+        success: boolean;
+        liveViewUrl?: string;
+        sessionId?: string;
+        error?: string;
+      }>(`/diagnoses/${params.diagnosisId}/initiate-live-view`, { linkUrl, linkLabel });
+      if (res.status !== 200 || !res.data?.success) {
+        throw new Error(res.data?.error || 'No se pudo iniciar Live View');
+      }
+      return {
+        liveViewUrl: res.data.liveViewUrl!,
+        sessionId, // sessionId temporal del frontend
+        browserbaseSessionId: res.data.sessionId, // sessionId de Browserbase
+      };
+    },
+    onSuccess: ({ liveViewUrl, sessionId, browserbaseSessionId }) => {
+      updateSession(sessionId, {
+        liveViewUrl,
+        browserbaseSessionId, // Guardar sessionId de Browserbase
+      });
+    },
+    onError: (error, { sessionId }) => {
+      console.error('Error initiating live view:', error);
+      enqueueSnackbar('Error al abrir el diagrama en Live View', { variant: 'error' });
+      removeSession(sessionId);
+    },
+  });
+
+  // Handler for electrical diagram click
+  const handleElectricalDiagramClick = (linkUrl: string, linkLabel: string) => {
+    setCurrentModalTitle(linkLabel);
+    const sessionId = addSession({
+      linkUrl,
+      liveViewUrl: '',
+      label: linkLabel,
+      isActive: true,
+      isConnected: true,
+      diagnosisId: params.diagnosisId as string,
+    });
+    initiateLiveViewMutation.mutate({ linkUrl, linkLabel, sessionId });
+  };
+
+  const carDescription = useCarPlateOrVin(
+    diagnosis.car
+      ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+      : undefined,
+  );
 
   // Filtrar averías para mostrar las nuevas por defecto
   const getReasonsToShow = () => {
@@ -257,7 +337,15 @@ const PreliminaryDiagnosis = () => {
         }}
       />
       <DetailsContainer>
-        <VehicleInformation car={diagnosis.car as Car} editMode={false} minimized />
+        <VehicleInformation
+          car={
+            diagnosis.car
+              ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+              : undefined
+          }
+          editMode={false}
+          minimized
+        />
         <DiagnosticContextSection
           symptoms={symptom}
           notes={diagnosis.notes}
@@ -310,6 +398,8 @@ const PreliminaryDiagnosis = () => {
                     reasoning={fault.reasonDetails}
                     recommendations={fault.diagnosticRecommendations || []}
                     tools={fault.requiredTools || []}
+                    electricalDiagrams={fault.electricalDiagrams}
+                    onElectricalDiagramClick={handleElectricalDiagramClick}
                   />
                 ))}
               </>
@@ -388,7 +478,77 @@ const PreliminaryDiagnosis = () => {
         onConfirm={handleConfirmFault}
         possibleReasons={diagnosis.preliminary?.possibleReasons || []}
       />
+
+      {/* Dialog para LiveView de diagramas eléctricos */}
+      <Dialog
+        open={!!activeSession}
+        onOpenChange={(open) => {
+          if (!open && activeSession) {
+            minimizeSession(activeSession.id);
+          }
+        }}
+      >
+        <DialogContent
+          className="grid h-[90vh] w-[90vw] max-w-none grid-rows-[auto_1fr] gap-0 rounded-none border-none bg-white p-0 shadow-none"
+          closeButton={false}
+        >
+          {/* Header personalizado con botón de cerrar */}
+          <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              {currentModalTitle}
+            </DialogTitle>
+            <DialogClose className="cursor-pointer rounded-full p-1 opacity-70 transition-opacity hover:bg-gray-100 hover:opacity-100 disabled:pointer-events-none">
+              <X className="h-5 w-5 text-gray-500" />
+              <span className="sr-only">Cerrar</span>
+            </DialogClose>
+          </div>
+
+          {/* Body del modal */}
+          <div className="relative overflow-hidden bg-white">
+            {(() => {
+              const liveViewUrl = activeSession?.liveViewUrl;
+
+              // Mostrar spinner si no hay URL todavía
+              if (!liveViewUrl || liveViewUrl === '') {
+                return (
+                  <div className="flex h-full items-center justify-center bg-gray-50">
+                    <div className="text-center">
+                      <Spinner label="Iniciando sesión remota..." />
+                      <p className="mt-4 text-sm text-gray-600">
+                        Conectando con HaynesPro WorkshopData...
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">Esto puede tomar unos segundos</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Mostrar iframe si hay URL válida
+              return (
+                <iframe
+                  src={liveViewUrl}
+                  className="absolute inset-0 h-full w-full border-0 bg-white"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
+                  allow="clipboard-read; clipboard-write; fullscreen"
+                  title="Diagrama Eléctrico - HaynesPro Live View"
+                />
+              );
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Componente flotante de sesiones Live View */}
+      <LiveViewSessionsFloater />
     </div>
+  );
+};
+
+const PreliminaryDiagnosis = () => {
+  return (
+    <LiveViewSessionsProvider>
+      <PreliminaryDiagnosisContent />
+    </LiveViewSessionsProvider>
   );
 };
 

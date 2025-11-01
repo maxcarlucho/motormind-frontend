@@ -2,9 +2,9 @@ import { CarIcon, Share2, MoreVertical, Trash2 } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { useState } from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/atoms/Avatar';
+import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 import { cn } from '@/utils/cn';
-import { getInitials } from '@/utils';
+import { getDiagnosisStatusLabel, getDiagnosisStatusColor } from '@/utils';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/atoms/Button';
 import { Badge } from '@/components/atoms/Badge';
@@ -28,6 +28,7 @@ interface DiagnosticListItemProps {
     avatar?: string;
   };
   summary: string[];
+  processedSymptom?: string;
   status: (typeof DIAGNOSIS_STATUS)[keyof typeof DIAGNOSIS_STATUS];
   timestamp: string;
   className?: string;
@@ -47,6 +48,7 @@ export const DiagnosticListItem = ({
   status,
   diagnosisId,
   summary = [],
+  processedSymptom,
   onDelete,
 }: DiagnosticListItemProps) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -78,135 +80,118 @@ export const DiagnosticListItem = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  // Determinar si es un estado de pre-cita (no interactivo)
+  const isPreAppointmentStatus =
+    (status as string) === 'WHATSAPP_AWAITING_SYMPTOM' ||
+    (status as string) === 'WHATSAPP_AWAITING_QUESTIONS' ||
+    (status as string) === 'WHATSAPP_COMPLETED';
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'Preguntas Guíadas';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'Asignar Códigos OBD';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'Pre-Diagnóstico';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'En Reparación';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'Reparado';
-      default:
-        return status;
-    }
-  };
+  const cardContent = (
+    <div
+      className={cn(
+        'mb-4 rounded-lg border border-gray-300 bg-white p-4',
+        !isPreAppointmentStatus && 'transition-colors duration-200 hover:bg-[#EAF2FD]',
+        className,
+      )}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 sm:h-10 sm:w-10">
+            <CarIcon className="text-primary h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-medium sm:text-base">
+              {vehicle?.brand} {vehicle?.model}
+            </p>
+            <p className="text-xs text-gray-500 sm:text-sm">{vehicle?.plate || vehicle?.vinCode}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
+          {status && (
+            <Badge
+              variant="outline"
+              className={`${getDiagnosisStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
+            >
+              {getDiagnosisStatusLabel(status)}
+            </Badge>
+          )}
+
+          {/* Dropdown de opciones - solo para estados no pre-cita */}
+          {!isPreAppointmentStatus && (
+            <Dropdown.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
+              <Dropdown.Trigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </Dropdown.Trigger>
+              <Dropdown.Content>
+                <Dropdown.Item
+                  onClick={handleShareClick}
+                  className="focus:bg-blue-50 focus:text-blue-600"
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Compartir diagnóstico
+                </Dropdown.Item>
+                <Dropdown.Item
+                  onClick={handleDeleteClick}
+                  className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Eliminar diagnóstico
+                </Dropdown.Item>
+              </Dropdown.Content>
+            </Dropdown.Root>
+          )}
+        </div>
+      </div>
+
+      {status === DIAGNOSIS_STATUS.GUIDED_QUESTIONS ? (
+        <TitledStringList title="Preguntas guiadas:" items={questions} />
+      ) : status === DIAGNOSIS_STATUS.ASSIGN_OBD_CODES ? (
+        <TitledStringList
+          title="Síntomas:"
+          items={processedSymptom ? [processedSymptom] : summary}
+          showBullets={false}
+        />
+      ) : status === DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS ? (
+        <TitledStringList
+          title="Síntomas:"
+          items={processedSymptom ? [processedSymptom] : summary}
+          showBullets={false}
+        />
+      ) : status === DIAGNOSIS_STATUS.PRELIMINARY ? (
+        <TitledStringList title="Potenciales averías:" items={problems} />
+      ) : (
+        <TitledStringList title="Problemas detectados:" items={problems} />
+      )}
+
+      <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+        <div className="flex items-center gap-2">
+          <CreatedByUser user={technician} />
+        </div>
+        <span className="text-xs text-gray-500">{timestamp}</span>
+      </div>
+    </div>
+  );
 
   return (
     <>
-      <Link to={`/cars${diagnosisLink.split('/cars')[1]}`}>
-        <div
-          className={cn(
-            'mb-4 rounded-lg border border-gray-300 bg-white p-4 transition-colors duration-200 hover:bg-[#EAF2FD]',
-            className,
-          )}
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 sm:h-10 sm:w-10">
-                <CarIcon className="text-primary h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-medium sm:text-base">
-                  {vehicle?.brand} {vehicle?.model}
-                </p>
-                <p className="text-xs text-gray-500 sm:text-sm">
-                  {vehicle?.plate || vehicle?.vinCode}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
-              {status && (
-                <Badge
-                  variant="outline"
-                  className={`${getStatusColor(status)} truncate px-2 py-0.5 text-xs font-medium`}
-                >
-                  {getStatusText(status)}
-                </Badge>
-              )}
-
-              {/* Dropdown de opciones */}
-              <Dropdown.Root open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                <Dropdown.Trigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </Dropdown.Trigger>
-                <Dropdown.Content>
-                  <Dropdown.Item
-                    onClick={handleShareClick}
-                    className="focus:bg-blue-50 focus:text-blue-600"
-                  >
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Compartir diagnóstico
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={handleDeleteClick}
-                    className="text-red-600 focus:bg-red-50 focus:text-red-600"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar diagnóstico
-                  </Dropdown.Item>
-                </Dropdown.Content>
-              </Dropdown.Root>
-            </div>
-          </div>
-
-          {status === DIAGNOSIS_STATUS.GUIDED_QUESTIONS ? (
-            <TitledStringList title="Preguntas guiadas:" items={questions} />
-          ) : status === DIAGNOSIS_STATUS.ASSIGN_OBD_CODES ? (
-            <TitledStringList title="Asignar Códigos OBD:" items={summary} />
-          ) : status === DIAGNOSIS_STATUS.PRELIMINARY ? (
-            <TitledStringList title="Potenciales averías:" items={problems} />
-          ) : (
-            <TitledStringList title="Problemas detectados:" items={problems} />
-          )}
-
-          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-6 w-6 sm:h-9 sm:w-9">
-                <AvatarImage alt={technician?.name || 'Unknown'} />
-                <AvatarFallback className="text-xs sm:text-base">
-                  {technician?.name ? getInitials(technician.name) : 'NN'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-xs font-medium sm:text-sm">
-                {technician?.name || 'Sin asignar'}
-              </span>
-            </div>
-            <span className="text-xs text-gray-500">{timestamp}</span>
-          </div>
-        </div>
-      </Link>
+      {isPreAppointmentStatus ? (
+        // Card no interactiva para estados de pre-cita
+        cardContent
+      ) : (
+        // Card interactiva para otros estados
+        <Link to={`/cars${diagnosisLink.split('/cars')[1]}`}>{cardContent}</Link>
+      )}
 
       {/* Modal de confirmación de eliminación - fuera del Link */}
       <DeleteDiagnosisModal

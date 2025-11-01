@@ -1,5 +1,6 @@
 import {
   BarChartIcon,
+  CalendarIcon,
   CarFrontIcon,
   CarIcon,
   ClipboardListIcon,
@@ -58,6 +59,11 @@ export const Sidebar = ({ className }: SidebarNavigationProps) => {
       href: '/diagnoses',
     },
     {
+      icon: CalendarIcon,
+      label: 'Citas',
+      href: '/appointments',
+    },
+    {
       id: 'peritajes',
       icon: CarFrontIcon,
       label: 'Peritajes',
@@ -109,6 +115,7 @@ export const Sidebar = ({ className }: SidebarNavigationProps) => {
             (item.href === '/' && currentPath === '/') ||
             (item.href === '/cars' && currentPath.startsWith('/cars')) ||
             (item.href === '/diagnoses' && currentPath.startsWith('/diagnoses')) ||
+            (item.href === '/appointments' && currentPath.startsWith('/appointments')) ||
             (item.href === '/damage-assessments' &&
               currentPath.startsWith('/damage-assessments')) ||
             (item.href === '/metrics' && currentPath.startsWith('/metrics')) ||

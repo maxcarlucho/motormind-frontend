@@ -1,14 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { debounce } from 'lodash';
-import { FileSearch, PlusIcon, SearchIcon } from 'lucide-react';
+import { FileSearch, PlusIcon, SearchIcon, CalendarPlus } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
-import { diagnosisLink, formatDate } from '@/utils';
+import { diagnosisLink, formatDate, getDiagnosisStatusLabel } from '@/utils';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
 import apiService from '@/service/api.service';
 import Spinner from '@/components/atoms/Spinner';
 import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
+import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppointmentModal';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import {
   Select,
@@ -22,13 +23,14 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/atoms/Input';
 import { Button } from '@/components/atoms/Button';
 
-const LIMIT = 1000;
+const LIMIT = 50;
 
 const Diagnoses = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const queryClient = useQueryClient();
   const { execute: getDiagnosesRequest } = useApi<{ data: Diagnosis[]; total: number }>(
@@ -92,23 +94,6 @@ const Diagnoses = () => {
   //   }
   // };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case DIAGNOSIS_STATUS.GUIDED_QUESTIONS:
-        return 'Preguntas Guíadas';
-      case DIAGNOSIS_STATUS.ASSIGN_OBD_CODES:
-        return 'Asignar Códigos OBD';
-      case DIAGNOSIS_STATUS.PRELIMINARY:
-        return 'Pre-Diagnóstico';
-      case DIAGNOSIS_STATUS.IN_REPARATION:
-        return 'En Reparación';
-      case DIAGNOSIS_STATUS.REPAIRED:
-        return 'Reparado';
-      default:
-        return status;
-    }
-  };
-
   const handleDeleteDiagnosis = async (diagnosisId: string) => {
     try {
       await apiService.deleteDiagnosis(diagnosisId);
@@ -116,6 +101,7 @@ const Diagnoses = () => {
 
       // Invalidar múltiples queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+      queryClient.invalidateQueries({ queryKey: ['recentDiagnoses'] });
       queryClient.invalidateQueries({ queryKey: ['getDiagnosesByCarId'] });
       queryClient.removeQueries({ queryKey: ['getDiagnosisById', diagnosisId] });
       queryClient.removeQueries({ queryKey: ['diagnosis', diagnosisId] });
@@ -154,30 +140,32 @@ const Diagnoses = () => {
               <SelectContent>
                 <SelectItem value="ALL">Todos los estados</SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.GUIDED_QUESTIONS}>
-                  {getStatusText(DIAGNOSIS_STATUS.GUIDED_QUESTIONS)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.GUIDED_QUESTIONS)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.ASSIGN_OBD_CODES}>
-                  {getStatusText(DIAGNOSIS_STATUS.ASSIGN_OBD_CODES)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.ASSIGN_OBD_CODES)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.PRELIMINARY}>
-                  {getStatusText(DIAGNOSIS_STATUS.PRELIMINARY)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.PRELIMINARY)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.IN_REPARATION}>
-                  {getStatusText(DIAGNOSIS_STATUS.IN_REPARATION)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.IN_REPARATION)}
                 </SelectItem>
                 <SelectItem value={DIAGNOSIS_STATUS.REPAIRED}>
-                  {getStatusText(DIAGNOSIS_STATUS.REPAIRED)}
+                  {getDiagnosisStatusLabel(DIAGNOSIS_STATUS.REPAIRED)}
                 </SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
-          >
-            <PlusIcon className="!h-5 !w-5" />
-            <span className="hidden lg:inline">Nuevo diagnóstico</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
+            >
+              <PlusIcon className="!h-5 !w-5" />
+              <span className="hidden lg:inline">Nuevo diagnóstico</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -194,7 +182,14 @@ const Diagnoses = () => {
                 <DiagnosticListItem
                   key={index}
                   vehicle={diagnosis.car}
-                  summary={[diagnosis.fault, diagnosis.answers]}
+                  summary={[
+                    diagnosis.fault,
+                    ...(diagnosis.answers
+                      ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                      : []),
+                  ]}
+                  // Para ASSIGN_OBD_CODES, mostrar síntoma procesado o ingresado
+                  processedSymptom={diagnosis.processedFault?.symptomCleaned || diagnosis.fault}
                   problems={diagnosis.preliminary?.possibleReasons?.map(({ title }) => title) || []}
                   questions={diagnosis.questions || []}
                   technician={diagnosis.createdBy}
@@ -238,9 +233,15 @@ const Diagnoses = () => {
         onOpenChange={setIsCreateModalOpen}
         submitButtonText="Comenzar diagnóstico"
       />
+
+      <CreatePreAppointmentModal
+        open={isPreAppointmentModalOpen}
+        onOpenChange={setIsPreAppointmentModalOpen}
+      />
+
       <div className="sm:hidden">
-        <FloatingButton onClick={() => setIsCreateModalOpen(true)}>
-          <PlusIcon className="!h-5 !w-5" />
+        <FloatingButton onClick={() => setIsPreAppointmentModalOpen(true)}>
+          <CalendarPlus className="!h-5 !w-5" />
         </FloatingButton>
       </div>
     </div>

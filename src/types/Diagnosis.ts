@@ -22,6 +22,7 @@ export type Diagnosis = {
       reasonDetails: string;
       diagnosticRecommendations: string[];
       requiredTools: string[];
+      electricalDiagrams?: DocumentLink[];
     }[];
     oldPossibleReasons?: string[];
     newPossibleReasons?: string[];
@@ -50,6 +51,7 @@ export type Diagnosis = {
         tools: string[];
         resources: DocumentLink[];
         repairManuals: DocumentLink[];
+        electricalDiagrams?: DocumentLink[];
       },
     ];
     alternativeFailures: [
@@ -86,6 +88,8 @@ export type Diagnosis = {
     avatar?: string;
   };
   markedAsRepairedBy?: string;
+  // REMOVED: electricalDiagrams moved to fault level (preliminary.possibleReasons and diagnosis.confirmedFailures)
+  // electricalDiagrams?: DocumentLink[];
 };
 
 export type DocumentLink = {

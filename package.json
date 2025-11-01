@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "serve -s dist -l 5173",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md}\""
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md}\"",
+    "design:grep": "rg --type ts --type tsx --type css"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.1",
@@ -30,6 +31,7 @@
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
+    "libphonenumber-js": "^1.12.17",
     "lodash": "^4.17.21",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.483.0",
@@ -39,10 +41,12 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "react-markdown": "^10.0.0",
+    "react-phone-number-input": "^3.4.12",
     "react-router-dom": "^7.2.0",
     "react-speech-recognition": "^4.0.0",
     "serve": "^14.2.4",
-    "tailwind-merge": "^3.2.0"
+    "tailwind-merge": "^3.2.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
@@ -52,6 +56,7 @@
     "@types/react-dom": "^19.0.3",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-speech-recognition": "^3.9.6",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.19.0",

@@ -26,6 +26,7 @@ export const PrimaryRepairSection = ({
     tools: string[];
     resources: DocumentLink[];
     repairManuals: DocumentLink[];
+    electricalDiagrams?: DocumentLink[];
   }[];
 }) => {
   const { diagnosisId } = useParams();
@@ -97,6 +98,14 @@ export const PrimaryRepairSection = ({
               </div>
 
               <ResourceLinkItems resources={fault.resources} />
+
+              {fault.electricalDiagrams && fault.electricalDiagrams.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium sm:text-base">Diagramas Eléctricos:</h4>
+                  <ResourceLinkItems resources={fault.electricalDiagrams} />
+                </div>
+              )}
+
               <SearchResourceButton
                 buttonText="Buscar más manuales de reparación"
                 resourceName="manuales de reparación"

@@ -31,6 +31,8 @@ import {
 } from '@/components/atoms/Dialog';
 import { useCarPlateOrVin } from '@/hooks/useCarPlateOrVin';
 import DetailsContainer from '@/components/atoms/DetailsContainer';
+import { LiveViewSessionsProvider } from '@/context/LiveViewSessions.context';
+import { LiveViewSessionsFloater } from '@/components/molecules/LiveViewSessionsFloater';
 const FinalReport = () => {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -73,7 +75,11 @@ const FinalReport = () => {
     retry: false,
   });
   const { symptom } = useSymptom(diagnosis);
-  const carDescription = useCarPlateOrVin(diagnosis.car);
+  const carDescription = useCarPlateOrVin(
+    diagnosis.car
+      ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+      : undefined,
+  );
 
   useEffect(() => {
     if (diagnosis?.finalNotes) {
@@ -201,157 +207,182 @@ const FinalReport = () => {
     }
   };
 
+  const navigateToVehicleDetail = () => {
+    navigate(`/cars/${params.carId}`);
+  };
+
   return (
-    <div className="bg-background min-h-screen pb-56 sm:pb-24">
-      <HeaderPage
-        onBack={onBack}
-        data={{
-          title: 'Informe Final',
-          description: carDescription,
-        }}
-      />
-      <DetailsContainer>
-        <VehicleInformation car={diagnosis.car as Car} editMode={false} minimized />
-
-        <DiagnosticContextSection
-          symptoms={symptom}
-          notes={diagnosis.notes}
-          questions={diagnosis.questions}
-          answers={diagnosis.processedAnswers ?? ''}
+    <LiveViewSessionsProvider>
+      <div className="bg-background min-h-screen pb-56 sm:pb-24">
+        <HeaderPage
+          onBack={onBack}
+          data={{
+            title: 'Informe Final',
+            description: carDescription,
+          }}
         />
-
-        <PrimaryRepairSection confirmedFailures={diagnosis.diagnosis?.confirmedFailures || []} />
-
-        <AlternativeFailures alternativeFailures={diagnosis.diagnosis?.alternativeFailures || []} />
-
-        <EstimatedResources
-          diagnosisId={params.diagnosisId as string}
-          estimatedResources={diagnosis.diagnosis?.estimatedBudget || {}}
-        />
-
-        <Conclusion
-          recommendations={diagnosis.diagnosis?.conclusion?.recommendations || []}
-          nextSteps={diagnosis.diagnosis?.conclusion?.nextSteps || []}
-        />
-
-        <div className="space-y-2">
-          <p className="block text-sm font-medium sm:text-base">
-            Notas Adicionales del Técnico (Internas)
-          </p>
-          <VoiceTextInput
-            value={finalNotes}
-            onChange={setFinalNotes}
-            className="min-h-[150px] resize-y"
-            placeholder="Añade aquí cualquier observación adicional, detalles específicos del vehículo o consideraciones especiales para la reparación..."
-            disabled={isLoadingFinalReport}
+        <DetailsContainer>
+          <VehicleInformation
+            car={
+              diagnosis.car
+                ? ({ ...diagnosis.car, lastRevision: diagnosis.car.lastRevision.toString() } as Car)
+                : undefined
+            }
+            editMode={false}
+            minimized
           />
-        </div>
-      </DetailsContainer>
 
-      <div className="fixed right-0 bottom-0 left-0 flex flex-col-reverse gap-4 border-t border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={shareReport}
-            className="sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground w-full sm:w-auto sm:border-0 sm:bg-transparent sm:shadow-none"
-            size="lg"
-          >
-            <Share2Icon className="h-4 w-4" />
-            <span className="sm:hidden">Compartir</span>
-            <span className="hidden sm:inline">Compartir</span>
-          </Button>
+          <DiagnosticContextSection
+            symptoms={symptom}
+            notes={diagnosis.notes}
+            questions={diagnosis.questions}
+            answers={diagnosis.processedAnswers ?? ''}
+          />
 
-          {!diagnosis.rating?._id && (
+          <PrimaryRepairSection confirmedFailures={diagnosis.diagnosis?.confirmedFailures || []} />
+
+          <AlternativeFailures
+            alternativeFailures={diagnosis.diagnosis?.alternativeFailures || []}
+          />
+
+          <EstimatedResources
+            diagnosisId={params.diagnosisId as string}
+            estimatedResources={diagnosis.diagnosis?.estimatedBudget || {}}
+          />
+
+          <Conclusion
+            recommendations={diagnosis.diagnosis?.conclusion?.recommendations || []}
+            nextSteps={diagnosis.diagnosis?.conclusion?.nextSteps || []}
+          />
+
+          <div className="space-y-2">
+            <p className="block text-sm font-medium sm:text-base">
+              Notas Adicionales del Técnico (Internas)
+            </p>
+            <VoiceTextInput
+              value={finalNotes}
+              onChange={setFinalNotes}
+              className="min-h-[150px] resize-y"
+              placeholder="Añade aquí cualquier observación adicional, detalles específicos del vehículo o consideraciones especiales para la reparación..."
+              disabled={isLoadingFinalReport}
+            />
+          </div>
+        </DetailsContainer>
+
+        <div className="fixed right-0 bottom-0 left-0 flex flex-col-reverse gap-4 border-t border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
             <Button
               variant="outline"
-              onClick={() => setIsRatingModalOpen(true)}
+              onClick={shareReport}
               className="sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground w-full sm:w-auto sm:border-0 sm:bg-transparent sm:shadow-none"
               size="lg"
             >
-              <StarIcon className="h-4 w-4" />
-              <span className="sm:hidden">Valorar</span>
-              <span className="hidden sm:inline">Valorar</span>
+              <Share2Icon className="h-4 w-4" />
+              <span className="sm:hidden">Compartir</span>
+              <span className="hidden sm:inline">Compartir</span>
             </Button>
-          )}
-        </div>
 
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            disabled={isLoadingFinalReport}
-            className="w-full sm:w-auto"
-            size="lg"
-          >
-            <ArrowLeftIcon className="h-4 w-4 sm:mr-2" />
-            <span className="sm:hidden">Volver</span>
-            <span className="hidden sm:inline">Volver al detalle del Vehículo</span>
-          </Button>
+            {!diagnosis.rating?._id && (
+              <Button
+                variant="outline"
+                onClick={() => setIsRatingModalOpen(true)}
+                className="sm:text-foreground sm:hover:bg-accent sm:hover:text-accent-foreground w-full sm:w-auto sm:border-0 sm:bg-transparent sm:shadow-none"
+                size="lg"
+              >
+                <StarIcon className="h-4 w-4" />
+                <span className="sm:hidden">Valorar</span>
+                <span className="hidden sm:inline">Valorar</span>
+              </Button>
+            )}
+          </div>
 
-          {diagnosis.status === DIAGNOSIS_STATUS.REPAIRED && !!diagnosis.finalNotes && (
-            <Button
-              onClick={updateFinalNotes}
-              disabled={diagnosis.finalNotes === finalNotes || isLoadingFinalReport}
-              className="w-full sm:w-auto"
-              size="lg"
-            >
-              <span className="sm:hidden">{isLoadingFinalReport ? 'Guardando...' : 'Guardar'}</span>
-              <span className="hidden sm:inline">
-                {isLoadingFinalReport ? 'Guardando...' : 'Guardar Cambios'}
-              </span>
-            </Button>
-          )}
-
-          {diagnosis.status !== DIAGNOSIS_STATUS.REPAIRED ? (
-            <Button
-              onClick={markAsRepaired}
-              disabled={isLoadingFinalReport || finalNotes.length === 0}
-              className="w-full sm:w-auto"
-              size="lg"
-            >
-              <CircleCheckBig className="h-4 w-4 sm:mr-2" />
-              <span className="sm:hidden">{isLoadingFinalReport ? 'Cargando...' : 'Guardar'}</span>
-              <span className="hidden sm:inline">
-                {isLoadingFinalReport ? 'Cargando...' : 'Marcar Reparación Completa'}
-              </span>
-            </Button>
-          ) : (
-            <Button disabled className="w-full bg-green-600 text-white sm:w-auto" size="lg">
-              <CircleCheckBig className="h-4 w-4 text-white sm:mr-2" />
-              Reparado
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmación</DialogTitle>
-            <DialogDescription>¿Confirmás que este diagnóstico ha sido reparado?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <Button
               variant="outline"
-              onClick={() => setIsConfirmationModalOpen(false)}
+              onClick={navigateToVehicleDetail}
               disabled={isLoadingFinalReport}
+              className="w-full sm:w-auto"
+              size="lg"
             >
-              Cancelar
+              <ArrowLeftIcon className="h-4 w-4 sm:mr-2" />
+              <span className="sm:hidden">Volver</span>
+              <span className="hidden sm:inline">Volver al detalle del Vehículo</span>
             </Button>
-            <Button onClick={handleConfirmRepair} disabled={isLoadingFinalReport}>
-              {isLoadingFinalReport ? 'Cargando...' : 'Confirmar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <RatingModal
-        isOpen={isRatingModalOpen}
-        onClose={() => setIsRatingModalOpen(false)}
-        onSubmit={handleRatingSubmit}
-        isLoading={isLoadingDiagnosisRating}
-      />
-    </div>
+            {diagnosis.status === DIAGNOSIS_STATUS.REPAIRED && !!diagnosis.finalNotes && (
+              <Button
+                onClick={updateFinalNotes}
+                disabled={diagnosis.finalNotes === finalNotes || isLoadingFinalReport}
+                className="w-full sm:w-auto"
+                size="lg"
+              >
+                <span className="sm:hidden">
+                  {isLoadingFinalReport ? 'Guardando...' : 'Guardar'}
+                </span>
+                <span className="hidden sm:inline">
+                  {isLoadingFinalReport ? 'Guardando...' : 'Guardar Cambios'}
+                </span>
+              </Button>
+            )}
+
+            {diagnosis.status !== DIAGNOSIS_STATUS.REPAIRED ? (
+              <Button
+                onClick={markAsRepaired}
+                disabled={isLoadingFinalReport || finalNotes.length === 0}
+                className="w-full sm:w-auto"
+                size="lg"
+              >
+                <CircleCheckBig className="h-4 w-4 sm:mr-2" />
+                <span className="sm:hidden">
+                  {isLoadingFinalReport ? 'Cargando...' : 'Guardar'}
+                </span>
+                <span className="hidden sm:inline">
+                  {isLoadingFinalReport ? 'Cargando...' : 'Marcar Reparación Completa'}
+                </span>
+              </Button>
+            ) : (
+              <Button disabled className="w-full bg-green-600 text-white sm:w-auto" size="lg">
+                <CircleCheckBig className="h-4 w-4 text-white sm:mr-2" />
+                Reparado
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmación</DialogTitle>
+              <DialogDescription>
+                ¿Confirmás que este diagnóstico ha sido reparado?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsConfirmationModalOpen(false)}
+                disabled={isLoadingFinalReport}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmRepair} disabled={isLoadingFinalReport}>
+                {isLoadingFinalReport ? 'Cargando...' : 'Confirmar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <RatingModal
+          isOpen={isRatingModalOpen}
+          onClose={() => setIsRatingModalOpen(false)}
+          onSubmit={handleRatingSubmit}
+          isLoading={isLoadingDiagnosisRating}
+        />
+
+        {/* Componente flotante de sesiones Live View */}
+        <LiveViewSessionsFloater />
+      </div>
+    </LiveViewSessionsProvider>
   );
 };
 

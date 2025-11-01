@@ -12,18 +12,9 @@ import {
 interface CostBreakdownProps {
   damageAssessment: DamageAssessment;
   onUpdateNotes: (notes: string) => void;
-  onConfirmDamages?: () => void;
-  isConfirming?: boolean;
-  onViewReport?: () => void;
 }
 
-export const CostBreakdown = ({
-  damageAssessment,
-  onUpdateNotes,
-  onConfirmDamages,
-  isConfirming = false,
-  onViewReport,
-}: CostBreakdownProps) => {
+export const CostBreakdown = ({ damageAssessment, onUpdateNotes }: CostBreakdownProps) => {
   const { workshop } = useWorkshop();
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(damageAssessment.notes || '');
@@ -271,25 +262,7 @@ export const CostBreakdown = ({
         </div>
 
         {/* Botones de acción */}
-        <div className="space-y-2">
-          {damageAssessment.state !== 'DAMAGES_CONFIRMED' && onConfirmDamages && (
-            <Button
-              className="w-full"
-              onClick={onConfirmDamages}
-              disabled={isConfirming || damageAssessment.damages.length === 0}
-            >
-              {isConfirming ? 'Confirmando...' : 'Confirmar y Generar Valoración'}
-            </Button>
-          )}
-          {damageAssessment.state === 'DAMAGES_CONFIRMED' && (
-            <>
-              <Button variant="outline" className="w-full" onClick={onViewReport}>
-                Ver Informe Completo
-              </Button>
-              <Button className="w-full">Generar Informe PDF</Button>
-            </>
-          )}
-        </div>
+        <div className="space-y-2"></div>
       </div>
     </div>
   );

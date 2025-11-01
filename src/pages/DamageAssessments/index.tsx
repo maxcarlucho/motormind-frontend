@@ -1,25 +1,24 @@
 import { useEffect, useState } from 'react';
 import { enqueueSnackbar } from 'notistack';
 import { FileSearch, PlusIcon } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-
 import { UserRole } from '@/types/User';
 import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/context/Auth.context';
 import { DamageAssessment } from '@/types/DamageAssessment';
 import { Button } from '@/components/atoms/Button';
-import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
 import { DamageAssessmentCard } from '@/components/molecules/DamageAssessmentCard';
 import { FloatingButton } from '@/components/atoms/FloatingButton';
 import Spinner from '@/components/atoms/Spinner';
 import { Select } from '@radix-ui/react-select';
 import { SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/atoms/Select';
 import { ASSESSMENT_STATUS } from '@/constants';
+import { getAssessmentStatusLabel } from '@/utils';
 
 const DamageAssessments = () => {
   const { user } = useAuth();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
   const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   const { execute: getDamageAssessmentsRequest } = useApi<DamageAssessment[]>(
@@ -56,18 +55,6 @@ const DamageAssessments = () => {
     }
   }, [isError]);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case ASSESSMENT_STATUS.PENDING_REVIEW:
-        return 'Pendiente de Revisión';
-      case ASSESSMENT_STATUS.DAMAGES_CONFIRMED:
-        return 'Daños Confirmados';
-
-      default:
-        return status;
-    }
-  };
-
   const IS_ADMIN = [UserRole.ADMIN, UserRole.SUPER_ADMIN].includes(user.role);
 
   if (!IS_ADMIN) return <Navigate to="/" replace />;
@@ -78,9 +65,7 @@ const DamageAssessments = () => {
         <div className="sticky top-0 z-10 flex flex-col items-center justify-between bg-white px-6 py-2 shadow-xs sm:flex-row sm:px-8 sm:py-4 lg:flex-row">
           <div className="lg:w-1/3">
             <h1 className="mr-2 py-0.5 text-xl font-semibold sm:py-0 lg:text-2xl">Peritajes</h1>
-            <p className="text-muted hidden xl:block">
-              Listado de peritajes realizados en el taller
-            </p>
+            <p className="text hidden xl:block">Listado de peritajes realizados en el taller</p>
           </div>
 
           <div className="mt-2 flex w-full flex-col justify-end gap-2 space-y-2 sm:mt-0 sm:w-auto sm:flex-row sm:space-y-0 sm:space-x-2 lg:w-2/3">
@@ -92,22 +77,25 @@ const DamageAssessments = () => {
                 <SelectContent>
                   <SelectItem value="ALL">Todos</SelectItem>
                   <SelectItem value={ASSESSMENT_STATUS.PENDING_REVIEW}>
-                    {getStatusText(ASSESSMENT_STATUS.PENDING_REVIEW)}
+                    {getAssessmentStatusLabel(ASSESSMENT_STATUS.PENDING_REVIEW)}
                   </SelectItem>
                   <SelectItem value={ASSESSMENT_STATUS.DAMAGES_CONFIRMED}>
-                    {getStatusText(ASSESSMENT_STATUS.DAMAGES_CONFIRMED)}
+                    {getAssessmentStatusLabel(ASSESSMENT_STATUS.DAMAGES_CONFIRMED)}
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <Button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => navigate('/damage-assessments/new')}
               className="hidden h-8 w-8 sm:flex sm:h-auto sm:w-auto"
             >
               <PlusIcon className="!h-5 !w-5" />
               <span className="hidden xl:inline">Crear peritaje</span>
             </Button>
-            <FloatingButton onClick={() => setIsCreateModalOpen(true)} className="sm:hidden">
+            <FloatingButton
+              onClick={() => navigate('/damage-assessments/new')}
+              className="sm:hidden"
+            >
               <PlusIcon className="!h-5 !w-5" />
             </FloatingButton>
           </div>
@@ -125,7 +113,7 @@ const DamageAssessments = () => {
               </div>
               <h3 className="mb-1 text-lg font-medium">No hay peritajes</h3>
               <p className="text-muted mb-4">Aún no se ha creado ningún peritaje en el sistema.</p>
-              <Button onClick={() => setIsCreateModalOpen(true)}>Crear peritaje</Button>
+              <Button onClick={() => navigate('/damage-assessments/new')}>Crear peritaje</Button>
             </div>
           ) : (
             <>
@@ -135,14 +123,6 @@ const DamageAssessments = () => {
             </>
           )}
         </div>
-        <CreateDiagnosticModal
-          open={isCreateModalOpen}
-          onOpenChange={setIsCreateModalOpen}
-          title="Crear Nuevo Peritaje"
-          allowManualCar={false}
-          submitButtonText="Comenzar peritaje"
-          redirectTo="damage-assessment"
-        />
       </div>
     </div>
   );

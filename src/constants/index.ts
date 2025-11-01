@@ -35,9 +35,61 @@ export const DIAGNOSIS_STATUS = {
   PRELIMINARY: 'PRELIMINARY',
   IN_REPARATION: 'IN_REPARATION',
   REPAIRED: 'REPAIRED',
+  // Estados específicos para WhatsApp (pre-citas)
+  WHATSAPP_AWAITING_QUESTIONS: 'WHATSAPP_AWAITING_QUESTIONS',
 } as const;
 
 export const ASSESSMENT_STATUS = {
   PENDING_REVIEW: 'PENDING_REVIEW',
   DAMAGES_CONFIRMED: 'DAMAGES_CONFIRMED',
 } as const;
+
+// ✅ NUEVO: Mapeo de assessment status a labels amigables para el usuario
+export const ASSESSMENT_STATUS_LABELS = {
+  [ASSESSMENT_STATUS.PENDING_REVIEW]: 'Pendiente de Revisión',
+  [ASSESSMENT_STATUS.DAMAGES_CONFIRMED]: 'Daños Confirmados',
+} as const;
+
+export const FEATURES = {
+  WIZARD_V2_ENABLED: import.meta.env.VITE_WIZARD_V2_ENABLED === 'true',
+} as const;
+
+// ✅ NUEVO: Mapeo de workflow status a labels amigables para el usuario
+export const WORKFLOW_STATUS_LABELS = {
+  processing: 'Detectando daños',
+  detected: 'Daños detectados',
+  damages_confirmed: 'Daños confirmados',
+  operations_defined: 'Operaciones definidas',
+  valuated: 'Valoración completada',
+  completed: 'Valoración finalizada',
+  error: 'Error en proceso',
+} as const;
+
+// ✅ NUEVO: Mapeo de diagnosis status a labels amigables para el usuario
+export const DIAGNOSIS_STATUS_LABELS = {
+  [DIAGNOSIS_STATUS.GUIDED_QUESTIONS]: 'Preguntas Guíadas',
+  [DIAGNOSIS_STATUS.ASSIGN_OBD_CODES]: 'Asignar Códigos OBD',
+  [DIAGNOSIS_STATUS.PRELIMINARY]: 'Pre-Diagnóstico',
+  [DIAGNOSIS_STATUS.IN_REPARATION]: 'En Reparación',
+  [DIAGNOSIS_STATUS.REPAIRED]: 'Reparado',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'Pre-Cita - Esperando Respuestas',
+} as const;
+
+// ✅ NUEVO: Mapeo de diagnosis status a colores CSS
+export const DIAGNOSIS_STATUS_COLORS = {
+  [DIAGNOSIS_STATUS.GUIDED_QUESTIONS]: 'bg-gray-100 text-gray-800 border-gray-200',
+  [DIAGNOSIS_STATUS.PRELIMINARY]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  [DIAGNOSIS_STATUS.ASSIGN_OBD_CODES]: 'bg-orange-100 text-orange-800 border-orange-200',
+  [DIAGNOSIS_STATUS.IN_REPARATION]: 'bg-blue-100 text-blue-800 border-blue-200',
+  [DIAGNOSIS_STATUS.REPAIRED]: 'bg-green-100 text-green-800 border-green-200',
+  [DIAGNOSIS_STATUS.WHATSAPP_AWAITING_QUESTIONS]: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+} as const;
+
+// ✅ NUEVO: Tipo para el mapeo de workflow status
+export type WorkflowStatus = keyof typeof WORKFLOW_STATUS_LABELS;
+
+// ✅ NUEVO: Tipo para el mapeo de diagnosis status
+export type DiagnosisStatus = keyof typeof DIAGNOSIS_STATUS;
+
+// ✅ NUEVO: Tipo para el mapeo de assessment status
+export type AssessmentStatus = keyof typeof ASSESSMENT_STATUS;

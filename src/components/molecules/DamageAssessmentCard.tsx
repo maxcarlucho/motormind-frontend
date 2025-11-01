@@ -1,23 +1,27 @@
 import { CarIcon, MoreVertical } from 'lucide-react';
-import { DamageAssessment } from '@/types/DamageAssessment';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DamageAssessment, Damage, WorkflowStatus } from '@/types/DamageAssessment';
+import { WORKFLOW_STATUS_LABELS } from '@/constants';
+import { getDamageTypeLabel } from '@/types/DamageAssessment';
+import { CreatedByUser } from '@/components/molecules/CreatedByUser';
 
 interface DamageAssessmentCardProps {
   assessment: DamageAssessment;
 }
 
-const stateMap = {
-  PENDING_REVIEW: 'Pendiente de Validación',
-  DAMAGES_CONFIRMED: 'Daños Confirmados',
-};
-
 export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ assessment }) => {
-  const { car, createdAt, _id, state, damages } = assessment;
+  const { car, createdAt, _id, workflow, damages } = assessment;
 
-  const damagesToShow =
-    state === 'DAMAGES_CONFIRMED' ? damages.filter((d) => d.isConfirmed) : damages;
+  const isWorkflowDamagesConfirmedOrGreater =
+    workflow?.status === 'damages_confirmed' ||
+    workflow?.status === 'operations_defined' ||
+    workflow?.status === 'valuated' ||
+    workflow?.status === 'completed';
+  console.log({ damages: assessment.confirmedDamages, status: workflow?.status });
+
+  const damagesToShow = isWorkflowDamagesConfirmedOrGreater ? assessment.confirmedDamages : damages;
 
   return (
     <Link to={`/damage-assessments/${_id}`} className="block">
@@ -37,12 +41,14 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
           <div className="flex items-center gap-2">
             <span
               className={`rounded-md px-2 py-1 text-xs font-medium ${
-                state === 'PENDING_REVIEW'
+                workflow?.status === 'processing'
                   ? 'bg-purple-100 text-purple-700'
                   : 'bg-green-100 text-green-700'
               }`}
             >
-              {stateMap[state]}
+              {workflow?.status
+                ? WORKFLOW_STATUS_LABELS[workflow.status as WorkflowStatus]
+                : 'Sin estado'}
             </span>
 
             <button
@@ -60,31 +66,34 @@ export const DamageAssessmentCard: React.FC<DamageAssessmentCardProps> = ({ asse
         <div className="mt-4 space-y-3 pl-1">
           <div className="text-sm">
             <span className="text-gray-500">Aseguradora:</span>{' '}
-            <span className="text-gray-800">{assessment.insuranceCompany}</span>
+            <span className="text-gray-800">
+              {assessment.insuranceCompany.replace('MOCK', '-')}
+            </span>
           </div>
 
           <div>
-            <p className="text-sm text-gray-500">Daños detectados:</p>
-            {damagesToShow.length > 0 ? (
+            <p className="text-sm text-gray-500">
+              {isWorkflowDamagesConfirmedOrGreater ? 'Daños confirmados:' : 'Daños detectados:'}
+            </p>
+            {damagesToShow && damagesToShow.length > 0 ? (
               <ul className="mt-1 ml-5 list-disc space-y-1 text-sm text-gray-800">
-                {damagesToShow.slice(0, 2).map((damage) => (
-                  <li key={damage._id}>{damage.description}</li>
+                {damagesToShow.slice(0, 2).map((damage: Damage) => (
+                  <li
+                    key={damage._id}
+                  >{`${getDamageTypeLabel(damage.type)} en ${damage.subarea}`}</li>
                 ))}
               </ul>
             ) : (
               <p className="mt-1 ml-5 text-sm text-gray-500">No se detectaron daños.</p>
             )}
-            {damagesToShow.length > 2 && (
+            {damagesToShow && damagesToShow.length > 2 && (
               <p className="mt-1 ml-5 text-xs text-blue-500">y {damagesToShow.length - 2} más...</p>
             )}
           </div>
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-          <div className="flex items-center gap-2">
-            <img src="https://i.pravatar.cc/24" alt="Creator" className="h-6 w-6 rounded-full" />
-            <span className="text-sm text-gray-700">Carlos Ruiz</span>
-          </div>
+          <CreatedByUser user={assessment.createdBy} />
           <span className="text-sm text-gray-500">
             {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: es })
               .charAt(0)

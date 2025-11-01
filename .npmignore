@@ -1,0 +1,12 @@
+# Design reference repo should not be included in any packaging
+../motormind-design/**
+**/motormind-design/**
+
+# Standard ignores
+node_modules/
+.env*
+*.log
+dist/
+coverage/
+.vscode/
+.idea/

@@ -1,40 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSearch, PlusIcon } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileSearch, PlusIcon, CalendarPlus } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { enqueueSnackbar } from 'notistack';
 import { diagnosisLink, formatDate } from '@/utils';
-import { Diagnosis } from '@/types/Diagnosis';
-import { useApi } from '@/hooks/useApi';
 import { DiagnosticListItem } from '@/components/molecules/DiagnosticListItem';
 import { DIAGNOSIS_STATUS } from '@/constants';
 import Spinner from '@/components/atoms/Spinner';
 import { CreateDiagnosticModal } from '@/components/organisms/CreateDiagnosticModal';
+import { CreatePreAppointmentModal } from '@/components/molecules/CreatePreAppointmentModal';
 import { Button } from '@/components/atoms/Button';
 import { FloatingButton } from '@/components/atoms/FloatingButton';
 import apiService from '@/service/api.service';
+import { useRecentDiagnoses } from '@/hooks/useRecentDiagnoses';
 
 const Dashboard = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPreAppointmentModalOpen, setIsPreAppointmentModalOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { execute: getDiagnosesRequest } = useApi<{ data: Diagnosis[] }>('get', '/diagnoses');
-
+  // Usar el nuevo hook para obtener diagnósticos recientes (ya filtrados sin pre-citas)
   const {
-    data: { data: diagnoses = [] } = { data: [] },
+    data: recentDiagnosesData,
     isLoading: isLoadingDiagnoses,
     isError,
     error,
-  } = useQuery<{ data: Diagnosis[] }>({
-    queryKey: ['diagnoses'],
-    queryFn: async () => {
-      const response = await getDiagnosesRequest(undefined, { totalLimit: 5 }, undefined);
+  } = useRecentDiagnoses({ limit: 5 });
 
-      return response.data;
-    },
-    enabled: true,
-    staleTime: 60000,
-    retry: false,
-  });
+  const diagnoses = recentDiagnosesData?.data || [];
 
   useEffect(() => {
     if (isError && error) {
@@ -49,6 +41,7 @@ const Dashboard = () => {
 
       // Invalidar múltiples queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['diagnoses'] });
+      queryClient.invalidateQueries({ queryKey: ['recentDiagnoses'] });
       queryClient.invalidateQueries({ queryKey: ['getDiagnosesByCarId'] });
       queryClient.removeQueries({ queryKey: ['getDiagnosisById', diagnosisId] });
       queryClient.removeQueries({ queryKey: ['diagnosis', diagnosisId] });
@@ -66,7 +59,7 @@ const Dashboard = () => {
           <h1 className="truncate py-0.5 text-xl font-semibold sm:py-0 lg:text-2xl">Panel</h1>
           <p className="text-muted hidden xl:block">Gestiona y revisa el estado del taller</p>
         </div>
-        <div className="hidden items-center sm:flex">
+        <div className="hidden items-center gap-2 sm:flex">
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="h-8 w-8 sm:h-auto sm:w-auto"
@@ -102,7 +95,14 @@ const Dashboard = () => {
                     problems={
                       diagnosis.preliminary?.possibleReasons.map(({ title }) => title) || []
                     }
-                    summary={[diagnosis.fault, diagnosis.answers]}
+                    summary={[
+                      diagnosis.fault,
+                      ...(diagnosis.answers
+                        ? diagnosis.answers.split('\n').filter((answer) => answer.trim())
+                        : []),
+                    ]}
+                    // Para ASSIGN_OBD_CODES, mostrar síntoma procesado o ingresado
+                    processedSymptom={diagnosis.processedFault?.symptomCleaned || diagnosis.fault}
                     questions={diagnosis.questions || []}
                     technician={diagnosis.createdBy}
                     status={
@@ -135,9 +135,15 @@ const Dashboard = () => {
         onOpenChange={setIsCreateModalOpen}
         submitButtonText="Comenzar diagnóstico"
       />
+
+      <CreatePreAppointmentModal
+        open={isPreAppointmentModalOpen}
+        onOpenChange={setIsPreAppointmentModalOpen}
+      />
+
       <div className="sm:hidden">
-        <FloatingButton onClick={() => setIsCreateModalOpen(true)}>
-          <PlusIcon className="!h-5 !w-5" />
+        <FloatingButton onClick={() => setIsPreAppointmentModalOpen(true)}>
+          <CalendarPlus className="!h-5 !w-5" />
         </FloatingButton>
       </div>
     </div>

@@ -11,6 +11,66 @@ body {
 }
 
 @theme {
+  /* Base colors - restored to original working values */
+  --color-background: #f9fafb;
+  --color-foreground: hsl(215 25% 10%);
+
+  /* Cards */
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(215 25% 10%);
+
+  /* Primary - Professional Blue */
+  --color-primary: #2753a2;
+  --color-primary-foreground: #fafafa;
+  --color-primary-muted: hsl(219 25% 85%);
+
+  /* Success - Confirmation Green */
+  --color-success: hsl(158 64% 52%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-success-muted: hsl(158 30% 85%);
+
+  /* Warning - Attention Orange */
+  --color-warning: hsl(35 84% 62%);
+  --color-warning-foreground: hsl(0 0% 100%);
+  --color-warning-muted: hsl(35 25% 85%);
+
+  /* Secondary/Muted */
+  --color-secondary: #e5e7eb;
+  --color-secondary-foreground: #374152;
+
+  --color-muted: #6b7280;
+  --color-muted-foreground: #fafafa; /* Restaurado al valor original que funcionaba */
+
+  --color-accent: hsl(215 16% 92%);
+  --color-accent-foreground: hsl(215 25% 15%);
+
+  /* Destructive */
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fafafa;
+
+  /* Borders and inputs */
+  --color-border: hsl(215 12% 88%);
+  --color-input: #6b7280;
+  --color-ring: hsl(219 70% 58%);
+
+  /* Border radius */
+  --radius: 0.5rem;
+}
+
+/*
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+html {
+  height: 100dvh;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@theme {
   --color-background: #f9fafb;
   --color-primary: #2753a2;
   --color-primary-foreground: #fafafa;
@@ -22,3 +82,4 @@ body {
   --color-destructive-foreground: #fafafa;
   --color-input: #6b7280;
 }
+*/
