@@ -121,13 +121,12 @@ export function useOperatorCases(): UseOperatorCasesReturn {
  * This will be replaced with actual API endpoint
  */
 async function fetchCasesFromBackend(): Promise<OperatorCase[]> {
-    // TODO: Replace with actual API call
-    // For now, try to fetch from damage assessments and transform
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
-        // This is a placeholder - we need a proper backend endpoint
         // For development, we'll use localStorage to persist mock data
-        const stored = localStorage.getItem('carretera_cases');
+        const stored = localStorage.getItem('carretera_operator_cases');
         if (stored) {
             const parsed = JSON.parse(stored);
             return parsed.map((c: any) => ({
@@ -150,10 +149,10 @@ async function fetchCasesFromBackend(): Promise<OperatorCase[]> {
  */
 export function addCaseToLocalStorage(caseData: OperatorCase) {
     try {
-        const stored = localStorage.getItem('carretera_cases');
+        const stored = localStorage.getItem('carretera_operator_cases');
         const cases = stored ? JSON.parse(stored) : [];
         cases.unshift(caseData); // Add to beginning
-        localStorage.setItem('carretera_cases', JSON.stringify(cases));
+        localStorage.setItem('carretera_operator_cases', JSON.stringify(cases));
     } catch (err) {
         console.error('Error saving case to localStorage:', err);
     }

@@ -136,23 +136,102 @@ export interface DecisionSubmission {
 }
 
 // ============================================================================
-// Workshop Types
+// Workshop Types (Phase 4)
 // ============================================================================
 
-export interface WorkshopCase {
+export interface WorkshopCaseDetailed {
     id: string;
-    assessmentId: string;
-    vehicleInfo: VehicleInfo;
+    caseNumber: string;
+    vehiclePlate: string;
+    clientName: string;
+    clientPhone: string;
     symptom: string;
-    clientAnswers: string[];
-    aiDiagnosis: {
-        possibleReasons: PossibleReason[];
-        recommendations: string[];
+    location?: string;
+
+    // Full history
+    questions: string[];
+    answers: string[];
+    aiAssessment: AIAssessment;
+
+    // Gruista info
+    gruistaDecision: {
+        decision: TrafficLightDecisionType;
+        notes?: string;
+        decidedAt: Date;
+        gruistaName: string;
     };
-    gruistaNotes?: string;
-    arrivedAt: Date;
-    status: 'received' | 'in-diagnosis' | 'completed';
+
+    // Workshop specific
+    status: WorkshopCaseStatus;
+    acceptedAt?: Date;
+    serviceOrderNumber?: string;
+    repairStatus?: WorkshopRepairStatus;
+    estimatedCompletion?: Date;
+
+    // OBD Diagnosis (after acceptance)
+    obdDiagnosis?: OBDDiagnosisData;
+    generatedDiagnosis?: GeneratedDiagnosis;
+
+    // Photos from gruista (future feature)
+    photos?: string[];
+
+    createdAt: Date;
+    updatedAt: Date;
 }
+
+export type WorkshopCaseStatus =
+    | 'incoming'      // Towed, not yet accepted
+    | 'accepted'      // Accepted by workshop
+    | 'rejected'      // Workshop rejected
+    | 'in-repair'     // Currently being repaired
+    | 'completed';    // Repair finished
+
+export type WorkshopRepairStatus =
+    | 'pending-inspection'
+    | 'inspecting'
+    | 'waiting-parts'
+    | 'repairing'
+    | 'testing'
+    | 'completed';
+
+export interface WorkshopRejection {
+    reason: string;
+    notes?: string;
+    rejectedAt: Date;
+    workshopName: string;
+}
+
+export type WorkshopRejectionReason =
+    | 'no-capacity'
+    | 'no-parts'
+    | 'wrong-specialty'
+    | 'other';
+
+// ============================================================================
+// OBD Diagnosis Types (Workshop)
+// ============================================================================
+
+export interface OBDDiagnosisData {
+    obdCodes: string[];
+    technicianComments: string;
+    timestamp: Date;
+    diagnosisId?: string; // ID from backend when diagnosis is generated
+}
+
+export interface GeneratedDiagnosis {
+    diagnosisId: string;
+    failures: Array<{
+        id: string;
+        name: string;
+        probability: number;
+        description: string;
+        recommendedActions: string[];
+    }>;
+    estimatedRepairTime?: string;
+    estimatedCost?: number;
+    generatedAt: Date;
+}
+
 
 // ============================================================================
 // API Response Types (Backend Integration)

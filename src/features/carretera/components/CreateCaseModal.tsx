@@ -38,9 +38,10 @@ export function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCaseModalP
                 notes: '',
             });
             setErrors({});
+            // Only call reset if needed - removed dependency to avoid loops
             reset();
         }
-    }, [isOpen, reset]);
+    }, [isOpen]); // Removed reset from dependencies
 
     // Handle escape key
     useEffect(() => {

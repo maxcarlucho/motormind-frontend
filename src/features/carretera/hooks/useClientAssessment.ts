@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { enqueueSnackbar } from 'notistack';
-import damageAssessmentApi from '@/service/damageAssessmentApi.service';
-import { CarreteraAssessment, AssessmentApiResponse } from '../types/carretera.types';
+import { CarreteraAssessment } from '../types/carretera.types';
 
 interface UseClientAssessmentReturn {
     assessment: CarreteraAssessment | null;
@@ -14,9 +13,19 @@ interface UseClientAssessmentReturn {
     markComplete: () => Promise<void>;
 }
 
+// Preguntas predefinidas para el diagnóstico
+const DIAGNOSTIC_QUESTIONS = [
+    "¿Qué síntoma presenta el vehículo?",
+    "¿Cuándo comenzó el problema?",
+    "¿El vehículo hace algún ruido extraño?",
+    "¿Has notado algún olor inusual?",
+    "¿El problema es constante o intermitente?",
+    "¿Puedes mover el vehículo o está completamente detenido?"
+];
+
 /**
  * Hook to manage client assessment state and interactions
- * Handles loading assessment data, submitting answers, and tracking completion
+ * MVP version using localStorage
  */
 export function useClientAssessment(assessmentId: string | undefined): UseClientAssessmentReturn {
     const [assessment, setAssessment] = useState<CarreteraAssessment | null>(null);
@@ -39,20 +48,30 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                 setIsLoading(true);
                 setError(null);
 
-                const response: AssessmentApiResponse = await damageAssessmentApi.getAssessment(assessmentId);
+                // Simulate API delay
+                await new Promise(resolve => setTimeout(resolve, 300));
 
-                // Transform API response to our Carretera type
+                // Load from localStorage
+                const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+                const caseData = clientCases[assessmentId];
+
+                if (!caseData) {
+                    throw new Error('Caso no encontrado');
+                }
+
+                // Create assessment from stored data
                 const carreteraAssessment: CarreteraAssessment = {
-                    id: response._id,
-                    clientName: 'Cliente', // TODO: Get from actual API when available
-                    symptom: response.description,
-                    questions: response.workflow?.questions || [],
-                    answers: response.workflow?.answers || [],
-                    status: response.workflow?.status as any || 'pending',
-                    createdAt: new Date(response.createdAt),
-                    updatedAt: new Date(response.updatedAt),
+                    id: caseData.id,
+                    clientName: caseData.clientName,
+                    clientPhone: caseData.clientPhone,
+                    symptom: caseData.symptom,
+                    questions: caseData.questions.length > 0 ? caseData.questions : DIAGNOSTIC_QUESTIONS,
+                    answers: caseData.answers || [],
+                    status: caseData.status || 'pending',
+                    createdAt: new Date(caseData.createdAt),
+                    updatedAt: new Date(caseData.updatedAt),
                     vehicleInfo: {
-                        // TODO: Get vehicle info from response.car when available
+                        plate: caseData.vehiclePlate,
                     },
                 };
 
@@ -62,7 +81,7 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                 setIsComplete(carreteraAssessment.status === 'completed');
             } catch (err) {
                 console.error('Error loading assessment:', err);
-                setError('Error al cargar los datos. Por favor, intenta de nuevo.');
+                setError('Error al cargar los datos. Por favor, verifica el enlace.');
                 enqueueSnackbar('Error al cargar la evaluación', { variant: 'error' });
             } finally {
                 setIsLoading(false);
