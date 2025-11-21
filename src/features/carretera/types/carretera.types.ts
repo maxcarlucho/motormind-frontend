@@ -139,7 +139,44 @@ export interface AssessmentApiResponse {
         questions?: string[];
         answers?: string[];
         status?: string;
+        clientName?: string;
+        clientPhone?: string;
+        location?: string;
     };
     createdAt: string;
     updatedAt: string;
+}
+
+// ============================================================================
+// Operator Dashboard Types
+// ============================================================================
+
+export interface OperatorCase {
+    id: string;
+    caseNumber: string; // User-friendly ID (e.g., "C-001")
+    vehiclePlate: string;
+    clientName: string;
+    clientPhone: string;
+    symptom: string;
+    location?: string;
+    status: AssessmentStatus;
+    createdAt: Date;
+    updatedAt: Date;
+    clientLink: string; // Pre-computed link
+}
+
+export interface CaseFormData {
+    vehiclePlate: string;
+    symptom: string;
+    clientName: string;
+    clientPhone: string;
+    location?: string;
+    notes?: string;
+}
+
+export interface CaseFilters {
+    status?: AssessmentStatus | 'all';
+    search?: string;
+    sortBy?: 'createdAt' | 'status' | 'plate';
+    sortOrder?: 'asc' | 'desc';
 }
