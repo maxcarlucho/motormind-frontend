@@ -3,6 +3,7 @@ import { Plus, RefreshCw, Search } from 'lucide-react';
 import { useOperatorCases, addCaseToLocalStorage } from '../hooks/useOperatorCases';
 import { CreateCaseModal } from '../components/CreateCaseModal';
 import { CaseListTable } from '../components/CaseListTable';
+import { CaseDetailModal } from '../components/CaseDetailModal';
 import { OperatorCase, AssessmentStatus } from '../types/carretera.types';
 
 export function OperatorDashboard() {
@@ -19,6 +20,8 @@ export function OperatorDashboard() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<AssessmentStatus | 'all'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCase, setSelectedCase] = useState<OperatorCase | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const handleCreateSuccess = (caseId: string) => {
         // Create a mock case for demonstration
@@ -56,6 +59,16 @@ export function OperatorDashboard() {
     const getStatusCount = (status: AssessmentStatus | 'all') => {
         if (status === 'all') return cases.length;
         return cases.filter((c) => c.status === status).length;
+    };
+
+    const handleCaseClick = (caseData: OperatorCase) => {
+        setSelectedCase(caseData);
+        setIsDetailModalOpen(true);
+    };
+
+    const handleCloseDetailModal = () => {
+        setIsDetailModalOpen(false);
+        setSelectedCase(null);
     };
 
     return (
@@ -167,6 +180,7 @@ export function OperatorDashboard() {
                         <CaseListTable
                             cases={filteredCases}
                             isLoading={isLoading}
+                            onCaseClick={handleCaseClick}
                         />
                     </div>
                 )}
@@ -178,6 +192,15 @@ export function OperatorDashboard() {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={handleCreateSuccess}
             />
+
+            {/* Case Detail Modal */}
+            {selectedCase && (
+                <CaseDetailModal
+                    caseData={selectedCase}
+                    isOpen={isDetailModalOpen}
+                    onClose={handleCloseDetailModal}
+                />
+            )}
         </div>
     );
 }

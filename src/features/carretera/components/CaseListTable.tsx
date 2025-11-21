@@ -1,4 +1,4 @@
-import { Copy, MessageCircle, Loader2 } from 'lucide-react';
+import { Copy, MessageCircle, Loader2, Eye } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { OperatorCase } from '../types/carretera.types';
 import { CaseStatusBadge } from './CaseStatusBadge';
@@ -8,13 +8,14 @@ import { es } from 'date-fns/locale';
 interface CaseListTableProps {
     cases: OperatorCase[];
     isLoading: boolean;
+    onCaseClick?: (caseData: OperatorCase) => void;
 }
 
 /**
  * Table component displaying list of operator cases
  * Responsive: Table on desktop, cards on mobile
  */
-export function CaseListTable({ cases, isLoading }: CaseListTableProps) {
+export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTableProps) {
     const copyClientLink = async (operatorCase: OperatorCase) => {
         const link = `${window.location.origin}/carretera/c/${operatorCase.id}`;
 
@@ -111,7 +112,11 @@ export function CaseListTable({ cases, isLoading }: CaseListTableProps) {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                         {cases.map((operatorCase) => (
-                            <tr key={operatorCase.id} className="hover:bg-gray-50">
+                            <tr
+                                key={operatorCase.id}
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() => onCaseClick?.(operatorCase)}
+                            >
                                 <td className="px-4 py-3 text-sm font-mono text-gray-900">
                                     {operatorCase.caseNumber}
                                 </td>
@@ -139,14 +144,30 @@ export function CaseListTable({ cases, isLoading }: CaseListTableProps) {
                                 <td className="px-4 py-3">
                                     <div className="flex items-center justify-end gap-2">
                                         <button
-                                            onClick={() => copyClientLink(operatorCase)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onCaseClick?.(operatorCase);
+                                            }}
+                                            className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                                            title="Ver detalles"
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                copyClientLink(operatorCase);
+                                            }}
                                             className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                             title="Copiar link del cliente"
                                         >
                                             <Copy className="h-4 w-4" />
                                         </button>
                                         <button
-                                            onClick={() => sendToWhatsApp(operatorCase)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                sendToWhatsApp(operatorCase);
+                                            }}
                                             className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                                             title="Enviar por WhatsApp"
                                         >
@@ -165,7 +186,8 @@ export function CaseListTable({ cases, isLoading }: CaseListTableProps) {
                 {cases.map((operatorCase) => (
                     <div
                         key={operatorCase.id}
-                        className="bg-white border border-gray-200 rounded-lg p-4 space-y-3"
+                        className="bg-white border border-gray-200 rounded-lg p-4 space-y-3 cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => onCaseClick?.(operatorCase)}
                     >
                         {/* Header */}
                         <div className="flex items-start justify-between">
@@ -205,18 +227,32 @@ export function CaseListTable({ cases, isLoading }: CaseListTableProps) {
                         {/* Actions */}
                         <div className="flex gap-2 pt-2">
                             <button
-                                onClick={() => copyClientLink(operatorCase)}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCaseClick?.(operatorCase);
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                             >
-                                <Copy className="h-4 w-4" />
-                                Copiar Link
+                                <Eye className="h-4 w-4" />
+                                Ver Detalles
                             </button>
                             <button
-                                onClick={() => sendToWhatsApp(operatorCase)}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyClientLink(operatorCase);
+                                }}
+                                className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                                <Copy className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    sendToWhatsApp(operatorCase);
+                                }}
+                                className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
                             >
                                 <MessageCircle className="h-4 w-4" />
-                                WhatsApp
                             </button>
                         </div>
                     </div>
