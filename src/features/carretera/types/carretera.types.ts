@@ -101,6 +101,40 @@ export interface GruistaAction {
     workshopLink?: string; // Generated link for workshop if towed
 }
 
+// Enhanced Gruista Types for Phase 3
+export interface GruistaCaseDetailed {
+    id: string;
+    caseNumber: string;
+    vehiclePlate: string;
+    clientName: string;
+    clientPhone: string;
+    symptom: string;
+    location?: string;
+    status: 'new' | 'in-progress' | 'completed' | 'needs-info' | 'towing';
+    assignedTo: string; // Gruista name/ID
+    questions: string[];
+    answers: string[];
+    aiAssessment: AIAssessment;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface AIAssessment {
+    diagnosis: string;
+    confidence: number; // 0-100
+    recommendation: TrafficLightDecisionType;
+    reasoning: string[];
+}
+
+export type TrafficLightDecisionType = 'repair' | 'info' | 'tow';
+
+export interface DecisionSubmission {
+    decision: TrafficLightDecisionType;
+    notes?: string;
+    workshopId?: string; // If towing
+    estimatedArrival?: Date; // If towing
+}
+
 // ============================================================================
 // Workshop Types
 // ============================================================================
