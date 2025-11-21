@@ -25,8 +25,10 @@ import Appointments from '@/pages/Appointments';
 import AppointmentDetails from '@/pages/AppointmentDetails';
 import BrowserbaseStreaming from '@/pages/BrowserbaseStreaming';
 import { WizardV2Entry, WizardV2NewEntry } from '@/features/damage-wizard-v2/routes';
+import { carreteraRoutes } from '@/features/carretera/routes';
 
 const router = createBrowserRouter([
+  ...carreteraRoutes,
   {
     path: '/',
     element: (

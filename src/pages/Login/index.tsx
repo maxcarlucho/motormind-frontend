@@ -39,6 +39,7 @@ const Login: React.FC = () => {
     setIsSendingMagicLink(true);
 
     try {
+      console.log('Attempting login with API URL:', apiUrl);
       const res = await axios.post(`${apiUrl}/auth/magic-link`, { email });
 
       if (res) {

@@ -1,3 +1,3 @@
-const apiUrl = import.meta.env.VITE_API_URL + '/api/v1';
+const apiUrl = 'https://motormind-backend-development.up.railway.app/api/v1';
 
 export { apiUrl };

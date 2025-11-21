@@ -60,6 +60,11 @@ const Dashboard = () => {
           <p className="text-muted hidden xl:block">Gestiona y revisa el estado del taller</p>
         </div>
         <div className="hidden items-center gap-2 sm:flex">
+          <Link to="/carretera/g/dashboard">
+            <Button variant="outline" className="h-8 sm:h-auto">
+              Carretera Demo
+            </Button>
+          </Link>
           <Button
             onClick={() => setIsCreateModalOpen(true)}
             className="h-8 w-8 sm:h-auto sm:w-auto"
