@@ -158,13 +158,5 @@ function getMockGruistaCases(): GruistaCaseDetailed[] {
 }
 */
 
-/**
- * Helper to save gruista cases to localStorage (for development)
- */
-export function saveGruistaCasesToStorage(cases: GruistaCaseDetailed[]) {
-    try {
-        localStorage.setItem('gruista_cases', JSON.stringify(cases));
-    } catch (err) {
-        console.error('Error saving gruista cases:', err);
-    }
-}
+// Note: We no longer need to save gruista cases separately
+// Cases are automatically read from operator cases and transformed on the fly

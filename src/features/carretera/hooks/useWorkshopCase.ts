@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { enqueueSnackbar } from 'notistack';
 import {
     WorkshopCaseDetailed,
-    WorkshopRepairStatus,
     WorkshopRejectionReason,
 } from '../types/carretera.types';
 import carreteraApi from '../services/carreteraApi.service';
@@ -15,7 +14,6 @@ interface UseWorkshopCaseReturn {
     error: string | null;
     acceptCase: () => Promise<string>; // Returns service order number
     rejectCase: (reason: WorkshopRejectionReason, notes?: string) => Promise<void>;
-    updateRepairStatus: (status: WorkshopRepairStatus) => Promise<void>;
     submitOBDDiagnosis: (obdCodes: string[], comments: string) => Promise<void>;
     isProcessing: boolean;
 }
@@ -171,59 +169,6 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
         }
     };
 
-    const updateRepairStatus = async (status: WorkshopRepairStatus): Promise<void> => {
-        setIsProcessing(true);
-        setError(null);
-
-        try {
-            // For now, use localStorage (API integration ready when backend is available)
-            // When backend is ready, uncomment this line:
-            // await carreteraApi.updateRepairStatus(caseId!, status);
-
-            // Mock implementation for development
-            const storedCases = localStorage.getItem('carretera_workshop_cases');
-            if (storedCases) {
-                const cases: WorkshopCaseDetailed[] = JSON.parse(storedCases);
-                const index = cases.findIndex(c => c.id === caseId);
-                if (index !== -1) {
-                    cases[index].repairStatus = status;
-                    cases[index].status = status === 'completed' ? 'completed' : 'in-repair';
-                    localStorage.setItem('carretera_workshop_cases', JSON.stringify(cases));
-                }
-            }
-
-            // Update local state
-            if (caseData) {
-                const updatedCase: WorkshopCaseDetailed = {
-                    ...caseData,
-                    repairStatus: status,
-                    status: status === 'completed' ? 'completed' : 'in-repair',
-                };
-                setCaseData(updatedCase);
-            }
-
-            const statusLabels: Record<WorkshopRepairStatus, string> = {
-                'pending-inspection': 'Pendiente de inspección',
-                inspecting: 'Inspeccionando',
-                'waiting-parts': 'Esperando repuestos',
-                repairing: 'Reparando',
-                testing: 'Probando',
-                completed: 'Completado',
-            };
-
-            enqueueSnackbar(`🔧 Estado actualizado: ${statusLabels[status]}`, {
-                variant: 'info',
-            });
-        } catch (err) {
-            console.error('Error updating repair status:', err);
-            const errorMessage = 'Error al actualizar el estado';
-            setError(errorMessage);
-            enqueueSnackbar(errorMessage, { variant: 'error' });
-            throw err;
-        } finally {
-            setIsProcessing(false);
-        }
-    };
 
     const submitOBDDiagnosis = async (obdCodes: string[], comments: string): Promise<void> => {
         setIsProcessing(true);
@@ -241,6 +186,9 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
 
             let diagnosisGenerated = false;
             let generatedFailures = null;
+
+            // Generate mock diagnosis for known OBD codes when no API is available
+            const mockDiagnosis = generateMockDiagnosis(obdCodes, caseData?.symptom || '');
 
             // If we have a diagnosis ID, try to regenerate diagnosis with OBD using core API
             // Only if authenticated (workshop dashboard) - not for workshop reception
@@ -274,8 +222,17 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
                         });
                     }
                 } catch (apiError) {
-                    console.log('Could not generate diagnosis with core API, saving locally');
+                    console.log('Could not generate diagnosis with core API, using mock data');
+                    // Use mock diagnosis if API fails
+                    if (mockDiagnosis) {
+                        diagnosisGenerated = true;
+                        generatedFailures = mockDiagnosis;
+                    }
                 }
+            } else if (mockDiagnosis) {
+                // No API available, use mock diagnosis
+                diagnosisGenerated = true;
+                generatedFailures = mockDiagnosis;
             }
 
             // Also try carretera backend if available and authenticated
@@ -345,7 +302,6 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
         error,
         acceptCase,
         rejectCase,
-        updateRepairStatus,
         submitOBDDiagnosis,
         isProcessing,
     };
@@ -423,4 +379,99 @@ function getMockWorkshopCase(caseId: string): WorkshopCaseDetailed | null {
     localStorage.setItem('carretera_workshop_cases', JSON.stringify(mockCases));
 
     return mockCases.find((c) => c.id === caseId) || null;
+}
+
+/**
+ * Generate mock diagnosis based on OBD codes
+ * This simulates AI diagnosis when API is not available
+ */
+function generateMockDiagnosis(obdCodes: string[], symptom: string) {
+    // P2425 - Exhaust Gas Recirculation (EGR) Cooling Valve Control Circuit
+    if (obdCodes.includes('P2425')) {
+        return [
+            {
+                part: 'Válvula de refrigeración EGR',
+                description: 'La válvula de control del circuito de refrigeración del EGR presenta un mal funcionamiento. Esto puede causar problemas de arranque en frío y pérdida de potencia.',
+                probability: 85,
+                steps: [
+                    'Verificar conexiones eléctricas de la válvula EGR',
+                    'Comprobar el funcionamiento del actuador de la válvula con escáner',
+                    'Inspeccionar el sistema de refrigeración del EGR por obstrucciones',
+                    'Si es necesario, reemplazar la válvula de refrigeración EGR',
+                    'Borrar códigos y realizar prueba de conducción'
+                ],
+                estimatedTime: '1.5 - 2 horas'
+            },
+            {
+                part: 'Cableado del circuito de control',
+                description: 'Posible cortocircuito o circuito abierto en el cableado de control de la válvula EGR.',
+                probability: 60,
+                steps: [
+                    'Inspeccionar visualmente el arnés de cables',
+                    'Medir continuidad en el circuito de control',
+                    'Verificar voltaje de referencia del ECM',
+                    'Reparar o reemplazar cableado dañado si se encuentra'
+                ],
+                estimatedTime: '45 - 60 minutos'
+            },
+            {
+                part: 'Módulo de Control del Motor (ECM)',
+                description: 'Fallo en el módulo de control que gestiona la válvula EGR. Menos probable pero posible.',
+                probability: 25,
+                steps: [
+                    'Verificar actualizaciones de software del ECM',
+                    'Realizar diagnóstico completo del ECM',
+                    'Comprobar otros códigos relacionados',
+                    'Reprogramar o reemplazar ECM si es necesario'
+                ],
+                estimatedTime: '2 - 3 horas'
+            }
+        ];
+    }
+
+    // P0171 - Sistema demasiado pobre (Banco 1)
+    if (obdCodes.includes('P0171')) {
+        return [
+            {
+                part: 'Fugas de aire en admisión',
+                description: 'Entrada de aire no medido después del sensor MAF causando mezcla pobre.',
+                probability: 75,
+                steps: [
+                    'Inspeccionar mangueras de vacío por grietas o desconexiones',
+                    'Verificar juntas del colector de admisión',
+                    'Comprobar el estado del filtro de aire',
+                    'Usar detector de fugas o spray para localizar entradas de aire'
+                ],
+                estimatedTime: '30 - 45 minutos'
+            },
+            {
+                part: 'Sensor MAF defectuoso',
+                description: 'El sensor de flujo de masa de aire puede estar sucio o dañado.',
+                probability: 60,
+                steps: [
+                    'Limpiar el sensor MAF con limpiador específico',
+                    'Verificar valores del sensor con escáner',
+                    'Comparar con especificaciones del fabricante',
+                    'Reemplazar si está fuera de rango'
+                ],
+                estimatedTime: '20 - 30 minutos'
+            }
+        ];
+    }
+
+    // Default diagnosis for unknown codes
+    return [
+        {
+            part: 'Diagnóstico pendiente',
+            description: `Código OBD ${obdCodes.join(', ')} detectado. Se requiere diagnóstico detallado basado en el síntoma: ${symptom}`,
+            probability: 50,
+            steps: [
+                'Verificar el significado específico del código en manual del fabricante',
+                'Realizar inspección visual del sistema afectado',
+                'Comprobar componentes relacionados con multímetro',
+                'Seguir árbol de diagnóstico del fabricante'
+            ],
+            estimatedTime: 'Por determinar'
+        }
+    ];
 }

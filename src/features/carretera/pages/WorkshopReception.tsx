@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Car, User, Phone, MapPin, Loader2 } from 'lucide-react';
+import { ArrowLeft, Car, User, Phone, MapPin, Loader2, Cpu, Wrench } from 'lucide-react';
 import { useWorkshopCase } from '../hooks/useWorkshopCase';
 import { ClientQAThread } from '../components/ClientQAThread';
 import { AIAssessmentSummary } from '../components/AIAssessmentSummary';
 import { GruistaDecisionSummary } from '../components/GruistaDecisionSummary';
 import { WorkshopActions } from '../components/WorkshopActions';
-import { RepairStatusTracker } from '../components/RepairStatusTracker';
 import { OBDDiagnosisForm } from '../components/OBDDiagnosisForm';
 
 export function WorkshopReception() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { caseData, isLoading, error, acceptCase, rejectCase, updateRepairStatus, submitOBDDiagnosis, isProcessing } =
+    const { caseData, isLoading, error, acceptCase, rejectCase, submitOBDDiagnosis, isProcessing } =
         useWorkshopCase(id);
     const [showOBDForm, setShowOBDForm] = useState(false);
 
@@ -30,7 +29,7 @@ export function WorkshopReception() {
     const handleOBDSubmit = async (obdCodes: string[], comments: string) => {
         await submitOBDDiagnosis(obdCodes, comments);
         setShowOBDForm(false);
-        // Optionally refresh or update the case data
+        // The AI diagnosis is generated and stored in caseData.obdDiagnosis
     };
 
     if (isLoading) {
@@ -184,28 +183,154 @@ export function WorkshopReception() {
                     />
                 </div>
 
-                {/* OBD Diagnosis Form (shows after accepting) */}
-                {showOBDForm && isAccepted && (
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">Diagnóstico Técnico</h2>
-                        <OBDDiagnosisForm
-                            onSubmit={handleOBDSubmit}
-                            isProcessing={isProcessing}
-                            caseNumber={caseData.caseNumber}
-                            vehiclePlate={caseData.vehiclePlate}
-                            symptom={caseData.symptom}
-                        />
+                {/* OBD Diagnosis Section - Shows immediately after accepting */}
+                {isAccepted && !caseData.obdDiagnosis && (
+                    <div className="space-y-6">
+                        {!showOBDForm ? (
+                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+                                <div className="flex items-start gap-4">
+                                    <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0 mt-1" />
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-blue-900 mb-2">
+                                            Diagnóstico OBD Pendiente
+                                        </h3>
+                                        <p className="text-blue-800 mb-4">
+                                            Conecta el escáner OBD al vehículo para obtener los códigos de error y generar un diagnóstico detallado con IA.
+                                        </p>
+                                        <button
+                                            onClick={() => setShowOBDForm(true)}
+                                            className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                        >
+                                            <Cpu className="h-5 w-5" />
+                                            Introducir Códigos OBD
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <OBDDiagnosisForm
+                                onSubmit={handleOBDSubmit}
+                                isProcessing={isProcessing}
+                                caseNumber={caseData.caseNumber}
+                                vehiclePlate={caseData.vehiclePlate}
+                                symptom={caseData.symptom}
+                            />
+                        )}
                     </div>
                 )}
 
-                {/* Repair Status Tracker (only if accepted and OBD completed) */}
-                {isAccepted && caseData.repairStatus && !showOBDForm && (
-                    <div>
-                        <RepairStatusTracker
-                            currentStatus={caseData.repairStatus}
-                            onUpdateStatus={updateRepairStatus}
-                            isProcessing={isProcessing}
-                        />
+                {/* AI Generated Diagnosis Results */}
+                {isAccepted && caseData.obdDiagnosis && (
+                    <div className="space-y-6">
+                        {/* OBD Codes Summary */}
+                        <div className="bg-white rounded-lg border-2 border-indigo-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
+                                <div className="flex items-center gap-2 text-white">
+                                    <Cpu className="h-5 w-5" />
+                                    <h3 className="font-bold text-lg">Diagnóstico OBD Completado</h3>
+                                </div>
+                            </div>
+                            <div className="p-4 space-y-3">
+                                <div>
+                                    <p className="text-sm text-gray-600 mb-1">Códigos OBD detectados:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {caseData.obdDiagnosis.obdCodes?.map((code: string, index: number) => (
+                                            <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-800 font-mono font-semibold rounded-lg">
+                                                {code}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                {caseData.obdDiagnosis.technicianComments && (
+                                    <div>
+                                        <p className="text-sm text-gray-600 mb-1">Observaciones del técnico:</p>
+                                        <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
+                                            {caseData.obdDiagnosis.technicianComments}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* AI Generated Possible Failures and Solutions */}
+                        <div className="bg-white rounded-lg border-2 border-green-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-green-600 to-teal-600 px-4 py-3">
+                                <div className="flex items-center gap-2 text-white">
+                                    <Wrench className="h-5 w-5" />
+                                    <h3 className="font-bold text-lg">Posibles Averías y Soluciones</h3>
+                                </div>
+                            </div>
+                            <div className="p-4">
+                                {caseData.obdDiagnosis.diagnosisGenerated && caseData.obdDiagnosis.failures ? (
+                                    <div className="space-y-4">
+                                        {caseData.obdDiagnosis.failures.map((failure: any, index: number) => (
+                                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                                                <div className="flex items-start gap-2 mb-3">
+                                                    <span className="text-2xl flex-shrink-0">
+                                                        {index === 0 ? '🔴' : index === 1 ? '🟡' : '🟢'}
+                                                    </span>
+                                                    <div className="flex-1">
+                                                        <h4 className="font-semibold text-gray-900 mb-1">
+                                                            {failure.part || `Avería ${index + 1}`}
+                                                        </h4>
+                                                        {failure.probability && (
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                <span className="text-sm text-gray-600">Probabilidad:</span>
+                                                                <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
+                                                                    <div
+                                                                        className={`h-2 rounded-full ${
+                                                                            failure.probability > 75 ? 'bg-red-500' :
+                                                                            failure.probability > 50 ? 'bg-yellow-500' :
+                                                                            'bg-green-500'
+                                                                        }`}
+                                                                        style={{ width: `${failure.probability}%` }}
+                                                                    />
+                                                                </div>
+                                                                <span className="text-sm font-semibold">{failure.probability}%</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <p className="text-gray-700 mb-3">{failure.description}</p>
+
+                                                {failure.steps && failure.steps.length > 0 && (
+                                                    <div className="bg-gray-50 rounded-lg p-3">
+                                                        <p className="text-sm font-semibold text-gray-700 mb-2">
+                                                            Pasos para solucionar:
+                                                        </p>
+                                                        <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                                                            {failure.steps.map((step: string, stepIndex: number) => (
+                                                                <li key={stepIndex}>{step}</li>
+                                                            ))}
+                                                        </ol>
+                                                    </div>
+                                                )}
+
+                                                {failure.estimatedTime && (
+                                                    <p className="text-xs text-gray-500 mt-2">
+                                                        ⏱ Tiempo estimado: {failure.estimatedTime}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
+                                            <p className="text-amber-800 text-sm">
+                                                <strong>⏳ Generando diagnóstico con IA...</strong>
+                                                <br/>El análisis de posibles averías se está procesando basándose en:
+                                            </p>
+                                            <ul className="text-sm text-amber-700 mt-2 list-disc list-inside">
+                                                <li>Códigos OBD: {caseData.obdDiagnosis.obdCodes?.join(', ')}</li>
+                                                <li>Síntoma: {caseData.symptom}</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 )}
 
