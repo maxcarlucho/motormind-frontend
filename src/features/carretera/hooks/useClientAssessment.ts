@@ -44,35 +44,35 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
     const { execute: updateDiagnosis } = useApi<Diagnosis>('put', '/cars/diagnosis/:diagnosisId');
     const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
 
-    // Helper function to load local data as fallback
-    const loadLocalData = useCallback((caseData: any) => {
-        if (!caseData) {
-            throw new Error('Caso no encontrado');
-        }
-
-        const carreteraAssessment: CarreteraAssessment = {
-            id: caseData.id,
-            clientName: caseData.clientName,
-            clientPhone: caseData.clientPhone,
-            symptom: caseData.symptom,
-            questions: caseData.questions.length > 0 ? caseData.questions : DIAGNOSTIC_QUESTIONS,
-            answers: caseData.answers || [],
-            status: caseData.status || 'pending',
-            createdAt: new Date(caseData.createdAt),
-            updatedAt: new Date(caseData.updatedAt),
-            vehicleInfo: {
-                plate: caseData.vehiclePlate,
-            },
-        };
-
-        setAssessment(carreteraAssessment);
-        setQuestions(carreteraAssessment.questions);
-        setAnswers(carreteraAssessment.answers);
-        setIsComplete(carreteraAssessment.status === 'completed');
-    }, []);
-
     // Load assessment data on mount or when ID changes
     useEffect(() => {
+        // Helper function to load local data as fallback
+        const loadLocalData = (caseData: any) => {
+            if (!caseData) {
+                throw new Error('Caso no encontrado');
+            }
+
+            const carreteraAssessment: CarreteraAssessment = {
+                id: caseData.id,
+                clientName: caseData.clientName,
+                clientPhone: caseData.clientPhone,
+                symptom: caseData.symptom,
+                questions: caseData.questions && caseData.questions.length > 0 ? caseData.questions : DIAGNOSTIC_QUESTIONS,
+                answers: caseData.answers || [],
+                status: caseData.status || 'pending',
+                createdAt: new Date(caseData.createdAt),
+                updatedAt: new Date(caseData.updatedAt),
+                vehicleInfo: {
+                    plate: caseData.vehiclePlate,
+                },
+            };
+
+            setAssessment(carreteraAssessment);
+            setQuestions(carreteraAssessment.questions);
+            setAnswers(carreteraAssessment.answers);
+            setIsComplete(carreteraAssessment.status === 'completed');
+        };
+
         const loadAssessment = async () => {
             if (!assessmentId) {
                 setError('No se proporcionó ID de evaluación');
@@ -142,7 +142,7 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
         };
 
         loadAssessment();
-    }, [assessmentId, getDiagnosis, loadLocalData]);
+    }, [assessmentId]); // Only depend on assessmentId to avoid infinite loops
 
     // Submit a new answer and save to core diagnosis
     const submitAnswer = useCallback(async (answer: string) => {
