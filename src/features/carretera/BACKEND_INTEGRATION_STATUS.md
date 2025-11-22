@@ -11,7 +11,7 @@ const diagnosisResponse = await damageAssessmentApi.intake({
     images: []
 });
 ```
-- **API Core:** `/damage-assessments/intakes`
+- **API Core:** `/diagnoses` (formerly `/damage-assessments/intakes`)
 - **Qué hace:** Crea un diagnóstico en el core cuando el operador crea un caso
 - **Fallback:** Si falla, guarda en localStorage
 
