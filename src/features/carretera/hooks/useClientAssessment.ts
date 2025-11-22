@@ -44,34 +44,35 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
     const { execute: updateDiagnosis } = useApi<Diagnosis>('put', '/cars/diagnosis/:diagnosisId');
     const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
 
+    // Helper function to load local data as fallback - moved outside useEffect
+    const loadLocalData = (caseData: any) => {
+        if (!caseData) {
+            throw new Error('Caso no encontrado');
+        }
+
+        const carreteraAssessment: CarreteraAssessment = {
+            id: caseData.id,
+            clientName: caseData.clientName,
+            clientPhone: caseData.clientPhone,
+            symptom: caseData.symptom,
+            questions: caseData.questions && caseData.questions.length > 0 ? caseData.questions : DIAGNOSTIC_QUESTIONS,
+            answers: caseData.answers || [],
+            status: caseData.status || 'pending',
+            createdAt: new Date(caseData.createdAt),
+            updatedAt: new Date(caseData.updatedAt),
+            vehicleInfo: {
+                plate: caseData.vehiclePlate,
+            },
+        };
+
+        setAssessment(carreteraAssessment);
+        setQuestions(carreteraAssessment.questions);
+        setAnswers(carreteraAssessment.answers);
+        setIsComplete(carreteraAssessment.status === 'completed');
+    };
+
     // Load assessment data on mount or when ID changes
     useEffect(() => {
-        // Helper function to load local data as fallback
-        const loadLocalData = (caseData: any) => {
-            if (!caseData) {
-                throw new Error('Caso no encontrado');
-            }
-
-            const carreteraAssessment: CarreteraAssessment = {
-                id: caseData.id,
-                clientName: caseData.clientName,
-                clientPhone: caseData.clientPhone,
-                symptom: caseData.symptom,
-                questions: caseData.questions && caseData.questions.length > 0 ? caseData.questions : DIAGNOSTIC_QUESTIONS,
-                answers: caseData.answers || [],
-                status: caseData.status || 'pending',
-                createdAt: new Date(caseData.createdAt),
-                updatedAt: new Date(caseData.updatedAt),
-                vehicleInfo: {
-                    plate: caseData.vehiclePlate,
-                },
-            };
-
-            setAssessment(carreteraAssessment);
-            setQuestions(carreteraAssessment.questions);
-            setAnswers(carreteraAssessment.answers);
-            setIsComplete(carreteraAssessment.status === 'completed');
-        };
 
         const loadAssessment = async () => {
             if (!assessmentId) {
@@ -91,6 +92,14 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                 if (localCaseData?.diagnosisId) {
                     // We have a diagnosis ID, fetch real data from core
                     try {
+                        // Skip API call if we don't have a token (client in incognito)
+                        const token = localStorage.getItem('token');
+                        if (!token) {
+                            console.log('No auth token, using local data only');
+                            loadLocalData(localCaseData);
+                            return;
+                        }
+
                         const diagnosisResponse = await getDiagnosis(undefined, undefined, {
                             diagnosisId: localCaseData.diagnosisId
                         });
@@ -156,8 +165,9 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
             const newAnswers = [...answers, answer];
             setAnswers(newAnswers);
 
-            // Save to core diagnosis if we have a diagnosis ID
-            if (diagnosisId) {
+            // Save to core diagnosis if we have a diagnosis ID and token
+            const token = localStorage.getItem('token');
+            if (diagnosisId && token) {
                 try {
                     await updateDiagnosis(
                         {
@@ -204,8 +214,9 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
         try {
             setIsLoading(true);
 
-            // Generate preliminary diagnosis without OBD codes
-            if (diagnosisId && carId) {
+            // Generate preliminary diagnosis without OBD codes (only if authenticated)
+            const token = localStorage.getItem('token');
+            if (diagnosisId && carId && token) {
                 try {
                     const preliminaryResponse = await generatePreliminary(
                         {
