@@ -216,6 +216,14 @@ export interface OBDDiagnosisData {
     technicianComments: string;
     timestamp: Date;
     diagnosisId?: string; // ID from backend when diagnosis is generated
+    diagnosisGenerated?: boolean;
+    failures?: Array<{
+        part: string;
+        probability: number;
+        description: string;
+        steps: string[];
+        estimatedTime?: string;
+    }>;
 }
 
 export interface GeneratedDiagnosis {

@@ -56,8 +56,8 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
 
                     // Transform to gruista format
                     const gruistaStatus = opCase.status === 'pending' ? 'new' :
-                                         opCase.status === 'assigned' ? 'in-progress' :
-                                         opCase.status;
+                        opCase.status === 'assigned' ? 'in-progress' :
+                            opCase.status;
 
                     const transformedCase: GruistaCaseDetailed = {
                         id: opCase.id,
@@ -142,11 +142,9 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
                 const operatorCases = JSON.parse(operatorCasesStr);
 
                 // Map gruista status back to operator status
-                const operatorStatus = newStatus === 'new' ? 'pending' :
-                                       newStatus === 'in-progress' ? 'assigned' :
-                                       newStatus === 'completed' ? 'completed' :
-                                       newStatus === 'towing' ? 'towing' :
-                                       newStatus;
+                const operatorStatus = newStatus === 'completed' ? 'completed' :
+                    newStatus === 'towing' ? 'towing' :
+                        newStatus;
 
                 const updatedCases = operatorCases.map((c: any) =>
                     c.id === caseData.id

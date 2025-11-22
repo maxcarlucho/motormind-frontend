@@ -118,7 +118,7 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
 
     const rejectCase = async (
         reason: WorkshopRejectionReason,
-        notes?: string
+        _notes?: string
     ): Promise<void> => {
         setIsProcessing(true);
         setError(null);

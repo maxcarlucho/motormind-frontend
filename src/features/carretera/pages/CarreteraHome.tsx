@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Truck, Wrench, Phone, Car, ArrowRight } from 'lucide-react';
+import { Truck, Wrench, Phone, Car, ArrowRight } from 'lucide-react';
 
 /**
  * Landing page for Carretera MVP with quick navigation links

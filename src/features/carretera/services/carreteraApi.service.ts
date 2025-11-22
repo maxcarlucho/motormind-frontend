@@ -9,8 +9,7 @@ import {
     WorkshopCaseDetailed,
     WorkshopRepairStatus,
     WorkshopRejectionReason,
-    CarreteraAssessment,
-    ChatMessageData
+    CarreteraAssessment
 } from '../types/carretera.types';
 
 /**

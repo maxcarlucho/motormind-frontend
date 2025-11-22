@@ -238,10 +238,3 @@ export function OBDDiagnosisForm({
     );
 }
 
-// Helper to parse OBD codes from string
-const parseOBDCodes = (input: string): string[] => {
-    return input
-        .split(/[\s,;]+/)
-        .map(code => code.trim().toUpperCase())
-        .filter(code => /^[PBCU][0-9A-F]{4}$/i.test(code));
-};

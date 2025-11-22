@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Car, ChevronRight, Package, Wrench, CheckCircle, Clock, Filter, Search, RefreshCw } from 'lucide-react';
+import { Car, ChevronRight, Search, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { WorkshopCaseDetailed, WorkshopCaseStatus, WorkshopRepairStatus } from '../types/carretera.types';
@@ -117,51 +117,46 @@ export function WorkshopDashboard() {
                 <div className="flex gap-2 overflow-x-auto">
                     <button
                         onClick={() => setStatusFilter('all')}
-                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-                            statusFilter === 'all'
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'all'
                                 ? 'bg-indigo-600 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            }`}
                     >
                         Todos ({statusCounts.all})
                     </button>
                     <button
                         onClick={() => setStatusFilter('incoming')}
-                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-                            statusFilter === 'incoming'
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'incoming'
                                 ? 'bg-yellow-500 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            }`}
                     >
                         📥 Entrantes ({statusCounts.incoming})
                     </button>
                     <button
                         onClick={() => setStatusFilter('accepted')}
-                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-                            statusFilter === 'accepted'
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'accepted'
                                 ? 'bg-green-500 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            }`}
                     >
                         ✅ Aceptados ({statusCounts.accepted})
                     </button>
                     <button
                         onClick={() => setStatusFilter('in-repair')}
-                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-                            statusFilter === 'in-repair'
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'in-repair'
                                 ? 'bg-blue-500 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            }`}
                     >
                         🔧 En Reparación ({statusCounts['in-repair']})
                     </button>
                     <button
                         onClick={() => setStatusFilter('completed')}
-                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
-                            statusFilter === 'completed'
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'completed'
                                 ? 'bg-purple-500 text-white'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                            }`}
                     >
                         🎉 Completados ({statusCounts.completed})
                     </button>

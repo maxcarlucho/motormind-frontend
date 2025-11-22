@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Wifi, Loader2 } from 'lucide-react';
 import { testBackendConnection, testAPIFormats } from '../debug/testBackendConnection';
 
 export function BackendTestButton() {
