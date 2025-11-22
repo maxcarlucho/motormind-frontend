@@ -144,7 +144,7 @@ export function QuickBackendCheck() {
                     setDetails('Server error (500)');
                 } else {
                     setStatus('offline');
-                    setDetails(`HTTP ${status}: ${data?.message || statusText || 'Unknown error'}`);
+                    setDetails(`HTTP ${status}: ${data?.message || error.response.statusText || 'Unknown error'}`);
                 }
             } else if (error.request) {
                 // The request was made but no response was received

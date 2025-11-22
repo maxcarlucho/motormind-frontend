@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, RefreshCw, Search } from 'lucide-react';
-import { useOperatorCases, addCaseToLocalStorage } from '../hooks/useOperatorCases';
+import { useOperatorCases } from '../hooks/useOperatorCases';
 import { CreateCaseModal } from '../components/CreateCaseModal';
 import { CaseListTable } from '../components/CaseListTable';
 import { CaseDetailModal } from '../components/CaseDetailModal';
@@ -27,25 +27,11 @@ export function OperatorDashboard() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const handleCreateSuccess = (caseId: string) => {
-        // Create a mock case for demonstration
-        // In production, this would come from the API response
-        const newCase: OperatorCase = {
-            id: caseId,
-            caseNumber: `C-${String(cases.length + 1).padStart(3, '0')}`,
-            vehiclePlate: 'NEW1234', // This would come from form data
-            clientName: 'Cliente Nuevo', // This would come from form data
-            clientPhone: '+34600000000', // This would come from form data
-            symptom: 'Nuevo caso creado', // This would come from form data
-            status: 'pending',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            clientLink: `${window.location.origin}/carretera/c/${caseId}`,
-        };
+        // The case has already been created and saved by useCreateCase hook
+        // Just refresh the list to show the new case
+        console.log('Case created successfully with ID:', caseId);
 
-        // Add to localStorage for development
-        addCaseToLocalStorage(newCase);
-
-        // Refresh the list
+        // Refresh the list to show the newly created case
         refresh();
     };
 

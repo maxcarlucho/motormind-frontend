@@ -35,6 +35,7 @@ export function useCreateCase(): UseCreateCaseReturn {
 
             let diagnosisId: string;
             let carId: string | null = null;
+            let generatedQuestions: string[] = [];
 
             try {
                 // Step 1: Get or create vehicle by license plate
@@ -85,8 +86,9 @@ export function useCreateCase(): UseCreateCaseReturn {
                 }
 
                 diagnosisId = diagnosisResponse.data._id;
+                generatedQuestions = diagnosisResponse.data.questions || [];
                 console.log('✅ Diagnosis created successfully:', diagnosisId);
-                console.log('✅ Questions generated:', diagnosisResponse.data.questions?.length || 0);
+                console.log('✅ Questions generated:', generatedQuestions.length);
 
             } catch (apiError: any) {
                 console.warn('⚠️ Could not create diagnosis in core system');
@@ -122,6 +124,14 @@ export function useCreateCase(): UseCreateCaseReturn {
                 const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 diagnosisId = `local-${uniqueId}`;
                 console.log('📝 Using local diagnosis ID:', diagnosisId);
+                // Use default questions when API fails
+                generatedQuestions = [
+                    "¿Qué síntoma presenta el vehículo?",
+                    "¿Cuándo comenzó el problema?",
+                    "¿El vehículo hace algún ruido extraño?",
+                    "¿Has notado algún olor inusual?",
+                    "¿El problema es constante o intermitente?"
+                ];
             }
 
             // Step 2: Try to create case in carretera backend
@@ -132,10 +142,11 @@ export function useCreateCase(): UseCreateCaseReturn {
 
                 if (isBackendAvailable) {
                     // Use real backend
-                    const response = await carreteraApi.createCase({
+                    const caseWithDiagnosis = {
                         ...data,
                         diagnosisId // Link to core diagnosis
-                    });
+                    } as any;
+                    const response = await carreteraApi.createCase(caseWithDiagnosis);
 
                     setCreatedCaseId(response.data.id);
                     enqueueSnackbar(`✅ Caso ${response.data.caseNumber} creado exitosamente`, {
@@ -149,9 +160,8 @@ export function useCreateCase(): UseCreateCaseReturn {
             }
 
             // Fallback: Use localStorage if carretera backend is not available
-            const timestamp = Date.now();
-            // Use unique ID to avoid duplicates
-            const caseId = diagnosisId.startsWith('local-') ? diagnosisId : `case-${diagnosisId}`;
+            // Use diagnosisId directly as caseId to avoid confusion
+            const caseId = diagnosisId;
             const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
             const caseNumber = `C-${String(caseCount).padStart(3, '0')}`;
 
@@ -188,7 +198,7 @@ export function useCreateCase(): UseCreateCaseReturn {
             const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
             clientCases[caseId] = {
                 ...newCase,
-                questions: [],
+                questions: generatedQuestions, // Use the questions from the diagnosis
                 answers: [],
                 currentQuestionIndex: 0,
                 diagnosisId,

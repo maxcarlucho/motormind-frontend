@@ -124,7 +124,7 @@ export function OBDDiagnosisForm({
                                 errors.obdCodes ? 'border-red-400' : 'border-gray-300'
                             } disabled:bg-gray-100 disabled:cursor-not-allowed`}
                         />
-                        {codes.length > 0 && !errors.obdCodes && (
+                        {formData.obdCodes && formData.obdCodes.length > 0 && !errors.obdCodes && (
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
                                 <CheckCircle className="h-5 w-5 text-green-500" />
                             </div>

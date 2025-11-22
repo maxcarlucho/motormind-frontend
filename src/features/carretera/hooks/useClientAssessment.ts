@@ -3,7 +3,6 @@ import { enqueueSnackbar } from 'notistack';
 import { CarreteraAssessment } from '../types/carretera.types';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
-import carreteraApi from '../services/carreteraApi.service';
 
 interface UseClientAssessmentReturn {
     assessment: CarreteraAssessment | null;
@@ -42,7 +41,7 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
 
     // API hooks for core diagnosis system
     const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
-    const { execute: updateDiagnosis } = useApi<Diagnosis>('patch', '/cars/diagnosis/:diagnosisId');
+    const { execute: updateDiagnosis } = useApi<Diagnosis>('put', '/cars/diagnosis/:diagnosisId');
     const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
 
     // Helper function to load local data as fallback
@@ -97,7 +96,7 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                         });
 
                         const diagnosis = diagnosisResponse.data;
-                        setDiagnosisId(diagnosis._id);
+                        setDiagnosisId(diagnosis._id || null);
                         setCarId(diagnosis.car?._id || null);
 
                         // Extract questions from diagnosis
@@ -109,7 +108,7 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                             id: assessmentId,
                             clientName: localCaseData.clientName,
                             clientPhone: localCaseData.clientPhone,
-                            symptom: diagnosis.symptoms || localCaseData.symptom,
+                            symptom: diagnosis.fault || localCaseData.symptom,
                             questions: diagnosisQuestions,
                             answers: diagnosisAnswers,
                             status: diagnosis.status === 'completed' ? 'completed' : 'in-progress',
