@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { OperatorCase, CaseFilters, AssessmentStatus } from '../types/carretera.types';
+import { cleanDuplicateCases } from '../utils/cleanDuplicateCases';
+import '../utils/clearAllData'; // Auto-imports the duplicate checker
 
 interface UseOperatorCasesReturn {
     cases: OperatorCase[];
@@ -47,6 +49,9 @@ export function useOperatorCases(): UseOperatorCasesReturn {
     };
 
     useEffect(() => {
+        // Clean duplicates first
+        cleanDuplicateCases();
+        // Then load cases
         loadCases();
     }, []);
 

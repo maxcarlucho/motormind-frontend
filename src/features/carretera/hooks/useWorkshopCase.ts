@@ -6,6 +6,8 @@ import {
     WorkshopRejectionReason,
 } from '../types/carretera.types';
 import carreteraApi from '../services/carreteraApi.service';
+import { useApi } from '@/hooks/useApi';
+import { Diagnosis } from '@/types/Diagnosis';
 
 interface UseWorkshopCaseReturn {
     caseData: WorkshopCaseDetailed | null;
@@ -29,6 +31,10 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // API hooks for core diagnosis system
+    const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
+    const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
 
     useEffect(() => {
         if (!caseId) {
@@ -228,18 +234,68 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
                 throw new Error('No case data available');
             }
 
-            // For now, use localStorage (API integration ready when backend is available)
-            // When backend is ready, uncomment this line:
-            // const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
+            // Try to get diagnosis ID from localStorage (was saved when case was created)
+            const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+            const clientCase = clientCases[caseId];
+            const diagnosisId = clientCase?.diagnosisId;
 
-            // Mock implementation for development
+            let diagnosisGenerated = false;
+            let generatedFailures = null;
+
+            // If we have a diagnosis ID, try to regenerate diagnosis with OBD using core API
+            if (diagnosisId) {
+                try {
+                    // First, get the diagnosis to get carId
+                    const diagnosisResponse = await getDiagnosis(undefined, undefined, {
+                        diagnosisId
+                    });
+                    const diagnosis = diagnosisResponse.data;
+                    const carId = diagnosis.car?._id;
+
+                    if (carId) {
+                        // Now regenerate the diagnosis with OBD codes
+                        const preliminaryResponse = await generatePreliminary(
+                            {
+                                obdCodes, // Now WITH OBD codes for full diagnosis
+                            },
+                            undefined,
+                            { carId, diagnosisId }
+                        );
+
+                        console.log('Full diagnosis generated with OBD:', preliminaryResponse.data);
+                        diagnosisGenerated = true;
+                        generatedFailures = preliminaryResponse.data.processedFault || null;
+
+                        enqueueSnackbar('✅ Diagnóstico completo generado con códigos OBD', {
+                            variant: 'success',
+                            autoHideDuration: 5000
+                        });
+                    }
+                } catch (apiError) {
+                    console.log('Could not generate diagnosis with core API, saving locally');
+                }
+            }
+
+            // Also try carretera backend if available
+            try {
+                const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
+                if (isBackendAvailable) {
+                    const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
+                    console.log('Carretera backend response:', result);
+                }
+            } catch (carreteraError) {
+                console.log('Carretera backend not available');
+            }
+
+            // Always save to localStorage as fallback
             const obdDiagnosisData = {
                 obdCodes,
                 technicianComments: comments,
                 timestamp: new Date().toISOString(),
+                diagnosisGenerated,
+                failures: generatedFailures,
             };
 
-            // Store in localStorage for development
             const storedCases = localStorage.getItem('carretera_workshop_cases');
             if (storedCases) {
                 const cases: WorkshopCaseDetailed[] = JSON.parse(storedCases);
@@ -256,14 +312,17 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
                 const updatedCase: WorkshopCaseDetailed = {
                     ...caseData,
                     repairStatus: 'inspecting',
+                    obdDiagnosis: obdDiagnosisData as any,
                 };
                 setCaseData(updatedCase);
             }
 
-            enqueueSnackbar('✅ Diagnóstico OBD registrado exitosamente', {
-                variant: 'success',
-                autoHideDuration: 4000,
-            });
+            if (!diagnosisGenerated) {
+                enqueueSnackbar('✅ Diagnóstico OBD guardado (sin conexión al servidor)', {
+                    variant: 'success',
+                    autoHideDuration: 4000,
+                });
+            }
         } catch (err) {
             console.error('Error submitting OBD diagnosis:', err);
             const errorMessage = 'Error al enviar el diagnóstico OBD';
