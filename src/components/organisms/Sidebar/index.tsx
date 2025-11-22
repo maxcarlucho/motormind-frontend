@@ -10,6 +10,7 @@ import {
   MenuIcon,
   SettingsIcon,
   TestTubeDiagonal,
+  TruckIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -71,6 +72,13 @@ export const Sidebar = ({ className }: SidebarNavigationProps) => {
       roles: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
     },
     {
+      id: 'carretera',
+      icon: TruckIcon,
+      label: 'Carretera',
+      href: '/carretera',
+      roles: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+    },
+    {
       icon: LineChartIcon,
       label: 'Métricas',
       href: '/metrics',
@@ -118,6 +126,7 @@ export const Sidebar = ({ className }: SidebarNavigationProps) => {
             (item.href === '/appointments' && currentPath.startsWith('/appointments')) ||
             (item.href === '/damage-assessments' &&
               currentPath.startsWith('/damage-assessments')) ||
+            (item.href === '/carretera' && currentPath.startsWith('/carretera')) ||
             (item.href === '/metrics' && currentPath.startsWith('/metrics')) ||
             (item.href === '/audits/evaluations' &&
               currentPath.startsWith('/audits/evaluations')) ||
