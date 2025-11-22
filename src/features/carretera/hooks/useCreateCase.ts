@@ -177,6 +177,7 @@ export function useCreateCase(): UseCreateCaseReturn {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 clientLink: `/carretera/c/${caseId}`,
+                workshopLink: `/carretera/t/${caseId}`, // Add workshop link
                 diagnosisId, // Store diagnosis ID reference
             } as OperatorCase & { diagnosisId: string };
 

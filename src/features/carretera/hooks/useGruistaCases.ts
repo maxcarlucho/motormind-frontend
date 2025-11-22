@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GruistaCaseDetailed } from '../types/carretera.types';
+import { useAuth } from '@/context/Auth.context';
 
 interface UseGruistaCasesReturn {
     cases: GruistaCaseDetailed[];
@@ -18,6 +19,7 @@ export function useGruistaCases(): UseGruistaCasesReturn {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<'new' | 'in-progress' | 'all'>('all');
+    const { user } = useAuth(); // Get current user
 
     const loadCases = async () => {
         try {
@@ -25,8 +27,9 @@ export function useGruistaCases(): UseGruistaCasesReturn {
             setError(null);
 
             // For development, load from localStorage or use mock data
-            const mockCases = await fetchGruistaCasesFromStorage();
-            setCases(mockCases);
+            // Pass user information to fetch function
+            const gruistaCases = await fetchGruistaCasesFromStorage(user?.name || 'Gruista');
+            setCases(gruistaCases);
         } catch (err) {
             console.error('Error loading gruista cases:', err);
             setError('Error al cargar los casos');
@@ -37,7 +40,8 @@ export function useGruistaCases(): UseGruistaCasesReturn {
 
     useEffect(() => {
         loadCases();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]); // Reload when user changes
 
     const refresh = async () => {
         await loadCases();
@@ -67,15 +71,69 @@ export function useGruistaCases(): UseGruistaCasesReturn {
 
 /**
  * Fetch gruista cases from localStorage (development)
+ * This function now reads from operator cases and automatically assigns them to the gruista
  * In production, this will call the backend API
  */
-async function fetchGruistaCasesFromStorage(): Promise<GruistaCaseDetailed[]> {
+async function fetchGruistaCasesFromStorage(gruistaName: string): Promise<GruistaCaseDetailed[]> {
     try {
+        // First, try to get operator cases (these are the real cases created)
+        const operatorCasesStr = localStorage.getItem('carretera_operator_cases');
+        const clientCasesStr = localStorage.getItem('carretera_client_cases');
+
+        if (operatorCasesStr) {
+            const operatorCases = JSON.parse(operatorCasesStr);
+            const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
+
+            // Transform operator cases to gruista format
+            const gruistaCases = operatorCases.map((opCase: any) => {
+                // Get client case data if it exists
+                const clientCase = clientCases[opCase.id] || {};
+
+                // Map status: pending -> new (for gruista view)
+                const gruistaStatus = opCase.status === 'pending' ? 'new' :
+                                     opCase.status === 'assigned' ? 'in-progress' :
+                                     opCase.status;
+
+                return {
+                    id: opCase.id,
+                    caseNumber: opCase.caseNumber,
+                    vehiclePlate: opCase.vehiclePlate,
+                    clientName: opCase.clientName,
+                    clientPhone: opCase.clientPhone,
+                    symptom: opCase.symptom,
+                    location: opCase.location || 'No especificada',
+                    status: gruistaStatus,
+                    assignedTo: gruistaName, // Assign to current user
+                    questions: clientCase.questions || [
+                        '¿Qué problema presenta el vehículo?',
+                        '¿Desde cuándo ocurre?',
+                        '¿Ha intentado alguna solución?'
+                    ],
+                    answers: clientCase.answers || [],
+                    aiAssessment: clientCase.aiAssessment || {
+                        diagnosis: 'Pendiente de evaluación del cliente',
+                        confidence: 0,
+                        recommendation: 'tow', // Default to tow for safety
+                        reasoning: ['Caso en espera de respuestas del cliente'],
+                    },
+                    createdAt: new Date(opCase.createdAt),
+                    updatedAt: new Date(opCase.updatedAt),
+                };
+            });
+
+            // Sort by creation date (newest first)
+            gruistaCases.sort((a: any, b: any) => b.createdAt - a.createdAt);
+
+            return gruistaCases;
+        }
+
+        // If no operator cases exist, check for legacy gruista_cases
         const stored = localStorage.getItem('gruista_cases');
         if (stored) {
             const parsed = JSON.parse(stored);
             return parsed.map((c: any) => ({
                 ...c,
+                assignedTo: gruistaName, // Update assigned name
                 createdAt: new Date(c.createdAt),
                 updatedAt: new Date(c.updatedAt),
             }));
@@ -84,116 +142,21 @@ async function fetchGruistaCasesFromStorage(): Promise<GruistaCaseDetailed[]> {
         console.error('Error fetching gruista cases:', err);
     }
 
-    // Return mock data if no stored cases
-    return getMockGruistaCases();
+    // Return empty array instead of mock data - cleaner for production
+    // If you want to see mock data for testing, uncomment the next line:
+    // return getMockGruistaCases();
+    return [];
 }
 
-/**
- * Mock data for development
- */
+// Mock data function removed - now we use real operator cases
+// If you need to restore mock data for testing, uncomment the function below:
+/*
 function getMockGruistaCases(): GruistaCaseDetailed[] {
     return [
-        {
-            id: 'gruista-case-001',
-            caseNumber: 'C-001',
-            vehiclePlate: 'ABC1234',
-            clientName: 'Juan Pérez',
-            clientPhone: '+34600123456',
-            symptom: 'Motor no arranca, hace click',
-            location: 'A-1 km 25 dirección Madrid',
-            status: 'new',
-            assignedTo: 'Paco García',
-            questions: [
-                '¿El motor hace algún ruido al intentar arrancar?',
-                '¿Las luces del tablero encienden?',
-                '¿Cuándo fue la última vez que cambió la batería?',
-            ],
-            answers: [
-                'Sí, hace un click repetitivo',
-                'Sí, todas las luces funcionan normalmente',
-                'Hace aproximadamente 3 años',
-            ],
-            aiAssessment: {
-                diagnosis: 'Posible fallo en motor de arranque o batería descargada',
-                confidence: 75,
-                recommendation: 'tow',
-                reasoning: [
-                    'Click característico indica motor de arranque',
-                    'Luces funcionan sugiere batería con carga',
-                    'Requiere diagnóstico profesional con equipo',
-                ],
-            },
-            createdAt: new Date(Date.now() - 15 * 60 * 1000), // 15 min ago
-            updatedAt: new Date(),
-        },
-        {
-            id: 'gruista-case-002',
-            caseNumber: 'C-002',
-            vehiclePlate: 'XYZ5678',
-            clientName: 'María García',
-            clientPhone: '+34611222333',
-            symptom: 'Rueda pinchada, no tiene rueda de repuesto',
-            location: 'M-30 salida 12',
-            status: 'in-progress',
-            assignedTo: 'Paco García',
-            questions: [
-                '¿Tiene rueda de repuesto?',
-                '¿El vehículo está en lugar seguro?',
-                '¿Puede cambiar la rueda usted mismo?',
-            ],
-            answers: [
-                'No, solo tiene kit antipinchazos',
-                'Sí, en el arcén',
-                'No, nunca lo he hecho',
-            ],
-            aiAssessment: {
-                diagnosis: 'Pinchazo sin rueda de repuesto disponible',
-                confidence: 95,
-                recommendation: 'tow',
-                reasoning: [
-                    'No dispone de rueda de repuesto',
-                    'Kit antipinchazos no es solución permanente',
-                    'Requiere traslado a taller para reparación',
-                ],
-            },
-            createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5 min ago
-            updatedAt: new Date(),
-        },
-        {
-            id: 'gruista-case-003',
-            caseNumber: 'C-003',
-            vehiclePlate: 'DEF9012',
-            clientName: 'Pedro López',
-            clientPhone: '+34622333444',
-            symptom: 'Batería descargada',
-            location: 'Parking Centro Comercial La Vaguada',
-            status: 'new',
-            assignedTo: 'Paco García',
-            questions: [
-                '¿Se quedó sin batería de repente?',
-                '¿Dejó las luces encendidas?',
-                '¿Qué edad tiene la batería?',
-            ],
-            answers: [
-                'Sí, de repente no arrancó',
-                'No, todo estaba apagado',
-                'Unos 5 años aproximadamente',
-            ],
-            aiAssessment: {
-                diagnosis: 'Batería agotada por antigüedad',
-                confidence: 85,
-                recommendation: 'repair',
-                reasoning: [
-                    'Batería con más de 4 años de antigüedad',
-                    'No hay indicios de luces olvidadas',
-                    'Posible arranque con pinzas',
-                ],
-            },
-            createdAt: new Date(Date.now() - 30 * 60 * 1000), // 30 min ago
-            updatedAt: new Date(),
-        },
+        // ... mock cases here ...
     ];
 }
+*/
 
 /**
  * Helper to save gruista cases to localStorage (for development)

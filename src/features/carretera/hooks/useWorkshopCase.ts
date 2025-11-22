@@ -243,7 +243,9 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
             let generatedFailures = null;
 
             // If we have a diagnosis ID, try to regenerate diagnosis with OBD using core API
-            if (diagnosisId) {
+            // Only if authenticated (workshop dashboard) - not for workshop reception
+            const token = localStorage.getItem('token');
+            if (diagnosisId && token) {
                 try {
                     // First, get the diagnosis to get carId
                     const diagnosisResponse = await getDiagnosis(undefined, undefined, {
@@ -276,15 +278,18 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
                 }
             }
 
-            // Also try carretera backend if available
-            try {
-                const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
-                if (isBackendAvailable) {
-                    const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
-                    console.log('Carretera backend response:', result);
+            // Also try carretera backend if available and authenticated
+            const authToken = localStorage.getItem('token');
+            if (authToken) {
+                try {
+                    const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
+                    if (isBackendAvailable) {
+                        const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
+                        console.log('Carretera backend response:', result);
+                    }
+                } catch (carreteraError) {
+                    console.log('Carretera backend not available');
                 }
-            } catch (carreteraError) {
-                console.log('Carretera backend not available');
             }
 
             // Always save to localStorage as fallback

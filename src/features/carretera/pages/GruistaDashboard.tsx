@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { RefreshCw, Truck } from 'lucide-react';
 import { useGruistaCases } from '../hooks/useGruistaCases';
 import { GruistaCaseCard } from '../components/GruistaCaseCard';
+import { useAuth } from '@/context/Auth.context';
 
 export function GruistaDashboard() {
     const navigate = useNavigate();
+    const { user } = useAuth(); // Get current user
     const { cases, isLoading, error, refresh, filterByStatus, filteredCases } = useGruistaCases();
     const [selectedFilter, setSelectedFilter] = useState<'new' | 'in-progress' | 'all'>('all');
 
@@ -33,7 +35,7 @@ export function GruistaDashboard() {
                             <Truck className="h-8 w-8" />
                             <div>
                                 <h1 className="text-2xl font-bold">Casos Asignados</h1>
-                                <p className="text-sm text-blue-100">Paco García</p>
+                                <p className="text-sm text-blue-100">{user?.name || 'Gruista'}</p>
                             </div>
                         </div>
                         <button

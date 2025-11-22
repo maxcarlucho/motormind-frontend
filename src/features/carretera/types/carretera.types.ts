@@ -276,6 +276,7 @@ export interface OperatorCase {
     createdAt: Date;
     updatedAt: Date;
     clientLink: string; // Pre-computed link
+    workshopLink?: string; // Pre-computed link for workshop
 }
 
 export interface CaseFormData {

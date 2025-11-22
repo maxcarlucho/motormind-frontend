@@ -6,34 +6,35 @@ import { GruistaDetail } from './pages/GruistaDetail';
 import { WorkshopReception } from './pages/WorkshopReception';
 import { WorkshopDashboard } from './pages/WorkshopDashboard';
 import { OperatorDashboard } from './pages/OperatorDashboard';
+import { RequireAuth } from './components/RequireAuth';
 
 export const carreteraRoutes: RouteObject[] = [
     {
         path: '/carretera',
-        element: <CarreteraHome />,
+        element: <RequireAuth><CarreteraHome /></RequireAuth>, // Main hub requires auth
     },
     {
         path: '/operador',
-        element: <OperatorDashboard />,
+        element: <RequireAuth><OperatorDashboard /></RequireAuth>, // Operator requires auth
     },
     {
         path: '/carretera/c/:id',
-        element: <ClientLanding />,
+        element: <ClientLanding />, // Client does NOT require auth
     },
     {
         path: '/carretera/g/dashboard',
-        element: <GruistaDashboard />,
+        element: <RequireAuth><GruistaDashboard /></RequireAuth>, // Gruista requires auth
     },
     {
         path: '/carretera/g/:id',
-        element: <GruistaDetail />,
+        element: <RequireAuth><GruistaDetail /></RequireAuth>, // Gruista detail requires auth
     },
     {
         path: '/carretera/t/dashboard',
-        element: <WorkshopDashboard />,
+        element: <RequireAuth><WorkshopDashboard /></RequireAuth>, // Workshop dashboard requires auth
     },
     {
         path: '/carretera/t/:id',
-        element: <WorkshopReception />,
+        element: <WorkshopReception />, // Workshop reception does NOT require auth (accessed via link)
     },
 ];
