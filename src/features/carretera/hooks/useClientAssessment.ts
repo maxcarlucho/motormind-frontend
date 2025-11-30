@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { enqueueSnackbar } from 'notistack';
 import { CarreteraAssessment } from '../types/carretera.types';
-import { ApiService } from '@/service/api.service';
 import { Diagnosis } from '@/types/Diagnosis';
+import carreteraApi from '../services/carreteraApi.service';
 
 interface UseClientAssessmentReturn {
     assessment: CarreteraAssessment | null;
@@ -19,6 +19,7 @@ interface UseClientAssessmentReturn {
 interface ClientAssessmentOptions {
     carId?: string;       // Car ID from validated scoped token
     diagnosisId?: string; // Diagnosis ID from validated scoped token
+    urlToken?: string;    // Scoped token from URL (for incognito access)
 }
 
 // Default questions if none are provided - optimized for roadside assistance
@@ -54,46 +55,22 @@ export function useClientAssessment(
     // Get carId and diagnosisId from validated token (passed from RequireAccessToken context)
     const tokenCarId = options.carId;
     const tokenDiagnosisId = options.diagnosisId;
+    const urlToken = options.urlToken;
 
     // Use ref to track if we've already generated preliminary
     const preliminaryGeneratedRef = useRef(false);
 
-    // Create API service with URL token if available
-    const getApiService = useCallback(() => {
-        const api = ApiService.getInstance();
-        return api;
-    }, []);
-
-    // Helper function to make authenticated API calls
-    // Uses operator's token from localStorage (stored when case was created)
-    const apiCall = useCallback(async <T>(
-        method: 'get' | 'post' | 'put',
-        url: string,
-        data?: any
-    ): Promise<T> => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No authentication token available');
+    // Set up scoped token for incognito access on mount
+    useEffect(() => {
+        if (urlToken) {
+            console.log('🔐 Setting scoped token for incognito API access');
+            carreteraApi.setScopedToken(urlToken);
         }
-
-        const api = getApiService();
-        const config = {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
+        return () => {
+            // Clean up on unmount
+            carreteraApi.setScopedToken(null);
         };
-
-        let response;
-        if (method === 'get') {
-            response = await api.get<T>(url, config);
-        } else if (method === 'post') {
-            response = await api.post<T>(url, data, config);
-        } else {
-            response = await api.put<T>(url, data, config);
-        }
-
-        return response.data;
-    }, [getApiService]);
+    }, [urlToken]);
 
     // Helper function to load local data as fallback
     const loadLocalData = useCallback((caseData: any) => {
@@ -151,14 +128,11 @@ export function useClientAssessment(
                 if (effectiveDiagnosisId) setDiagnosisId(effectiveDiagnosisId);
 
                 // If we have diagnosisId (from token or localStorage), fetch from backend
-                // This works even in incognito mode since the token contains the IDs
+                // This works even in incognito mode since carreteraApi uses the scoped token
                 if (effectiveDiagnosisId) {
                     try {
                         console.log('🔄 Fetching diagnosis from backend...', { effectiveDiagnosisId, effectiveCarId });
-                        const diagnosis = await apiCall<Diagnosis>(
-                            'get',
-                            `/cars/diagnosis/${effectiveDiagnosisId}`
-                        );
+                        const diagnosis = await carreteraApi.getDiagnosis(effectiveDiagnosisId) as Diagnosis;
 
                         console.log('✅ Diagnosis fetched:', diagnosis);
 
@@ -237,64 +211,52 @@ export function useClientAssessment(
         };
 
         loadAssessment();
-    }, [assessmentId, tokenCarId, tokenDiagnosisId, apiCall, loadLocalData]);
+    }, [assessmentId, tokenCarId, tokenDiagnosisId, loadLocalData]);
 
-    // Submit a new answer and save to backend
-    const submitAnswer = useCallback(async (answer: string) => {
-        if (!assessment) {
-            enqueueSnackbar('No hay evaluación cargada', { variant: 'error' });
-            return;
+    // Helper: Mark complete locally without backend AI
+    const markCompleteLocally = useCallback((finalAnswers: string[], currentAssessment: CarreteraAssessment) => {
+        setIsComplete(true);
+
+        const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+        if (clientCases[currentAssessment.id]) {
+            clientCases[currentAssessment.id].status = 'completed';
+            clientCases[currentAssessment.id].answers = finalAnswers;
+            clientCases[currentAssessment.id].aiAssessment = {
+                status: 'ready' as const,
+                diagnosis: `Evaluación completada: ${currentAssessment.symptom}`,
+                confidence: 40,
+                recommendation: 'tow' as const,
+                reasoning: ['Cliente completó cuestionario', 'Requiere evaluación del gruista'],
+                clientProgress: { answered: finalAnswers.length, total: questions.length },
+            };
+            localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
         }
 
-        try {
-            // Optimistically update local state
-            const newAnswers = [...answers, answer];
-            setAnswers(newAnswers);
+        enqueueSnackbar('✅ Evaluación completada. La grúa está en camino.', { variant: 'success' });
+    }, [questions.length]);
 
-            // Get token from localStorage
-            const token = localStorage.getItem('token');
+    // Helper function to determine recommendation
+    const determineRecommendation = useCallback((preliminary: any): 'repair' | 'tow' => {
+        if (!preliminary?.possibleReasons?.length) return 'tow';
 
-            // Save to backend if we have diagnosisId, carId and token
-            const effectiveCarId = carId || tokenCarId;
-            if (diagnosisId && effectiveCarId && token) {
-                try {
-                    console.log('📤 Saving answer to backend...');
-                    // Correct endpoint: PUT /cars/:carId/diagnosis/:diagnosisId/answers
-                    await apiCall<Diagnosis>(
-                        'put',
-                        `/cars/${effectiveCarId}/diagnosis/${diagnosisId}/answers`,
-                        {
-                            answers: newAnswers.join('|'), // Core expects pipe-separated answers
-                        }
-                    );
-                    console.log('✅ Answer saved to backend');
-                } catch (apiError: any) {
-                    console.log('⚠️ Could not save to backend, continuing with localStorage');
-                    console.log('   Error:', apiError?.response?.status, apiError?.response?.data || apiError?.message);
-                }
-            }
+        const topReason = preliminary.possibleReasons[0];
+        const requiredTools = topReason.requiredTools || [];
+        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas', 'batería', 'cargador'];
 
-            // Also update localStorage (for offline support and Gruista polling)
-            const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
-            if (clientCases[assessment.id]) {
-                clientCases[assessment.id].answers = newAnswers;
-                localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
-            }
+        const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
+            simpleTools.some(simple => tool.toLowerCase().includes(simple))
+        );
 
-            // Check if all questions are answered - if so, auto-generate preliminary
-            if (newAnswers.length >= questions.length) {
-                console.log('🎯 All questions answered! Generating preliminary diagnosis...');
-                await generatePreliminaryDiagnosis(newAnswers);
-            }
-            // No snackbar for each answer - it's distracting for the client
-        } catch (err) {
-            console.error('Error submitting answer:', err);
-            enqueueSnackbar('Error al guardar respuesta', { variant: 'error' });
-            // Revert optimistic update
-            setAnswers(answers);
-            throw err;
+        if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
+            return 'repair';
         }
-    }, [assessment, answers, questions, diagnosisId, carId, tokenCarId, apiCall]);
+
+        if (topReason.probability === 'Media' && hasSimpleTools && requiredTools.length <= 1) {
+            return 'repair';
+        }
+
+        return 'tow';
+    }, []);
 
     // Generate preliminary diagnosis when client finishes all questions
     const generatePreliminaryDiagnosis = useCallback(async (finalAnswers: string[]) => {
@@ -310,10 +272,10 @@ export function useClientAssessment(
             return;
         }
 
-        const token = localStorage.getItem('token');
         const effectiveCarId = carId || tokenCarId;
+        const hasAuthToken = carreteraApi.getAuthToken();
 
-        if (!token || !effectiveCarId) {
+        if (!hasAuthToken || !effectiveCarId) {
             console.log('⚠️ Cannot generate preliminary: missing token or carId');
             // Mark as complete locally without AI diagnosis
             markCompleteLocally(finalAnswers, assessment);
@@ -326,24 +288,24 @@ export function useClientAssessment(
             console.log('🤖 Generating preliminary diagnosis...');
             console.log('   - diagnosisId:', diagnosisId);
             console.log('   - carId:', effectiveCarId);
+            console.log('   - incognito mode:', carreteraApi.isIncognitoMode());
 
             // First ensure answers are saved to backend
-            // Correct endpoint: PUT /cars/:carId/diagnosis/:diagnosisId/answers
-            await apiCall<Diagnosis>(
-                'put',
-                `/cars/${effectiveCarId}/diagnosis/${diagnosisId}/answers`,
-                {
-                    answers: finalAnswers.join('|'),
-                }
+            // Works in incognito mode using scoped token
+            await carreteraApi.saveAnswers(
+                effectiveCarId,
+                diagnosisId,
+                finalAnswers.join('|')
             );
             console.log('✅ Answers saved to backend');
 
             // Generate preliminary diagnosis
-            const diagnosis = await apiCall<Diagnosis>(
-                'post',
-                `/cars/${effectiveCarId}/diagnosis/${diagnosisId}/preliminary`,
-                { obdCodes: [] } // No OBD codes for pre-diagnosis
-            );
+            // Works in incognito mode using scoped token
+            const diagnosis = await carreteraApi.generatePreliminary(
+                effectiveCarId,
+                diagnosisId,
+                [] // No OBD codes for pre-diagnosis
+            ) as Diagnosis;
 
             console.log('✅ Preliminary diagnosis generated:', diagnosis);
 
@@ -401,52 +363,60 @@ export function useClientAssessment(
             // Mark complete locally as fallback
             markCompleteLocally(finalAnswers, assessment);
         }
-    }, [assessment, diagnosisId, carId, tokenCarId, questions, apiCall]);
+    }, [assessment, diagnosisId, carId, tokenCarId, questions, markCompleteLocally, determineRecommendation]);
 
-    // Helper: Mark complete locally without backend AI
-    const markCompleteLocally = (finalAnswers: string[], currentAssessment: CarreteraAssessment) => {
-        setIsComplete(true);
-
-        const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
-        if (clientCases[currentAssessment.id]) {
-            clientCases[currentAssessment.id].status = 'completed';
-            clientCases[currentAssessment.id].answers = finalAnswers;
-            clientCases[currentAssessment.id].aiAssessment = {
-                status: 'ready' as const,
-                diagnosis: `Evaluación completada: ${currentAssessment.symptom}`,
-                confidence: 40,
-                recommendation: 'tow' as const,
-                reasoning: ['Cliente completó cuestionario', 'Requiere evaluación del gruista'],
-                clientProgress: { answered: finalAnswers.length, total: questions.length },
-            };
-            localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+    // Submit a new answer and save to backend
+    const submitAnswer = useCallback(async (answer: string) => {
+        if (!assessment) {
+            enqueueSnackbar('No hay evaluación cargada', { variant: 'error' });
+            return;
         }
 
-        enqueueSnackbar('✅ Evaluación completada. La grúa está en camino.', { variant: 'success' });
-    };
+        try {
+            // Optimistically update local state
+            const newAnswers = [...answers, answer];
+            setAnswers(newAnswers);
 
-    // Helper function to determine recommendation
-    function determineRecommendation(preliminary: any): 'repair' | 'tow' {
-        if (!preliminary?.possibleReasons?.length) return 'tow';
+            // Save to backend if we have diagnosisId and carId
+            // Works in incognito mode using the scoped token from URL
+            const effectiveCarId = carId || tokenCarId;
+            if (diagnosisId && effectiveCarId && carreteraApi.getAuthToken()) {
+                try {
+                    console.log('📤 Saving answer to backend...');
+                    // Correct endpoint: PUT /cars/:carId/diagnosis/:diagnosisId/answers
+                    await carreteraApi.saveAnswers(
+                        effectiveCarId,
+                        diagnosisId,
+                        newAnswers.join('|') // Core expects pipe-separated answers
+                    );
+                    console.log('✅ Answer saved to backend');
+                } catch (apiError: any) {
+                    console.log('⚠️ Could not save to backend, continuing with localStorage');
+                    console.log('   Error:', apiError?.response?.status, apiError?.response?.data || apiError?.message);
+                }
+            }
 
-        const topReason = preliminary.possibleReasons[0];
-        const requiredTools = topReason.requiredTools || [];
-        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas', 'batería', 'cargador'];
+            // Also update localStorage (for offline support and Gruista polling)
+            const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+            if (clientCases[assessment.id]) {
+                clientCases[assessment.id].answers = newAnswers;
+                localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+            }
 
-        const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
-            simpleTools.some(simple => tool.toLowerCase().includes(simple))
-        );
-
-        if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
-            return 'repair';
+            // Check if all questions are answered - if so, auto-generate preliminary
+            if (newAnswers.length >= questions.length) {
+                console.log('🎯 All questions answered! Generating preliminary diagnosis...');
+                await generatePreliminaryDiagnosis(newAnswers);
+            }
+            // No snackbar for each answer - it's distracting for the client
+        } catch (err) {
+            console.error('Error submitting answer:', err);
+            enqueueSnackbar('Error al guardar respuesta', { variant: 'error' });
+            // Revert optimistic update
+            setAnswers(answers);
+            throw err;
         }
-
-        if (topReason.probability === 'Media' && hasSimpleTools && requiredTools.length <= 1) {
-            return 'repair';
-        }
-
-        return 'tow';
-    }
+    }, [assessment, answers, questions, diagnosisId, carId, tokenCarId, generatePreliminaryDiagnosis]);
 
     // Manual mark complete (legacy, now auto-triggered)
     const markComplete = useCallback(async () => {

@@ -46,10 +46,15 @@ export function GruistaDetail() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="h-16 w-16 text-blue-600 animate-spin mx-auto mb-4" />
-                    <p className="text-lg font-semibold text-gray-700">Cargando caso...</p>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                <div className="text-center max-w-sm">
+                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+                    </div>
+                    <p className="text-xl font-bold text-gray-800 mb-2">Cargando caso...</p>
+                    <p className="text-sm text-gray-500">
+                        Obteniendo información del vehículo y diagnóstico IA
+                    </p>
                 </div>
             </div>
         );

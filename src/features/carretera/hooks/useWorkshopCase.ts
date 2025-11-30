@@ -5,7 +5,6 @@ import {
     WorkshopRejectionReason,
 } from '../types/carretera.types';
 import carreteraApi from '../services/carreteraApi.service';
-import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
 
 interface UseWorkshopCaseReturn {
@@ -21,6 +20,7 @@ interface UseWorkshopCaseReturn {
 interface WorkshopCaseOptions {
     carId?: string;       // Car ID from validated token (works in incognito)
     diagnosisId?: string; // Diagnosis ID from validated token (works in incognito)
+    urlToken?: string;    // Scoped token from URL (for incognito access)
 }
 
 /**
@@ -36,11 +36,19 @@ export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = 
     const [error, setError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // API hooks for core diagnosis system
-    const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
-    const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
+    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId, urlToken } = options;
 
-    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = options;
+    // Set up scoped token for incognito access on mount
+    useEffect(() => {
+        if (urlToken) {
+            console.log('🔐 [Workshop] Setting scoped token for incognito API access');
+            carreteraApi.setScopedToken(urlToken);
+        }
+        return () => {
+            // Clean up on unmount
+            carreteraApi.setScopedToken(null);
+        };
+    }, [urlToken]);
 
     useEffect(() => {
         if (!caseId) {
@@ -91,13 +99,12 @@ export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = 
 
             // If we have diagnosis ID (from token), try to load from backend
             // This is the PRIMARY path for incognito/shared links
+            // Uses carreteraApi which supports scoped tokens for incognito access
             if (effectiveDiagnosisId) {
                 try {
                     console.log('🔄 Loading workshop case from backend...', { effectiveDiagnosisId, effectiveCarId });
-                    const diagnosisResponse = await getDiagnosis(undefined, undefined, {
-                        diagnosisId: effectiveDiagnosisId
-                    });
-                    const diagnosis = diagnosisResponse.data;
+                    console.log('   - incognito mode:', carreteraApi.isIncognitoMode());
+                    const diagnosis = await carreteraApi.getDiagnosis(effectiveDiagnosisId) as Diagnosis;
                     console.log('✅ Diagnosis loaded:', diagnosis);
 
                     // Extract data from diagnosis
@@ -314,10 +321,11 @@ export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = 
                 throw new Error('No case data available');
             }
 
-            // Try to get diagnosis ID from localStorage (was saved when case was created)
+            // Try to get diagnosis ID from localStorage or token
             const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
             const clientCase = clientCases[caseId];
-            const diagnosisId = clientCase?.diagnosisId;
+            const effectiveDiagnosisId = tokenDiagnosisId || clientCase?.diagnosisId;
+            const effectiveCarId = tokenCarId || clientCase?.carId;
 
             let diagnosisGenerated = false;
             let generatedFailures: any[] = [];
@@ -326,32 +334,31 @@ export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = 
             const mockDiagnosis = generateMockDiagnosis(obdCodes, caseData?.symptom || '');
 
             // If we have a diagnosis ID, try to regenerate diagnosis with OBD using core API
-            // Only if authenticated (workshop dashboard) - not for workshop reception
-            const token = localStorage.getItem('token');
-            if (diagnosisId && token) {
+            // Works in incognito mode using scoped token from URL
+            const hasAuthToken = carreteraApi.getAuthToken();
+            if (effectiveDiagnosisId && hasAuthToken) {
                 try {
-                    // First, get the diagnosis to get carId
-                    const diagnosisResponse = await getDiagnosis(undefined, undefined, {
-                        diagnosisId
-                    });
-                    const diagnosis = diagnosisResponse.data;
-                    const carId = diagnosis.car?._id;
+                    // First, get the diagnosis to get carId if we don't have it
+                    let carId = effectiveCarId;
+                    if (!carId) {
+                        const diagnosis = await carreteraApi.getDiagnosis(effectiveDiagnosisId) as Diagnosis;
+                        carId = diagnosis.car?._id;
+                    }
 
                     if (carId) {
                         // Now regenerate the diagnosis with OBD codes
-                        const preliminaryResponse = await generatePreliminary(
-                            {
-                                obdCodes, // Now WITH OBD codes for full diagnosis
-                            },
-                            undefined,
-                            { carId, diagnosisId }
-                        );
+                        // Works in incognito mode using scoped token
+                        const preliminaryResponse = await carreteraApi.generatePreliminary(
+                            carId,
+                            effectiveDiagnosisId,
+                            obdCodes // WITH OBD codes for full diagnosis
+                        ) as Diagnosis;
 
-                        console.log('Full diagnosis generated with OBD:', preliminaryResponse.data);
+                        console.log('Full diagnosis generated with OBD:', preliminaryResponse);
                         diagnosisGenerated = true;
 
                         // Extract failures from preliminary.possibleReasons
-                        const possibleReasons = preliminaryResponse.data.preliminary?.possibleReasons || [];
+                        const possibleReasons = preliminaryResponse.preliminary?.possibleReasons || [];
                         generatedFailures = possibleReasons.map((reason: any, index: number) => ({
                             part: reason.title || `Posible causa ${index + 1}`,
                             probability: reason.probability === 'Alta' ? 85 :
@@ -380,18 +387,15 @@ export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = 
                 generatedFailures = mockDiagnosis;
             }
 
-            // Also try carretera backend if available and authenticated
-            const authToken = localStorage.getItem('token');
-            if (authToken) {
-                try {
-                    const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
-                    if (isBackendAvailable) {
-                        const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
-                        console.log('Carretera backend response:', result);
-                    }
-                } catch (carreteraError) {
-                    console.log('Carretera backend not available');
+            // Also try carretera backend if available
+            try {
+                const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
+                if (isBackendAvailable) {
+                    const result = await carreteraApi.submitOBDDiagnosis(caseId, obdCodes, comments);
+                    console.log('Carretera backend response:', result);
                 }
+            } catch (carreteraError) {
+                console.log('Carretera backend not available');
             }
 
             // Always save to localStorage as fallback

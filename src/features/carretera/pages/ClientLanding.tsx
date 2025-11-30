@@ -10,7 +10,8 @@ export const ClientLanding = () => {
 
   // Get validated token data from RequireAccessToken context
   // The token has already been validated for: correct caseId, not expired, type='client'
-  const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = useAccessToken();
+  // The raw token is passed to useClientAssessment for API calls (works in incognito)
+  const { carId: tokenCarId, diagnosisId: tokenDiagnosisId, token: urlToken } = useAccessToken();
 
   const {
     assessment,
@@ -21,7 +22,7 @@ export const ClientLanding = () => {
     isGeneratingDiagnosis,
     error,
     submitAnswer,
-  } = useClientAssessment(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId });
+  } = useClientAssessment(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId, urlToken });
 
   // Loading state
   if (isLoading) {

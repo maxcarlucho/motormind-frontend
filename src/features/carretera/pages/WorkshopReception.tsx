@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Loader2, Cpu, Wrench, CheckCircle, ChevronDown, ChevronUp, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, Car, Loader2, Cpu, Wrench, CheckCircle, ChevronDown, ChevronUp, AlertTriangle, Clock } from 'lucide-react';
 import { useWorkshopCase } from '../hooks/useWorkshopCase';
 import { ClientQAThread } from '../components/ClientQAThread';
 import { AIAssessmentSummary } from '../components/AIAssessmentSummary';
@@ -15,11 +15,11 @@ export function WorkshopReception() {
     const navigate = useNavigate();
 
     // Get validated token data from RequireAccessToken context
-    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = useAccessToken();
+    // The raw token is passed to useWorkshopCase for API calls (works in incognito)
+    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId, token: urlToken } = useAccessToken();
 
     const { caseData, isLoading, error, acceptCase, rejectCase, submitOBDDiagnosis, isProcessing } =
-        useWorkshopCase(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId });
-    const [showOBDForm, setShowOBDForm] = useState(false);
+        useWorkshopCase(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId, urlToken });
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
     const [showMoreInfo, setShowMoreInfo] = useState(false);
 
@@ -42,12 +42,19 @@ export function WorkshopReception() {
     const handleAccept = async () => {
         const serviceOrderNumber = await acceptCase();
         console.log('Service order created:', serviceOrderNumber);
-        setShowOBDForm(true);
+        // El estado cambia a 'accepted' y el componente renderiza el formulario OBD
+    };
+
+    // Al cerrar el modal de bienvenida, aceptar automáticamente el caso
+    const handleWelcomeAccept = async () => {
+        setShowWelcomeModal(false);
+        // Auto-aceptar el caso para ir directo al OBD
+        await handleAccept();
     };
 
     const handleOBDSubmit = async (obdCodes: string[], comments: string) => {
         await submitOBDDiagnosis(obdCodes, comments);
-        setShowOBDForm(false);
+        // El estado cambia y muestra los resultados
     };
 
     if (isLoading) {
@@ -87,7 +94,7 @@ export function WorkshopReception() {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {/* Welcome Modal */}
+            {/* Welcome Modal - Al aceptar, va directo al OBD */}
             {showWelcomeModal && caseData && (
                 <WorkshopWelcomeModal
                     caseNumber={caseData.caseNumber}
@@ -96,7 +103,7 @@ export function WorkshopReception() {
                     clientName={caseData.clientName}
                     gruistaDecision={caseData.gruistaDecision?.decision || 'tow'}
                     onClose={() => setShowWelcomeModal(false)}
-                    onAccept={() => setShowWelcomeModal(false)}
+                    onAccept={handleWelcomeAccept}
                 />
             )}
 
@@ -189,72 +196,17 @@ export function WorkshopReception() {
 
                 {/* STEP 2: Accepted - Need OBD Codes */}
                 {needsOBD && (
-                    <>
-                        {/* Success Banner */}
-                        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
-                            <div className="flex items-center gap-3">
-                                <CheckCircle className="h-8 w-8 text-green-600" />
-                                <div>
-                                    <p className="font-bold text-green-800">Caso Aceptado</p>
-                                    <p className="text-green-700 text-sm">
-                                        Orden: <span className="font-mono font-bold">{caseData.serviceOrderNumber}</span>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* OBD Form or CTA */}
-                        {!showOBDForm ? (
-                            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white text-center">
-                                <Cpu className="h-12 w-12 mx-auto mb-4 opacity-90" />
-                                <h3 className="text-xl font-bold mb-2">Siguiente paso: Diagnóstico OBD</h3>
-                                <p className="text-blue-100 mb-6 text-sm">
-                                    Conecta el escáner OBD al vehículo y mete los códigos de error.
-                                    El sistema te dará un diagnóstico automático.
-                                </p>
-                                <button
-                                    onClick={() => setShowOBDForm(true)}
-                                    className="w-full px-6 py-4 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <Cpu className="h-5 w-5" />
-                                    Introducir Códigos OBD
-                                </button>
-                            </div>
-                        ) : (
-                            <OBDDiagnosisForm
-                                onSubmit={handleOBDSubmit}
-                                isProcessing={isProcessing}
-                                caseNumber={caseData.caseNumber}
-                                vehiclePlate={caseData.vehiclePlate}
-                                symptom={caseData.symptom || ''}
-                            />
-                        )}
-
-                        {/* Collapsible: Case Background */}
-                        <button
-                            onClick={() => setShowMoreInfo(!showMoreInfo)}
-                            className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-gray-700 text-sm"
-                        >
-                            {showMoreInfo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            {showMoreInfo ? 'Ocultar historial' : 'Ver historial del caso'}
-                        </button>
-
-                        {showMoreInfo && (
-                            <div className="space-y-4">
-                                {/* Problem Summary */}
-                                <div className="bg-white rounded-xl p-4 border border-gray-200">
-                                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Problema reportado</p>
-                                    <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
-                                </div>
-                                <ClientQAThread
-                                    questions={caseData.questions}
-                                    answers={caseData.answers}
-                                    isCollapsible={false}
-                                />
-                                <AIAssessmentSummary assessment={caseData.aiAssessment} />
-                            </div>
-                        )}
-                    </>
+                    <OBDDiagnosisForm
+                        onSubmit={handleOBDSubmit}
+                        isProcessing={isProcessing}
+                        caseNumber={caseData.caseNumber}
+                        vehiclePlate={caseData.vehiclePlate}
+                        symptom={caseData.symptom || ''}
+                        clientName={caseData.clientName}
+                        questions={caseData.questions}
+                        answers={caseData.answers}
+                        aiAssessment={caseData.aiAssessment}
+                    />
                 )}
 
                 {/* STEP 3: Has OBD Diagnosis - Show Results */}

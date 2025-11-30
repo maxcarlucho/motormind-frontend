@@ -1,4 +1,4 @@
-import { Brain, TrendingUp, Clock, Loader2, CheckCircle, MessageSquare, Wrench, AlertTriangle, ListChecks } from 'lucide-react';
+import { Brain, Clock, Loader2, CheckCircle, MessageSquare, AlertTriangle } from 'lucide-react';
 import { AIAssessment } from '../types/carretera.types';
 
 interface AIAssessmentSummaryProps {
@@ -167,200 +167,146 @@ function DiagnosisPendingState({
 }
 
 /**
+ * Extrae puntos clave de un texto largo de diagnóstico
+ * Busca frases cortas y relevantes para el gruista
+ */
+function extractKeyPoints(reasoning: string[]): string[] {
+    const keyPoints: string[] = [];
+
+    for (const text of reasoning) {
+        // Dividir por puntos, "•", o saltos de línea
+        const sentences = text.split(/[.•\n]+/).map(s => s.trim()).filter(s => s.length > 10 && s.length < 100);
+
+        for (const sentence of sentences) {
+            // Priorizar frases con palabras clave importantes para gruista
+            const isImportant = /riesgo|seguridad|peligro|urgente|inmediato|fallo|defectuoso|reparar|remolcar|taller/i.test(sentence);
+
+            if (isImportant && keyPoints.length < 3) {
+                // Limpiar y capitalizar
+                const cleaned = sentence.charAt(0).toUpperCase() + sentence.slice(1);
+                if (!keyPoints.includes(cleaned)) {
+                    keyPoints.push(cleaned);
+                }
+            }
+        }
+    }
+
+    // Si no encontramos frases importantes, tomar las primeras cortas
+    if (keyPoints.length === 0) {
+        for (const text of reasoning) {
+            const sentences = text.split(/[.•\n]+/).map(s => s.trim()).filter(s => s.length > 10 && s.length < 80);
+            if (sentences.length > 0 && keyPoints.length < 2) {
+                keyPoints.push(sentences[0].charAt(0).toUpperCase() + sentences[0].slice(1));
+            }
+        }
+    }
+
+    return keyPoints.slice(0, 3);
+}
+
+/**
  * Shows when diagnosis is ready with full AI assessment
- * Now includes extended fields: actionSteps, risks, estimatedTime
+ * CONCISO: Datos clave para que el gruista tome decisión rápida
  */
 function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
     const getConfidenceColor = (confidence: number) => {
-        if (confidence >= 80) return 'text-green-600';
-        if (confidence >= 60) return 'text-yellow-600';
-        return 'text-orange-600';
+        if (confidence >= 80) return 'text-green-600 bg-green-100';
+        if (confidence >= 60) return 'text-amber-600 bg-amber-100';
+        return 'text-red-600 bg-red-100';
     };
 
-    const getConfidenceBarColor = (confidence: number) => {
-        if (confidence >= 80) return 'bg-green-500';
-        if (confidence >= 60) return 'bg-yellow-500';
-        return 'bg-orange-500';
-    };
-
-    const getRecommendationBadge = () => {
+    const getRecommendationConfig = () => {
         switch (assessment.recommendation) {
             case 'repair':
                 return {
                     icon: '🟢',
-                    label: 'REPARAR IN-SITU',
-                    bgColor: 'bg-green-100',
-                    textColor: 'text-green-800',
-                    borderColor: 'border-green-300',
-                };
-            case 'repair-failed':
-                return {
-                    icon: '🟡',
-                    label: 'REPARACIÓN FALLIDA',
-                    bgColor: 'bg-amber-100',
-                    textColor: 'text-amber-800',
-                    borderColor: 'border-amber-300',
+                    label: 'REPARABLE',
+                    bgColor: 'bg-green-500',
+                    textColor: 'text-white',
                 };
             case 'tow':
             default:
                 return {
                     icon: '🔴',
-                    label: 'REMOLCAR AL TALLER',
-                    bgColor: 'bg-red-100',
-                    textColor: 'text-red-800',
-                    borderColor: 'border-red-300',
+                    label: 'REMOLCAR',
+                    bgColor: 'bg-red-500',
+                    textColor: 'text-white',
                 };
         }
     };
 
-    const recommendationBadge = getRecommendationBadge();
+    const rec = getRecommendationConfig();
+
+    // Extraer puntos clave del reasoning largo
+    const keyPoints = assessment.reasoning && assessment.reasoning.length > 0
+        ? extractKeyPoints(assessment.reasoning)
+        : [];
 
     return (
-        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
-                <div className="flex items-center justify-between text-white">
-                    <div className="flex items-center gap-2">
-                        <Brain className="h-5 w-5" />
-                        <h3 className="font-bold text-lg">Diagnóstico IA</h3>
-                    </div>
-                    <div className="flex items-center gap-1 text-green-300">
-                        <CheckCircle className="h-4 w-4" />
-                        <span className="text-xs font-medium">Listo</span>
-                    </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            {/* Header compacto */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white">
+                    <Brain className="h-4 w-4" />
+                    <span className="font-semibold text-sm">Diagnóstico IA</span>
+                </div>
+                <div className="flex items-center gap-1 text-green-300">
+                    <CheckCircle className="h-3 w-3" />
+                    <span className="text-xs">Listo</span>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="p-4 space-y-4">
-                {/* Summary (new field - short headline for gruista) */}
-                {assessment.summary && (
-                    <div className="bg-white rounded-lg p-3 border border-indigo-200">
-                        <p className="text-lg font-bold text-gray-900">
-                            {assessment.summary}
-                        </p>
+            {/* Contenido principal - MUY CONCISO */}
+            <div className="p-4 space-y-3">
+                {/* Fila 1: Recomendación + Confianza (lo más importante arriba) */}
+                <div className="flex items-center gap-3 flex-wrap">
+                    {/* Badge de recomendación grande */}
+                    <div className={`${rec.bgColor} ${rec.textColor} px-4 py-2 rounded-lg flex items-center gap-2`}>
+                        <span className="text-xl">{rec.icon}</span>
+                        <span className="font-bold">{rec.label}</span>
                     </div>
-                )}
-
-                {/* Diagnosis */}
-                <div>
-                    <p className="text-base text-gray-900 leading-relaxed font-medium">
-                        {assessment.diagnosis}
-                    </p>
-                </div>
-
-                {/* Confidence & Estimated Time Row */}
-                <div className="flex items-center gap-4">
-                    {/* Confidence */}
-                    <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-                                <TrendingUp className="h-4 w-4" />
-                                Confianza
-                            </span>
-                            <span className={`text-lg font-bold ${getConfidenceColor(assessment.confidence)}`}>
-                                {assessment.confidence}%
-                            </span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                            <div
-                                className={`h-full rounded-full transition-all duration-500 ${getConfidenceBarColor(
-                                    assessment.confidence
-                                )}`}
-                                style={{ width: `${assessment.confidence}%` }}
-                            />
-                        </div>
+                    {/* Confianza */}
+                    <div className={`px-3 py-2 rounded-lg ${getConfidenceColor(assessment.confidence)}`}>
+                        <span className="font-bold">{assessment.confidence}%</span>
+                        <span className="text-xs ml-1 opacity-75">confianza</span>
                     </div>
-
-                    {/* Estimated Time (new field) */}
+                    {/* Tiempo estimado */}
                     {assessment.estimatedTime && (
-                        <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
-                            <Clock className="h-4 w-4 text-gray-600" />
-                            <span className="text-sm font-semibold text-gray-700">
-                                {assessment.estimatedTime}
-                            </span>
+                        <div className="flex items-center gap-1 text-gray-600 text-sm">
+                            <Clock className="h-4 w-4" />
+                            <span>{assessment.estimatedTime}</span>
                         </div>
                     )}
                 </div>
 
-                {/* Recommendation */}
-                <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Recomendación:</p>
-                    <div
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 ${recommendationBadge.bgColor} ${recommendationBadge.textColor} ${recommendationBadge.borderColor}`}
-                    >
-                        <span className="text-2xl">{recommendationBadge.icon}</span>
-                        <span className="font-bold text-base">{recommendationBadge.label}</span>
-                    </div>
+                {/* Diagnóstico - una línea clara */}
+                <div className="border-l-4 border-indigo-500 pl-3 py-1">
+                    <p className="font-semibold text-gray-900">{assessment.diagnosis}</p>
                 </div>
 
-                {/* Reasoning */}
-                {assessment.reasoning && assessment.reasoning.length > 0 && (
-                    <div>
-                        <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                            <Brain className="h-4 w-4" />
-                            Por qué:
-                        </p>
-                        <ul className="space-y-2">
-                            {assessment.reasoning.map((reason, index) => (
-                                <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                                    <span className="text-indigo-600 font-bold mt-0.5">•</span>
-                                    <span className="flex-1">{reason}</span>
+                {/* Por qué - puntos clave extraídos, como bullets */}
+                {keyPoints.length > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Por qué</p>
+                        <ul className="space-y-1">
+                            {keyPoints.map((point, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                                    <span className="text-indigo-500 mt-1">•</span>
+                                    <span>{point}</span>
                                 </li>
                             ))}
                         </ul>
                     </div>
                 )}
 
-                {/* Action Steps (new field) */}
-                {assessment.actionSteps && assessment.actionSteps.length > 0 && (
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1">
-                            <ListChecks className="h-4 w-4" />
-                            Pasos a Seguir:
-                        </p>
-                        <ol className="space-y-2">
-                            {assessment.actionSteps.map((step, index) => (
-                                <li key={index} className="flex items-start gap-2 text-sm text-green-700">
-                                    <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                        {index + 1}
-                                    </span>
-                                    <span className="flex-1">{step}</span>
-                                </li>
-                            ))}
-                        </ol>
-                    </div>
-                )}
-
-                {/* Risks (new field) */}
+                {/* Riesgo si existe - destacado */}
                 {assessment.risks && assessment.risks.length > 0 && (
-                    <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
-                        <p className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1">
-                            <AlertTriangle className="h-4 w-4" />
-                            Riesgos a Considerar:
-                        </p>
-                        <ul className="space-y-2">
-                            {assessment.risks.map((risk, index) => (
-                                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
-                                    <span className="text-amber-600 font-bold mt-0.5">⚠</span>
-                                    <span className="flex-1">{risk}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-
-                {/* Alternative Consideration (new field) */}
-                {assessment.alternativeConsideration && (
-                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                        <p className="text-sm font-semibold text-blue-800 mb-1 flex items-center gap-1">
-                            <Wrench className="h-4 w-4" />
-                            Si la situación cambia:
-                        </p>
-                        <p className="text-sm text-blue-700">
-                            {assessment.alternativeConsideration}
-                        </p>
+                    <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <span className="font-semibold">Riesgo: </span>
+                            <span>{assessment.risks[0].length > 100 ? assessment.risks[0].substring(0, 100) + '...' : assessment.risks[0]}</span>
+                        </div>
                     </div>
                 )}
             </div>

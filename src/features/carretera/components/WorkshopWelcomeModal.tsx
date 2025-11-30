@@ -154,7 +154,7 @@ export function WorkshopWelcomeModal({
                         className="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                     >
                         <Wrench className="h-5 w-5" />
-                        <span>Ver Info del Coche</span>
+                        <span>Empezar Diagnóstico</span>
                     </button>
                     <p className="text-xs text-gray-400 text-center">
                         Caso #{caseNumber}

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { apiUrl } from '@/constants/env';
 import {
     OperatorCase,
@@ -22,9 +22,18 @@ import {
  * ├── /client        - Client diagnostic flow
  * ├── /gruista       - Tow truck driver dashboard
  * └── /workshop      - Workshop reception and tracking
+ *
+ * SECURITY NOTE:
+ * This service supports two authentication modes:
+ * 1. Full auth (localStorage token) - For operators, gruistas logged in
+ * 2. Scoped token (URL token) - For clients/workshops in incognito mode
+ *
+ * The scoped token from URL grants LIMITED access to a single case only.
  */
 class CarreteraApiService {
     private api: AxiosInstance;
+    private coreApi: AxiosInstance; // For core Motormind API calls
+    private scopedToken: string | null = null; // Token from URL for incognito access
 
     constructor() {
         this.api = axios.create({
@@ -32,9 +41,24 @@ class CarreteraApiService {
             headers: { 'Content-Type': 'application/json' }
         });
 
-        // Add auth token interceptor
+        this.coreApi = axios.create({
+            baseURL: apiUrl,
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        // Add auth token interceptor for carretera API
         this.api.interceptors.request.use((config) => {
             const token = localStorage.getItem('token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+
+        // Add auth token interceptor for core API (supports both localStorage and scoped token)
+        this.coreApi.interceptors.request.use((config) => {
+            // Priority: 1. localStorage token (logged in user), 2. scoped token (incognito)
+            const token = localStorage.getItem('token') || this.scopedToken;
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -47,13 +71,110 @@ class CarreteraApiService {
             (error) => {
                 // Handle common errors
                 if (error.response?.status === 401) {
-                    // Token expired or invalid
+                    // Only redirect to login if NOT using scoped token (incognito mode)
+                    if (!this.scopedToken) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    }
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        // Same for core API
+        this.coreApi.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                // Don't redirect to login for scoped token users (clients/workshops in incognito)
+                if (error.response?.status === 401 && !this.scopedToken) {
                     localStorage.removeItem('token');
                     window.location.href = '/login';
                 }
                 return Promise.reject(error);
             }
         );
+    }
+
+    /**
+     * Set scoped token for incognito access
+     * This token comes from the URL and grants access to a single case
+     * Used by clients and workshops who don't have a Motormind account
+     */
+    setScopedToken(token: string | null) {
+        this.scopedToken = token;
+    }
+
+    /**
+     * Get the current auth token (localStorage or scoped)
+     */
+    getAuthToken(): string | null {
+        return localStorage.getItem('token') || this.scopedToken;
+    }
+
+    /**
+     * Check if we're in incognito mode (using scoped token, not full auth)
+     */
+    isIncognitoMode(): boolean {
+        return !localStorage.getItem('token') && !!this.scopedToken;
+    }
+
+    // =========================================================================
+    // CORE API METHODS - For Motormind backend calls (diagnosis, cars, etc.)
+    // These work in incognito mode with the scoped token
+    // =========================================================================
+
+    /**
+     * Get diagnosis by ID (works in incognito with scoped token)
+     */
+    async getDiagnosis(diagnosisId: string): Promise<any> {
+        const response = await this.coreApi.get(`/cars/diagnosis/${diagnosisId}`);
+        return response.data;
+    }
+
+    /**
+     * Save answers to diagnosis (works in incognito with scoped token)
+     */
+    async saveAnswers(carId: string, diagnosisId: string, answers: string): Promise<any> {
+        const response = await this.coreApi.put(
+            `/cars/${carId}/diagnosis/${diagnosisId}/answers`,
+            { answers }
+        );
+        return response.data;
+    }
+
+    /**
+     * Generate preliminary diagnosis (works in incognito with scoped token)
+     */
+    async generatePreliminary(carId: string, diagnosisId: string, obdCodes: string[] = []): Promise<any> {
+        const response = await this.coreApi.post(
+            `/cars/${carId}/diagnosis/${diagnosisId}/preliminary`,
+            { obdCodes }
+        );
+        return response.data;
+    }
+
+    /**
+     * Make a generic GET request to core API (works in incognito)
+     */
+    async coreGet<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.coreApi.get<T>(url, config);
+        return response.data;
+    }
+
+    /**
+     * Make a generic POST request to core API (works in incognito)
+     */
+    async corePost<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.coreApi.post<T>(url, data, config);
+        return response.data;
+    }
+
+    /**
+     * Make a generic PUT request to core API (works in incognito)
+     */
+    async corePut<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+        const response = await this.coreApi.put<T>(url, data, config);
+        return response.data;
     }
 
     // =========================================================================
