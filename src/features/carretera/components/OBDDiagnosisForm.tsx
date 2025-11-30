@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Cpu, FileText, Loader2, CheckCircle, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Brain, User, Wrench } from 'lucide-react';
+import { Cpu, FileText, Loader2, AlertCircle, ChevronDown, ChevronUp, MessageSquare, Brain, User, Wrench } from 'lucide-react';
 import { AIAssessment } from '../types/carretera.types';
 
 interface OBDDiagnosisFormProps {

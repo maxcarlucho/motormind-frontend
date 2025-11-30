@@ -235,16 +235,16 @@ export function WorkshopReception() {
                             </div>
                             <div className="p-4">
                                 <div className="flex flex-wrap gap-2">
-                                    {caseData.obdDiagnosis.obdCodes?.map((code: string, index: number) => (
+                                    {caseData.obdDiagnosis?.obdCodes?.map((code: string, index: number) => (
                                         <span key={index} className="px-3 py-2 bg-slate-100 text-slate-800 font-mono font-bold rounded-lg text-lg">
                                             {code}
                                         </span>
                                     ))}
                                 </div>
-                                {caseData.obdDiagnosis.technicianComments && (
+                                {caseData.obdDiagnosis?.technicianComments && (
                                     <div className="mt-4 pt-4 border-t">
                                         <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tus observaciones</p>
-                                        <p className="text-gray-700 text-sm">{caseData.obdDiagnosis.technicianComments}</p>
+                                        <p className="text-gray-700 text-sm">{caseData.obdDiagnosis?.technicianComments}</p>
                                     </div>
                                 )}
                             </div>
@@ -259,9 +259,9 @@ export function WorkshopReception() {
                                 </p>
                             </div>
                             <div className="p-4">
-                                {caseData.obdDiagnosis.diagnosisGenerated && Array.isArray(caseData.obdDiagnosis.failures) && caseData.obdDiagnosis.failures.length > 0 ? (
+                                {caseData.obdDiagnosis?.diagnosisGenerated && Array.isArray(caseData.obdDiagnosis?.failures) && caseData.obdDiagnosis?.failures?.length > 0 ? (
                                     <div className="space-y-4">
-                                        {caseData.obdDiagnosis.failures.map((failure: any, index: number) => (
+                                        {caseData.obdDiagnosis?.failures?.map((failure: any, index: number) => (
                                             <div key={index} className={`p-4 rounded-lg ${index === 0 ? 'bg-red-50 border-2 border-red-200' : index === 1 ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
                                                 <div className="flex items-start gap-3">
                                                     <span className="text-2xl">

@@ -349,6 +349,25 @@ src/features/carretera/
 
 ## Changelog
 
+### v2.4 (2024-11-30)
+- **Rediseño completo UX para Gruista**:
+  - Resumen de diagnóstico IA más conciso con datos clave visibles de un vistazo
+  - Badge de recomendación prominente (🟢 REPARABLE / 🔴 REMOLCAR) + % confianza
+  - Extracción automática de puntos clave del reasoning largo
+  - Pantalla de carga mejorada con contexto sobre qué está pasando
+- **Rediseño completo UX para Taller**:
+  - Modal de bienvenida simplificado para técnicos que no conocen el sistema
+  - Al aceptar modal, se auto-acepta el caso y va directo al formulario OBD
+  - Formulario OBD rediseñado con TODO el contexto del caso:
+    - Problema reportado
+    - Pre-diagnóstico IA con recomendación y confianza
+    - Respuestas del cliente (colapsables)
+  - Eliminadas pantallas intermedias innecesarias
+- **Mejoras generales**:
+  - El técnico ve todo el historial en una sola pantalla
+  - Referencia de códigos OBD colapsada por defecto
+  - Optional chaining corregido para evitar crashes
+
 ### v2.3 (2024-11-30)
 - **Bug documentado**: El campo `notes` enviado al backend NO se usa en el prompt de generación de preguntas
   - **Ubicación del problema**: Backend `scripts/update-questions-prompt-v3-6.ts` - El prompt template no incluye `{NOTES}`
