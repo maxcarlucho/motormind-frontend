@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { enqueueSnackbar } from 'notistack';
-import { GruistaCaseDetailed, TrafficLightDecisionType, DecisionSubmission, WorkshopCaseDetailed, AIAssessment, PossibleReason } from '../types/carretera.types';
+import { GruistaCaseDetailed, TrafficLightDecisionType, DecisionSubmission, WorkshopCaseDetailed, AIAssessment } from '../types/carretera.types';
 import { useAuth } from '@/context/Auth.context';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
-import { gruistaRecommendationService, GruistaRecommendationInput } from '../services/gruistaRecommendation.service';
 
 interface UseGruistaCaseReturn {
     caseData: GruistaCaseDetailed | null;
@@ -317,74 +316,9 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
     };
 
     /**
-     * Genera recomendación usando el servicio de IA
-     * Reemplaza la lógica hardcoded anterior con IA contextualizada
+     * Lógica para determinar recomendación basada en el pre-diagnóstico
      */
-    async function generateAIRecommendation(
-        preliminary: any,
-        caseInfo: {
-            vehiclePlate: string;
-            symptom: string;
-            location?: string;
-            questions: string[];
-            answers: string[];
-            vehicleBrand?: string;
-            vehicleModel?: string;
-            vehicleYear?: number;
-        }
-    ): Promise<Partial<AIAssessment>> {
-        try {
-            // Preparar input para el servicio de recomendación
-            const input: GruistaRecommendationInput = {
-                vehiclePlate: caseInfo.vehiclePlate,
-                vehicleBrand: caseInfo.vehicleBrand,
-                vehicleModel: caseInfo.vehicleModel,
-                vehicleYear: caseInfo.vehicleYear,
-                symptom: caseInfo.symptom,
-                location: caseInfo.location,
-                questions: caseInfo.questions,
-                answers: caseInfo.answers,
-                possibleReasons: (preliminary?.possibleReasons || []).map((r: any): PossibleReason => ({
-                    title: r.title,
-                    probability: r.probability,
-                    reasonDetails: r.reasonDetails,
-                    diagnosticRecommendations: r.diagnosticRecommendations || [],
-                    requiredTools: r.requiredTools || []
-                })),
-                isHighway: gruistaRecommendationService.detectHighway(caseInfo.location || '')
-            };
-
-            // Llamar al servicio de IA
-            const recommendation = await gruistaRecommendationService.generateRecommendation(input);
-
-            return {
-                recommendation: recommendation.recommendation,
-                confidence: recommendation.confidence,
-                reasoning: recommendation.reasoning,
-                summary: recommendation.summary,
-                actionSteps: recommendation.actionSteps,
-                risks: recommendation.risks,
-                estimatedTime: recommendation.estimatedTime,
-                alternativeConsideration: recommendation.alternativeConsideration
-            };
-        } catch (error) {
-            console.error('Error generating AI recommendation, using fallback:', error);
-            // Fallback a lógica simple si falla
-            return {
-                recommendation: determineRecommendationFallback(preliminary),
-                confidence: 50,
-                reasoning: preliminary?.possibleReasons?.[0]?.reasonDetails
-                    ? [preliminary.possibleReasons[0].reasonDetails]
-                    : ['Recomendación basada en análisis simplificado']
-            };
-        }
-    }
-
-    /**
-     * Fallback: Lógica simple para determinar recomendación si falla la IA
-     * Mantiene compatibilidad con el sistema anterior
-     */
-    function determineRecommendationFallback(preliminary: any): 'repair' | 'tow' {
+    function determineRecommendation(preliminary: any): 'repair' | 'tow' {
         if (!preliminary?.possibleReasons?.length) return 'tow';
 
         const topReason = preliminary.possibleReasons[0];

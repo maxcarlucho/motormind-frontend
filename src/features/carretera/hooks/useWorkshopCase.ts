@@ -281,7 +281,7 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
             const diagnosisId = clientCase?.diagnosisId;
 
             let diagnosisGenerated = false;
-            let generatedFailures = null;
+            let generatedFailures: any[] = [];
 
             // Generate mock diagnosis for known OBD codes when no API is available
             const mockDiagnosis = generateMockDiagnosis(obdCodes, caseData?.symptom || '');
@@ -310,7 +310,17 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
 
                         console.log('Full diagnosis generated with OBD:', preliminaryResponse.data);
                         diagnosisGenerated = true;
-                        generatedFailures = preliminaryResponse.data.processedFault || null;
+
+                        // Extract failures from preliminary.possibleReasons
+                        const possibleReasons = preliminaryResponse.data.preliminary?.possibleReasons || [];
+                        generatedFailures = possibleReasons.map((reason: any, index: number) => ({
+                            part: reason.title || `Posible causa ${index + 1}`,
+                            probability: reason.probability === 'Alta' ? 85 :
+                                        reason.probability === 'Media' ? 65 : 45,
+                            description: reason.reasonDetails || '',
+                            steps: reason.diagnosticRecommendations || [],
+                            requiredTools: reason.requiredTools || [],
+                        }));
 
                         enqueueSnackbar('✅ Diagnóstico completo generado con códigos OBD', {
                             variant: 'success',

@@ -261,7 +261,7 @@ export function WorkshopReception() {
                                 </div>
                             </div>
                             <div className="p-4">
-                                {caseData.obdDiagnosis.diagnosisGenerated && caseData.obdDiagnosis.failures ? (
+                                {caseData.obdDiagnosis.diagnosisGenerated && Array.isArray(caseData.obdDiagnosis.failures) && caseData.obdDiagnosis.failures.length > 0 ? (
                                     <div className="space-y-4">
                                         {caseData.obdDiagnosis.failures.map((failure: any, index: number) => (
                                             <div key={index} className="border border-gray-200 rounded-lg p-4">

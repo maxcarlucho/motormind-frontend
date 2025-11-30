@@ -7,7 +7,7 @@
  * Reemplaza la lógica hardcoded de determineRecommendation() con IA real.
  */
 
-import { AIAssessment, PossibleReason } from '../types/carretera.types';
+import { PossibleReason } from '../types/carretera.types';
 import { ApiService } from '@/service/api.service';
 
 // ============================================================================
