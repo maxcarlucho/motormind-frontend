@@ -228,16 +228,49 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
 
                     console.log('Pre-diagnosis generated:', preliminaryResponse.data);
 
+                    // Extract AI assessment from the backend response
+                    const backendDiagnosis = preliminaryResponse.data;
+                    // possibleReasons are in 'preliminary' field, not 'processedFault'
+                    const preliminary = backendDiagnosis.preliminary;
+                    const possibleReasons = preliminary?.possibleReasons || [];
+                    const topReason = possibleReasons[0];
+
+                    // Build aiAssessment from backend data
+                    const aiAssessment = {
+                        diagnosis: topReason?.title ||
+                                   backendDiagnosis.fault ||
+                                   assessment.symptom,
+                        confidence: topReason?.probability === 'Alta' ? 85 :
+                                    topReason?.probability === 'Media' ? 65 : 45,
+                        recommendation: determineRecommendationFromPreliminary(preliminary),
+                        reasoning: possibleReasons.map((r: any) => r.reasonDetails).filter(Boolean) ||
+                                   ['Diagnóstico generado por IA basado en síntomas reportados'],
+                        // Store full backend data for detailed view
+                        possibleReasons: possibleReasons,
+                        rawDiagnosis: backendDiagnosis,
+                    };
+
                     // Update local state
                     setIsComplete(true);
 
-                    // Store the generated diagnosis info
+                    // Store the generated diagnosis info AND aiAssessment for Gruista
                     const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
                     if (clientCases[assessment.id]) {
                         clientCases[assessment.id].status = 'completed';
                         clientCases[assessment.id].preDiagnosisGenerated = true;
+                        clientCases[assessment.id].aiAssessment = aiAssessment;
+                        clientCases[assessment.id].answers = answers; // Ensure answers are saved
                         localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
                     }
+
+                    // Also update operator cases status
+                    const operatorCases = JSON.parse(localStorage.getItem('carretera_operator_cases') || '[]');
+                    const updatedOperatorCases = operatorCases.map((c: any) =>
+                        c.id === assessment.id
+                            ? { ...c, status: 'in-progress', updatedAt: new Date().toISOString() }
+                            : c
+                    );
+                    localStorage.setItem('carretera_operator_cases', JSON.stringify(updatedOperatorCases));
 
                     enqueueSnackbar('✅ Evaluación completada. La grúa está en camino', {
                         variant: 'success',
@@ -245,8 +278,23 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                     });
                 } catch (apiError) {
                     console.log('Could not generate preliminary diagnosis, marking complete locally');
-                    // Fallback to local completion
+                    // Fallback to local completion with default assessment
                     setIsComplete(true);
+
+                    const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+                    if (clientCases[assessment.id]) {
+                        clientCases[assessment.id].status = 'completed';
+                        clientCases[assessment.id].answers = answers;
+                        // Generate a basic aiAssessment based on symptom when API fails
+                        clientCases[assessment.id].aiAssessment = {
+                            diagnosis: `Diagnóstico pendiente para: ${assessment.symptom}`,
+                            confidence: 50,
+                            recommendation: 'tow', // Default to tow for safety
+                            reasoning: ['Diagnóstico automático no disponible', 'Se recomienda inspección en taller'],
+                        };
+                        localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+                    }
+
                     enqueueSnackbar('✅ Evaluación completada', { variant: 'success' });
                 }
             } else {
@@ -256,6 +304,14 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
                 const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
                 if (clientCases[assessment.id]) {
                     clientCases[assessment.id].status = 'completed';
+                    clientCases[assessment.id].answers = answers;
+                    // Generate a basic aiAssessment
+                    clientCases[assessment.id].aiAssessment = {
+                        diagnosis: `Evaluación completada: ${assessment.symptom}`,
+                        confidence: 40,
+                        recommendation: 'tow',
+                        reasoning: ['Cliente completó cuestionario', 'Requiere evaluación del gruista'],
+                    };
                     localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
                 }
 
@@ -268,7 +324,37 @@ export function useClientAssessment(assessmentId: string | undefined): UseClient
         } finally {
             setIsLoading(false);
         }
-    }, [assessment, diagnosisId, carId, generatePreliminary]);
+    }, [assessment, diagnosisId, carId, answers, generatePreliminary]);
+
+    // Helper function to determine recommendation based on backend preliminary diagnosis
+    function determineRecommendationFromPreliminary(preliminary: any): 'repair' | 'info' | 'tow' {
+        if (!preliminary || !preliminary.possibleReasons) {
+            return 'tow'; // Default to tow for safety
+        }
+
+        const topReason = preliminary.possibleReasons[0];
+        if (!topReason) return 'tow';
+
+        // Check if required tools are simple (can repair on-site)
+        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables de arranque', 'pinzas'];
+        const requiredTools = topReason.requiredTools || [];
+        const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
+            simpleTools.some(simple => tool.toLowerCase().includes(simple))
+        );
+
+        // High probability + simple tools = can repair on-site
+        if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
+            return 'repair';
+        }
+
+        // Medium probability = needs more info
+        if (topReason.probability === 'Media') {
+            return 'info';
+        }
+
+        // Default to tow for complex repairs
+        return 'tow';
+    }
 
     return {
         assessment,

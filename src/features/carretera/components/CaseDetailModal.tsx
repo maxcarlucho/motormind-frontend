@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from 'react';
 import { X, Copy, MessageCircle, ExternalLink } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { OperatorCase } from '../types/carretera.types';
@@ -12,18 +13,54 @@ interface CaseDetailModalProps {
 }
 
 /**
+ * Helper to format phone number for WhatsApp
+ * Ensures Spanish numbers have +34 prefix
+ */
+function formatPhoneForWhatsApp(phone: string): string {
+    const cleanPhone = phone.replace(/\D/g, ''); // Remove non-digits
+
+    // If already has country code (starts with 34), add +
+    if (cleanPhone.startsWith('34') && cleanPhone.length >= 11) {
+        return cleanPhone;
+    }
+
+    // Spanish mobile numbers start with 6, 7, 8, or 9
+    if (cleanPhone.length === 9 && /^[6789]/.test(cleanPhone)) {
+        return `34${cleanPhone}`;
+    }
+
+    return cleanPhone;
+}
+
+/**
  * Modal to display detailed information about a case
  * Phase 1: Basic information and actions
  */
 export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalProps) {
+    // Handle ESC key to close modal
+    const handleEscKey = useCallback((e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            onClose();
+        }
+    }, [onClose]);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.addEventListener('keydown', handleEscKey);
+            return () => document.removeEventListener('keydown', handleEscKey);
+        }
+    }, [isOpen, handleEscKey]);
+
     if (!isOpen) return null;
 
+    const getFullClientLink = () => `${window.location.origin}/carretera/c/${caseData.id}`;
+
     const copyClientLink = async () => {
-        const link = `${window.location.origin}/carretera/c/${caseData.id}`;
+        const link = getFullClientLink();
 
         try {
             await navigator.clipboard.writeText(link);
-            enqueueSnackbar('✅ Link copiado al portapapeles', { variant: 'success' });
+            enqueueSnackbar('Link copiado al portapapeles', { variant: 'success' });
         } catch (err) {
             // Fallback for older browsers
             const input = document.createElement('input');
@@ -32,13 +69,13 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
             input.select();
             document.execCommand('copy');
             document.body.removeChild(input);
-            enqueueSnackbar('✅ Link copiado', { variant: 'success' });
+            enqueueSnackbar('Link copiado', { variant: 'success' });
         }
     };
 
     const sendToWhatsApp = () => {
-        const { clientPhone, clientName, symptom, id } = caseData;
-        const clientLink = `${window.location.origin}/carretera/c/${id}`;
+        const { clientPhone, clientName, symptom } = caseData;
+        const clientLink = getFullClientLink();
 
         const message = encodeURIComponent(
             `Hola ${clientName},\n\n` +
@@ -46,10 +83,10 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
             `accede a este enlace y responde las preguntas:\n\n` +
             `${clientLink}\n\n` +
             `Muchas gracias,\n` +
-            `Asistencia en Carretera Mapfre`
+            `Asistencia en Carretera`
         );
 
-        const phone = clientPhone.replace(/\D/g, ''); // Remove non-digits
+        const phone = formatPhoneForWhatsApp(clientPhone);
         const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
 
         window.open(whatsappUrl, '_blank');
@@ -166,36 +203,48 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
                                     <input
                                         type="text"
                                         readOnly
-                                        value={caseData.clientLink}
-                                        className="flex-1 text-xs font-mono bg-white border border-blue-300 rounded px-3 py-2 text-gray-700"
+                                        value={getFullClientLink()}
+                                        className="flex-1 text-sm font-mono bg-white border border-blue-300 rounded px-3 py-2 text-gray-700"
                                     />
                                     <button
                                         onClick={copyClientLink}
                                         className="p-2 text-blue-700 hover:bg-blue-100 rounded transition-colors"
                                         title="Copiar link"
                                     >
-                                        <Copy className="h-4 w-4" />
+                                        <Copy className="h-5 w-5" />
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Footer Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3 p-6 bg-gray-50 border-t border-gray-200">
-                            <button
-                                onClick={openClientView}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                <ExternalLink className="h-4 w-4" />
-                                Abrir Vista del Cliente
-                            </button>
+                        {/* Footer Actions - WhatsApp more prominent */}
+                        <div className="flex flex-col gap-3 p-6 bg-gray-50 border-t border-gray-200">
+                            {/* WhatsApp - Primary action, full width, more prominent */}
                             <button
                                 onClick={sendToWhatsApp}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg"
                             >
-                                <MessageCircle className="h-4 w-4" />
+                                <MessageCircle className="h-6 w-6" />
                                 Enviar por WhatsApp
                             </button>
+
+                            {/* Secondary actions */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={openClientView}
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    <ExternalLink className="h-4 w-4" />
+                                    Ver como Cliente
+                                </button>
+                                <button
+                                    onClick={copyClientLink}
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                    Copiar Enlace
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

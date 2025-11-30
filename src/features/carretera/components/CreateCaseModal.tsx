@@ -65,11 +65,11 @@ export function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCaseModalP
             newErrors.vehiclePlate = 'Formato inválido (ej: ABC1234 o 1234ABC)';
         }
 
-        // Symptom validation
+        // Symptom validation - minimum 3 characters to allow short descriptions like "fallo"
         if (!formData.symptom) {
             newErrors.symptom = 'El síntoma es obligatorio';
-        } else if (formData.symptom.length < 10) {
-            newErrors.symptom = 'Describe el síntoma con más detalle (mín. 10 caracteres)';
+        } else if (formData.symptom.trim().length < 3) {
+            newErrors.symptom = 'Describe el síntoma (mín. 3 caracteres)';
         }
 
         // Client name validation

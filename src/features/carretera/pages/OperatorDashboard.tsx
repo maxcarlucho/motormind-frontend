@@ -5,9 +5,6 @@ import { CreateCaseModal } from '../components/CreateCaseModal';
 import { CaseListTable } from '../components/CaseListTable';
 import { CaseDetailModal } from '../components/CaseDetailModal';
 import { OperatorCase, AssessmentStatus } from '../types/carretera.types';
-import { BackendTestButton } from '../components/BackendTestButton';
-import { QuickBackendCheck } from '../components/QuickBackendCheck';
-import '../debug/simpleBackendTest'; // Auto-registers simpleBackendTest() in window
 
 export function OperatorDashboard() {
     const {
@@ -190,12 +187,6 @@ export function OperatorDashboard() {
                     onClose={handleCloseDetailModal}
                 />
             )}
-
-            {/* Backend Status Indicator */}
-            <QuickBackendCheck />
-
-            {/* Backend Test Button - TEMPORARY FOR DEBUGGING */}
-            <BackendTestButton />
         </div>
     );
 }

@@ -1,15 +1,13 @@
-import { CheckCircle, Truck, Phone, MapPin } from 'lucide-react';
+import { CheckCircle, Truck, MapPin } from 'lucide-react';
 
 interface ClientCompleteProps {
     clientName?: string;
     estimatedArrival?: Date;
-    contactPhone?: string;
 }
 
 export function ClientComplete({
     clientName = 'Cliente',
     estimatedArrival,
-    contactPhone = '+34 900 123 456',
 }: ClientCompleteProps) {
     return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
@@ -77,26 +75,10 @@ export function ClientComplete({
                     </ul>
                 </div>
 
-                {/* Contact Info */}
-                <div className="space-y-3">
-                    <p className="text-sm text-gray-600">
-                        ¿Necesitas ayuda o información adicional?
-                    </p>
-                    <a
-                        href={`tel:${contactPhone.replace(/\s/g, '')}`}
-                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-blue-700 active:bg-blue-800"
-                    >
-                        <Phone className="h-5 w-5" />
-                        Llamar al {contactPhone}
-                    </a>
-                </div>
-
                 {/* Footer */}
                 <div className="pt-6 border-t border-gray-200">
                     <p className="text-xs text-gray-500">
                         Servicio de asistencia en carretera
-                        <br />
-                        <span className="font-semibold">Mapfre × Motormind</span>
                     </p>
                 </div>
             </div>

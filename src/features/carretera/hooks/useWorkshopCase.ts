@@ -48,12 +48,108 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
         setError(null);
 
         try {
-            // TODO: Replace with actual API call
-            // const response = await damageAssessmentApi.get(`/carretera/workshop/${caseId}`);
+            // First try to load from workshop_cases (created when gruista tows)
+            const workshopCasesStr = localStorage.getItem('carretera_workshop_cases');
+            if (workshopCasesStr) {
+                const workshopCases = JSON.parse(workshopCasesStr);
+                const found = workshopCases.find((c: any) => c.id === caseId);
+                if (found) {
+                    // Convert date strings back to Date objects
+                    const workshopCase: WorkshopCaseDetailed = {
+                        ...found,
+                        createdAt: new Date(found.createdAt),
+                        updatedAt: new Date(found.updatedAt),
+                        gruistaDecision: {
+                            ...found.gruistaDecision,
+                            decidedAt: new Date(found.gruistaDecision.decidedAt),
+                        },
+                        acceptedAt: found.acceptedAt ? new Date(found.acceptedAt) : undefined,
+                    };
+                    setCaseData(workshopCase);
+                    return;
+                }
+            }
 
-            // Mock data for development
+            // If not in workshop_cases, try to build from operator/client cases
+            // This handles cases that might not have been properly transferred
+            const operatorCasesStr = localStorage.getItem('carretera_operator_cases');
+            const clientCasesStr = localStorage.getItem('carretera_client_cases');
+
+            if (operatorCasesStr) {
+                const operatorCases = JSON.parse(operatorCasesStr);
+                const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
+
+                const opCase = operatorCases.find((c: any) => c.id === caseId);
+
+                if (opCase) {
+                    const clientCase = clientCases[caseId] || {};
+
+                    // Build workshop case from available data
+                    const workshopCase: WorkshopCaseDetailed = {
+                        id: opCase.id,
+                        caseNumber: opCase.caseNumber,
+                        vehiclePlate: opCase.vehiclePlate,
+                        clientName: opCase.clientName,
+                        clientPhone: opCase.clientPhone,
+                        symptom: opCase.symptom,
+                        location: opCase.location || 'No especificada',
+                        questions: clientCase.questions || [],
+                        answers: clientCase.answers || [],
+                        aiAssessment: clientCase.aiAssessment || {
+                            diagnosis: opCase.symptom,
+                            confidence: 50,
+                            recommendation: 'tow',
+                            reasoning: ['Caso transferido al taller'],
+                        },
+                        gruistaDecision: {
+                            decision: 'tow',
+                            notes: 'Transferido al taller',
+                            decidedAt: new Date(),
+                            gruistaName: 'Gruista',
+                        },
+                        status: 'incoming',
+                        createdAt: new Date(opCase.createdAt),
+                        updatedAt: new Date(opCase.updatedAt),
+                    };
+
+                    // Try to enhance with backend data if available
+                    const diagnosisId = clientCase.diagnosisId;
+                    const token = localStorage.getItem('token');
+
+                    if (diagnosisId && token) {
+                        try {
+                            const diagnosisResponse = await getDiagnosis(undefined, undefined, {
+                                diagnosisId
+                            });
+                            const diagnosis = diagnosisResponse.data;
+
+                            if (diagnosis.preliminary?.possibleReasons?.length > 0) {
+                                const topReason = diagnosis.preliminary.possibleReasons[0];
+                                workshopCase.aiAssessment = {
+                                    diagnosis: topReason.title || diagnosis.fault,
+                                    confidence: topReason.probability === 'Alta' ? 85 :
+                                                topReason.probability === 'Media' ? 65 : 45,
+                                    recommendation: 'tow',
+                                    reasoning: diagnosis.preliminary.possibleReasons.map((r: any) => r.reasonDetails),
+                                };
+                            }
+                        } catch (apiError) {
+                            console.log('Could not fetch backend diagnosis');
+                        }
+                    }
+
+                    // Save to workshop_cases for future access
+                    const existingWorkshopCases = workshopCasesStr ? JSON.parse(workshopCasesStr) : [];
+                    existingWorkshopCases.unshift(workshopCase);
+                    localStorage.setItem('carretera_workshop_cases', JSON.stringify(existingWorkshopCases));
+
+                    setCaseData(workshopCase);
+                    return;
+                }
+            }
+
+            // Fallback to mock data only if nothing found
             const mockData = getMockWorkshopCase(caseId!);
-
             if (mockData) {
                 setCaseData(mockData);
             } else {
