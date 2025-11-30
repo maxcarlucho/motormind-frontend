@@ -6,7 +6,7 @@ import { useCreateCase } from '../hooks/useCreateCase';
 interface CreateCaseModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: (caseId: string) => void;
+    onSuccess: (caseId: string, formData: CaseFormData) => void;
 }
 
 /**
@@ -101,8 +101,9 @@ export function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCaseModalP
 
         try {
             const caseId = await createCase(formData);
-            onSuccess(caseId);
-            onClose();
+            // Pass both caseId and formData so parent can open detail modal
+            onSuccess(caseId, formData);
+            // Don't close - parent will handle closing and opening detail modal
         } catch (err) {
             // Error is handled in the hook
             console.error('Failed to create case:', err);

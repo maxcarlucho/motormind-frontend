@@ -4,7 +4,7 @@ import { useOperatorCases } from '../hooks/useOperatorCases';
 import { CreateCaseModal } from '../components/CreateCaseModal';
 import { CaseListTable } from '../components/CaseListTable';
 import { CaseDetailModal } from '../components/CaseDetailModal';
-import { OperatorCase, AssessmentStatus } from '../types/carretera.types';
+import { OperatorCase, AssessmentStatus, CaseFormData } from '../types/carretera.types';
 
 export function OperatorDashboard() {
     const {
@@ -23,13 +23,33 @@ export function OperatorDashboard() {
     const [selectedCase, setSelectedCase] = useState<OperatorCase | null>(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-    const handleCreateSuccess = (caseId: string) => {
-        // The case has already been created and saved by useCreateCase hook
-        // Just refresh the list to show the new case
+    const handleCreateSuccess = (caseId: string, formData: CaseFormData) => {
         console.log('Case created successfully with ID:', caseId);
+
+        // Close create modal
+        setIsModalOpen(false);
 
         // Refresh the list to show the newly created case
         refresh();
+
+        // Build the new case object to show in detail modal
+        const newCase: OperatorCase = {
+            id: caseId,
+            caseNumber: `C-${String(cases.length + 1).padStart(3, '0')}`,
+            vehiclePlate: formData.vehiclePlate,
+            clientName: formData.clientName,
+            clientPhone: formData.clientPhone,
+            symptom: formData.symptom,
+            location: formData.location,
+            status: 'pending',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            clientLink: `/carretera/c/${caseId}`,
+        };
+
+        // Open detail modal with the newly created case
+        setSelectedCase(newCase);
+        setIsDetailModalOpen(true);
     };
 
     const handleStatusFilter = (status: AssessmentStatus | 'all') => {
