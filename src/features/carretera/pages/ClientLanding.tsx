@@ -1,17 +1,16 @@
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useClientAssessment } from '../hooks/useClientAssessment';
 import { ChatInterface } from '../components/ChatInterface';
 import { ClientComplete } from '../components/ClientComplete';
+import { useAccessToken } from '../components/RequireAccessToken';
 
 export const ClientLanding = () => {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
 
-  // Extract token and carId from URL query params
-  // These are needed for the client to call backend APIs
-  const urlToken = searchParams.get('t') || undefined;
-  const urlCarId = searchParams.get('car') || undefined;
+  // Get validated token data from RequireAccessToken context
+  // The token has already been validated for: correct caseId, not expired, type='client'
+  const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = useAccessToken();
 
   const {
     assessment,
@@ -22,7 +21,7 @@ export const ClientLanding = () => {
     isGeneratingDiagnosis,
     error,
     submitAnswer,
-  } = useClientAssessment(id, { token: urlToken, carId: urlCarId });
+  } = useClientAssessment(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId });
 
   // Loading state
   if (isLoading) {
@@ -78,20 +77,15 @@ export const ClientLanding = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 max-w-4xl mx-auto w-full">
+      <div className="flex-1 max-w-4xl mx-auto w-full overflow-hidden">
         <ChatInterface
           questions={questions}
           answers={answers}
           onAnswerSubmit={submitAnswer}
           isLoading={isLoading}
+          clientName={assessment.clientName}
+          symptom={assessment.symptom?.split('[ASISTENCIA')[0]?.trim()}
         />
-      </div>
-
-      {/* Footer */}
-      <div className="bg-white border-t border-gray-200 px-4 py-2">
-        <p className="text-xs text-gray-500 text-center max-w-4xl mx-auto">
-          Tus respuestas ayudarán al técnico a diagnosticar el problema más rápido
-        </p>
       </div>
     </div>
   );

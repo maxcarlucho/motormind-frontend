@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { enqueueSnackbar } from 'notistack';
 import { GruistaCaseDetailed, TrafficLightDecisionType, DecisionSubmission, WorkshopCaseDetailed, AIAssessment } from '../types/carretera.types';
 import { useAuth } from '@/context/Auth.context';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
+import { generateAccessToken } from '../utils/accessToken';
 
 interface UseGruistaCaseReturn {
     caseData: GruistaCaseDetailed | null;
@@ -11,7 +12,7 @@ interface UseGruistaCaseReturn {
     error: string | null;
     submitDecision: (decision: TrafficLightDecisionType, notes?: string) => Promise<void>;
     isSubmitting: boolean;
-    generateWorkshopLink: () => string;
+    generateWorkshopLink: () => Promise<string>; // Now async (generates token)
     refresh: () => Promise<void>; // Manual refresh
     isRefreshing: boolean;
 }
@@ -455,10 +456,25 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
         }
     };
 
-    const generateWorkshopLink = (): string => {
+    /**
+     * Generate a secure workshop link with scoped access token
+     * The token is limited to this specific case and cannot be used elsewhere
+     */
+    const generateWorkshopLink = useCallback(async (): Promise<string> => {
         if (!caseData) return '';
-        return `${window.location.origin}/carretera/t/${caseData.id}`;
-    };
+
+        // Get diagnosisId and carId from localStorage
+        const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+        const clientCase = clientCases[caseData.id] || {};
+
+        // Generate scoped token for workshop access
+        const workshopToken = await generateAccessToken('workshop', caseData.id, {
+            carId: clientCase.carId,
+            diagnosisId: clientCase.diagnosisId,
+        });
+
+        return `${window.location.origin}/carretera/t/${caseData.id}?token=${encodeURIComponent(workshopToken)}`;
+    }, [caseData]);
 
     // Manual refresh function
     const refresh = async () => {

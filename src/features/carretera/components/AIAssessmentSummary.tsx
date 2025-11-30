@@ -60,9 +60,9 @@ function DiagnosisPendingState({
                 };
             case 'generating':
                 return {
-                    icon: <Loader2 className="h-8 w-8 animate-spin" />,
-                    title: 'Generando Diagnóstico IA',
-                    subtitle: 'El cliente terminó. Analizando respuestas...',
+                    icon: <Brain className="h-8 w-8 animate-pulse" />,
+                    title: 'Analizando con IA',
+                    subtitle: 'El cliente ha completado todas las preguntas',
                     bgGradient: 'from-purple-500 to-indigo-600',
                     borderColor: 'border-purple-300',
                     bgColor: 'from-purple-50 to-indigo-50',
@@ -118,15 +118,46 @@ function DiagnosisPendingState({
                         </div>
                     )}
 
-                    {/* Generating animation */}
+                    {/* Generating - Enhanced info for gruista */}
                     {status === 'generating' && (
-                        <div className="flex items-center gap-2 text-purple-600">
-                            <div className="flex space-x-1">
-                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="w-full space-y-4">
+                            {/* Processing animation */}
+                            <div className="flex items-center justify-center gap-2 text-purple-600">
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <span className="text-sm font-medium">Procesando con IA...</span>
                             </div>
-                            <span className="text-sm">Procesando con IA...</span>
+
+                            {/* What's happening */}
+                            <div className="bg-white rounded-lg p-4 border border-purple-200 text-left">
+                                <p className="text-sm font-semibold text-purple-800 mb-3">La IA está analizando:</p>
+                                <ul className="space-y-2 text-sm text-gray-700">
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        <span>Respuestas del cliente</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                        <span>Datos del vehículo</span>
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <Loader2 className="h-4 w-4 text-purple-500 animate-spin flex-shrink-0" />
+                                        <span>Generando diagnóstico preliminar...</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            {/* Estimated time */}
+                            <div className="flex items-center justify-center gap-2 text-gray-500">
+                                <Clock className="h-4 w-4" />
+                                <span className="text-xs">Esto puede tardar 30-60 segundos</span>
+                            </div>
+
+                            {/* Tip for gruista */}
+                            <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                                <p className="text-xs text-amber-700">
+                                    <strong>Mientras esperas:</strong> Puedes revisar la ubicación del cliente y preparar el equipo necesario.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>

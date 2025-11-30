@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Car, User, Phone, MapPin, Loader2, Cpu, Wrench } from 'lucide-react';
 import { useWorkshopCase } from '../hooks/useWorkshopCase';
@@ -7,6 +7,7 @@ import { AIAssessmentSummary } from '../components/AIAssessmentSummary';
 import { GruistaDecisionSummary } from '../components/GruistaDecisionSummary';
 import { WorkshopActions } from '../components/WorkshopActions';
 import { OBDDiagnosisForm } from '../components/OBDDiagnosisForm';
+import { WorkshopWelcomeModal } from '../components/WorkshopWelcomeModal';
 
 export function WorkshopReception() {
     const { id } = useParams<{ id: string }>();
@@ -14,6 +15,20 @@ export function WorkshopReception() {
     const { caseData, isLoading, error, acceptCase, rejectCase, submitOBDDiagnosis, isProcessing } =
         useWorkshopCase(id);
     const [showOBDForm, setShowOBDForm] = useState(false);
+    const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+    // Show welcome modal for incoming cases (first time viewing)
+    useEffect(() => {
+        if (caseData && caseData.status === 'incoming') {
+            // Check if we've already shown the modal for this case
+            const shownModalKey = `workshop_welcome_shown_${id}`;
+            const hasShownModal = sessionStorage.getItem(shownModalKey);
+            if (!hasShownModal) {
+                setShowWelcomeModal(true);
+                sessionStorage.setItem(shownModalKey, 'true');
+            }
+        }
+    }, [caseData, id]);
 
     const handleBack = () => {
         navigate('/carretera/t/dashboard');
@@ -67,6 +82,19 @@ export function WorkshopReception() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Welcome Modal for new incoming cases */}
+            {showWelcomeModal && caseData && (
+                <WorkshopWelcomeModal
+                    caseNumber={caseData.caseNumber}
+                    vehiclePlate={caseData.vehiclePlate}
+                    symptom={caseData.symptom}
+                    clientName={caseData.clientName}
+                    gruistaDecision={caseData.gruistaDecision?.decision || 'tow'}
+                    onClose={() => setShowWelcomeModal(false)}
+                    onAccept={() => setShowWelcomeModal(false)}
+                />
+            )}
+
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg sticky top-0 z-20">
                 <div className="px-4 py-4">
@@ -87,6 +115,17 @@ export function WorkshopReception() {
 
             {/* Content */}
             <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+                {/* Workshop Actions - MOVED TO TOP for incoming cases */}
+                {isIncoming && (
+                    <div className="sticky top-[72px] z-10 -mx-4 px-4 py-3 bg-gradient-to-b from-gray-50 via-gray-50 to-transparent">
+                        <WorkshopActions
+                            onAccept={handleAccept}
+                            onReject={rejectCase}
+                            isProcessing={isProcessing}
+                        />
+                    </div>
+                )}
+
                 {/* Status Banner */}
                 {isAccepted && (
                     <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
@@ -114,20 +153,37 @@ export function WorkshopReception() {
                     </div>
                 )}
 
-                {/* Vehicle Info */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Car className="h-5 w-5 text-indigo-600" />
-                        <h2 className="text-lg font-bold text-gray-900">Información del Vehículo</h2>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <p className="text-sm text-gray-600">Matrícula</p>
-                            <p className="text-2xl font-bold text-gray-900">{caseData.vehiclePlate}</p>
+                {/* Vehicle Info - Enhanced for technician */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-3">
+                        <div className="flex items-center gap-2 text-white">
+                            <Car className="h-5 w-5" />
+                            <h2 className="text-lg font-bold">Información del Vehículo</h2>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Síntoma Reportado</p>
-                            <p className="text-base text-gray-900">{caseData.symptom}</p>
+                    </div>
+                    <div className="p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">Matrícula</p>
+                                <p className="text-3xl font-bold text-gray-900 font-mono">{caseData.vehiclePlate}</p>
+                            </div>
+                            {/* Vehicle details if available */}
+                            {caseData.vehicleInfo && (
+                                <div className="text-right">
+                                    <p className="text-sm font-semibold text-gray-800">
+                                        {caseData.vehicleInfo.brand} {caseData.vehicleInfo.model}
+                                    </p>
+                                    {caseData.vehicleInfo.year && (
+                                        <p className="text-sm text-gray-600">{caseData.vehicleInfo.year}</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="border-t pt-4">
+                            <p className="text-sm font-semibold text-gray-700 mb-2">Síntoma Reportado</p>
+                            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r">
+                                <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -334,17 +390,6 @@ export function WorkshopReception() {
                     </div>
                 )}
 
-                {/* Workshop Actions (only if incoming) */}
-                {isIncoming && (
-                    <div>
-                        <h2 className="text-lg font-bold text-gray-900 mb-3">Acciones</h2>
-                        <WorkshopActions
-                            onAccept={handleAccept}
-                            onReject={rejectCase}
-                            isProcessing={isProcessing}
-                        />
-                    </div>
-                )}
             </div>
         </div>
     );

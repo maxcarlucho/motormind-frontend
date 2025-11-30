@@ -17,8 +17,8 @@ interface UseClientAssessmentReturn {
 }
 
 interface ClientAssessmentOptions {
-    token?: string;  // Token from URL for API access
-    carId?: string;  // Car ID from URL for preliminary generation
+    carId?: string;       // Car ID from validated scoped token
+    diagnosisId?: string; // Diagnosis ID from validated scoped token
 }
 
 // Default questions if none are provided - optimized for roadside assistance
@@ -33,7 +33,9 @@ const DIAGNOSTIC_QUESTIONS = [
 
 /**
  * Hook to manage client assessment state and interactions
- * Now supports token from URL for direct backend communication
+ *
+ * Security: Token validation is handled by RequireAccessToken component.
+ * This hook receives pre-validated carId and diagnosisId from the scoped token.
  */
 export function useClientAssessment(
     assessmentId: string | undefined,
@@ -49,9 +51,9 @@ export function useClientAssessment(
     const [diagnosisId, setDiagnosisId] = useState<string | null>(null);
     const [carId, setCarId] = useState<string | null>(null);
 
-    // Store token from URL
-    const urlToken = options.token;
-    const urlCarId = options.carId;
+    // Get carId and diagnosisId from validated token (passed from RequireAccessToken context)
+    const tokenCarId = options.carId;
+    const tokenDiagnosisId = options.diagnosisId;
 
     // Use ref to track if we've already generated preliminary
     const preliminaryGeneratedRef = useRef(false);
@@ -62,13 +64,14 @@ export function useClientAssessment(
         return api;
     }, []);
 
-    // Helper function to make authenticated API calls using URL token
+    // Helper function to make authenticated API calls
+    // Uses operator's token from localStorage (stored when case was created)
     const apiCall = useCallback(async <T>(
         method: 'get' | 'post' | 'put',
         url: string,
         data?: any
     ): Promise<T> => {
-        const token = urlToken || localStorage.getItem('token');
+        const token = localStorage.getItem('token');
         if (!token) {
             throw new Error('No authentication token available');
         }
@@ -90,7 +93,7 @@ export function useClientAssessment(
         }
 
         return response.data;
-    }, [urlToken, getApiService]);
+    }, [getApiService]);
 
     // Helper function to load local data as fallback
     const loadLocalData = useCallback((caseData: any) => {
@@ -118,10 +121,10 @@ export function useClientAssessment(
         setAnswers(carreteraAssessment.answers);
         setIsComplete(carreteraAssessment.status === 'completed');
 
-        // Set IDs from local data
-        if (caseData.diagnosisId) setDiagnosisId(caseData.diagnosisId);
-        if (caseData.carId || urlCarId) setCarId(caseData.carId || urlCarId || null);
-    }, [urlCarId]);
+        // Set IDs from local data or token
+        if (caseData.diagnosisId || tokenDiagnosisId) setDiagnosisId(caseData.diagnosisId || tokenDiagnosisId);
+        if (caseData.carId || tokenCarId) setCarId(caseData.carId || tokenCarId || null);
+    }, [tokenCarId, tokenDiagnosisId]);
 
     // Load assessment data on mount or when ID changes
     useEffect(() => {
@@ -146,15 +149,16 @@ export function useClientAssessment(
                     return;
                 }
 
-                // Set carId from URL or localStorage
-                const effectiveCarId = urlCarId || localCaseData.carId;
+                // Set carId from token or localStorage
+                const effectiveCarId = tokenCarId || localCaseData.carId;
                 if (effectiveCarId) setCarId(effectiveCarId);
 
-                const effectiveDiagnosisId = localCaseData.diagnosisId;
+                // Set diagnosisId from token or localStorage
+                const effectiveDiagnosisId = tokenDiagnosisId || localCaseData.diagnosisId;
                 if (effectiveDiagnosisId) setDiagnosisId(effectiveDiagnosisId);
 
-                // Try to fetch from backend if we have token
-                const token = urlToken || localStorage.getItem('token');
+                // Try to fetch from backend if we have auth token
+                const token = localStorage.getItem('token');
 
                 if (effectiveDiagnosisId && token) {
                     try {
@@ -221,7 +225,7 @@ export function useClientAssessment(
         };
 
         loadAssessment();
-    }, [assessmentId, urlToken, urlCarId, apiCall, loadLocalData]);
+    }, [assessmentId, tokenCarId, tokenDiagnosisId, apiCall, loadLocalData]);
 
     // Submit a new answer and save to backend
     const submitAnswer = useCallback(async (answer: string) => {
@@ -235,11 +239,11 @@ export function useClientAssessment(
             const newAnswers = [...answers, answer];
             setAnswers(newAnswers);
 
-            // Get token (from URL or localStorage)
-            const token = urlToken || localStorage.getItem('token');
+            // Get token from localStorage
+            const token = localStorage.getItem('token');
 
             // Save to backend if we have diagnosisId, carId and token
-            const effectiveCarId = carId || urlCarId;
+            const effectiveCarId = carId || tokenCarId;
             if (diagnosisId && effectiveCarId && token) {
                 try {
                     console.log('📤 Saving answer to backend...');
@@ -269,9 +273,8 @@ export function useClientAssessment(
             if (newAnswers.length >= questions.length) {
                 console.log('🎯 All questions answered! Generating preliminary diagnosis...');
                 await generatePreliminaryDiagnosis(newAnswers);
-            } else {
-                enqueueSnackbar('Respuesta guardada', { variant: 'success' });
             }
+            // No snackbar for each answer - it's distracting for the client
         } catch (err) {
             console.error('Error submitting answer:', err);
             enqueueSnackbar('Error al guardar respuesta', { variant: 'error' });
@@ -279,7 +282,7 @@ export function useClientAssessment(
             setAnswers(answers);
             throw err;
         }
-    }, [assessment, answers, questions, diagnosisId, urlToken, apiCall]);
+    }, [assessment, answers, questions, diagnosisId, carId, tokenCarId, apiCall]);
 
     // Generate preliminary diagnosis when client finishes all questions
     const generatePreliminaryDiagnosis = useCallback(async (finalAnswers: string[]) => {
@@ -295,8 +298,8 @@ export function useClientAssessment(
             return;
         }
 
-        const token = urlToken || localStorage.getItem('token');
-        const effectiveCarId = carId || urlCarId;
+        const token = localStorage.getItem('token');
+        const effectiveCarId = carId || tokenCarId;
 
         if (!token || !effectiveCarId) {
             console.log('⚠️ Cannot generate preliminary: missing token or carId');
@@ -386,7 +389,7 @@ export function useClientAssessment(
             // Mark complete locally as fallback
             markCompleteLocally(finalAnswers, assessment);
         }
-    }, [assessment, diagnosisId, carId, urlCarId, urlToken, questions, apiCall]);
+    }, [assessment, diagnosisId, carId, tokenCarId, questions, apiCall]);
 
     // Helper: Mark complete locally without backend AI
     const markCompleteLocally = (finalAnswers: string[], currentAssessment: CarreteraAssessment) => {

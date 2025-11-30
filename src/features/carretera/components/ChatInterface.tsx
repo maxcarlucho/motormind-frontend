@@ -8,6 +8,8 @@ interface ChatInterfaceProps {
     answers: string[];
     onAnswerSubmit: (answer: string) => Promise<void>;
     isLoading: boolean;
+    clientName?: string;
+    symptom?: string;
 }
 
 export function ChatInterface({
@@ -15,6 +17,8 @@ export function ChatInterface({
     answers,
     onAnswerSubmit,
     isLoading,
+    clientName,
+    symptom,
 }: ChatInterfaceProps) {
     const [currentAnswer, setCurrentAnswer] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,10 +74,40 @@ export function ChatInterface({
         }
     };
 
+    // Generate welcome message
+    const welcomeMessage = clientName
+        ? `¡Hola${clientName ? ` ${clientName.split(' ')[0]}` : ''}! Soy el asistente de diagnóstico. La grúa ya está en camino hacia ti.\n\nMientras llega, necesito hacerte ${questions.length} preguntas rápidas sobre "${symptom || 'el problema de tu vehículo'}" para que el técnico llegue mejor preparado.\n\nTus respuestas nos ayudarán a determinar si podemos resolver el problema en el lugar o si necesitaremos llevarlo al taller.`
+        : `¡Hola! Soy el asistente de diagnóstico. La grúa ya está en camino.\n\nNecesito hacerte ${questions.length} preguntas rápidas para ayudar al técnico a llegar mejor preparado.`;
+
     return (
         <div className="flex flex-col h-full">
+            {/* Progress indicator */}
+            <div className="bg-blue-50 border-b border-blue-100 px-4 py-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-blue-700 font-medium">
+                        Pregunta {Math.min(answers.length + 1, questions.length)} de {questions.length}
+                    </span>
+                    <div className="flex-1 mx-4 h-2 bg-blue-200 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                            style={{ width: `${(answers.length / questions.length) * 100}%` }}
+                        />
+                    </div>
+                    <span className="text-blue-600 text-xs">
+                        {Math.round((answers.length / questions.length) * 100)}%
+                    </span>
+                </div>
+            </div>
+
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+                {/* Welcome message - always show first */}
+                <ChatMessage
+                    message={welcomeMessage}
+                    type="ai"
+                    timestamp={new Date()}
+                />
+
                 {/* Render all previous Q&A pairs */}
                 {questions.slice(0, answers.length).map((question, index) => (
                     <div key={`qa-${index}`}>

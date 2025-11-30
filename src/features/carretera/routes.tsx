@@ -7,6 +7,7 @@ import { WorkshopReception } from './pages/WorkshopReception';
 import { WorkshopDashboard } from './pages/WorkshopDashboard';
 import { OperatorDashboard } from './pages/OperatorDashboard';
 import { RequireAuth } from './components/RequireAuth';
+import { RequireAccessToken } from './components/RequireAccessToken';
 
 export const carreteraRoutes: RouteObject[] = [
     {
@@ -19,7 +20,13 @@ export const carreteraRoutes: RouteObject[] = [
     },
     {
         path: '/carretera/c/:id',
-        element: <ClientLanding />, // Client does NOT require auth
+        // Client requires a valid SCOPED token (not full auth)
+        // Token is validated for: correct caseId, not expired, type='client'
+        element: (
+            <RequireAccessToken tokenType="client">
+                <ClientLanding />
+            </RequireAccessToken>
+        ),
     },
     {
         path: '/carretera/g/dashboard',
@@ -35,6 +42,14 @@ export const carreteraRoutes: RouteObject[] = [
     },
     {
         path: '/carretera/t/:id',
-        element: <WorkshopReception />, // Workshop reception does NOT require auth (accessed via link)
+        // Workshop requires a valid SCOPED token (not full auth)
+        // Token is validated for: correct caseId, not expired, type='workshop'
+        // Multiple people at the workshop can use the same link (shareable)
+        // Works in incognito mode - no Motormind login required
+        element: (
+            <RequireAccessToken tokenType="workshop">
+                <WorkshopReception />
+            </RequireAccessToken>
+        ),
     },
 ];

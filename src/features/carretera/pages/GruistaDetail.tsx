@@ -19,13 +19,18 @@ export function GruistaDetail() {
     const handleDecision = async (decision: any, notes?: string) => {
         await submitDecision(decision, notes);
 
-        // If towing, show workshop link
+        // If towing, generate and show workshop link with secure token
         if (decision === 'tow') {
-            const workshopLink = generateWorkshopLink();
+            const workshopLink = await generateWorkshopLink();
             enqueueSnackbar(
                 `🔴 Link del taller: ${workshopLink}`,
                 { variant: 'info', autoHideDuration: 10000 }
             );
+            // Copy to clipboard for easy sharing
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(workshopLink);
+                enqueueSnackbar('Link copiado al portapapeles', { variant: 'success' });
+            }
         }
 
         // Navigate back after 2 seconds
