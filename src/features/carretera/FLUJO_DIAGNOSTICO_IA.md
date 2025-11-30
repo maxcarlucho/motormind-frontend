@@ -6,9 +6,29 @@
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │  OPERADOR   │───>│   CLIENTE   │───>│    GRÚA     │───>│   TALLER    │
 │  Crea caso  │    │  Responde   │    │   Decide    │    │  Diagnóstico│
-│             │    │  preguntas  │    │  acción     │    │  completo   │
+│  + Prompt 1 │    │  preguntas  │    │  + Prompt 2 │    │  completo   │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
+
+## Prompts de IA del Sistema
+
+| # | Prompt | Ubicación | Propósito |
+|---|--------|-----------|-----------|
+| 1 | **Generación de Preguntas** | `hooks/useCreateCase.ts:71-86` | Genera preguntas concisas para cliente varado |
+| 2 | **Recomendación Gruista** | `services/gruistaRecommendation.service.ts` | Analiza pre-diagnóstico y genera recomendación contextualizada |
+
+### Prompt 2: Detalles
+- **Input**: Pre-diagnóstico de Motormind + respuestas del cliente + ubicación
+- **Output JSON**:
+  - `recommendation`: 'repair' | 'tow'
+  - `confidence`: 0-100
+  - `summary`: Resumen corto (máx 80 chars)
+  - `reasoning`: Array de razones
+  - `actionSteps`: Pasos a seguir
+  - `risks`: Riesgos si falla
+  - `estimatedTime`: '15-30 min' | '45-60 min' | '>1 hora'
+  - `alternativeConsideration`: Qué hacer si cambia la situación
+- **Contexto especial**: Toledo, España - detecta autovías (A-42, etc.), hora del día
 
 ---
 
@@ -85,8 +105,9 @@ POST /cars/:carId/diagnosis/:diagnosisId/preliminary → Generar pre-diagnóstic
 |--------|----------|
 | Cargando | Spinner "Cargando información..." |
 | Respondiendo | Chat con preguntas |
-| Generando | "Generando diagnóstico..." con animación IA |
 | Completado | "¡Gracias! La grúa está en camino" |
+
+**Nota**: Cuando el cliente termina de responder, ve inmediatamente la pantalla de "Completado". La generación del diagnóstico IA ocurre en segundo plano, sin mostrar estados de carga al cliente.
 
 ### Datos Guardados
 - `answers`: respuestas separadas por `|` (backend)
@@ -329,10 +350,12 @@ src/features/carretera/
 
 ## Changelog
 
+### v2.1 (2024-11-30)
+- **UX mejorada para cliente**: Eliminada pantalla "Generando diagnóstico...". El cliente ve directamente "¡Gracias! La grúa está en camino" mientras la IA procesa en segundo plano
+
 ### v2.0 (2024-11-30)
 - **Token en URL del cliente**: El operador genera URL con JWT token para que el cliente pueda interactuar con el backend
 - **Auto-generación del preliminary**: Cuando el cliente termina, automáticamente se llama a `/preliminary`
-- **Pantalla "Generando diagnóstico"**: Nueva UI mientras la IA procesa
 - **TecDoc integration**: El vehículo se crea automáticamente con datos de TecDoc usando solo la matrícula
 - **Endpoints corregidos**: `PUT /cars/:carId/diagnosis/:diagnosisId/answers` (no `/cars/diagnosis/:id`)
 - **Semáforo simplificado**: Solo 2 opciones (repair/tow), eliminado "info"
