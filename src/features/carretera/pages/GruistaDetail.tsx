@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, MapPin, Copy, Loader2, Car, User } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { useGruistaCase } from '../hooks/useGruistaCase';
 import { ClientQAThread } from '../components/ClientQAThread';
@@ -9,36 +9,11 @@ import { TrafficLightDecision } from '../components/TrafficLightDecision';
 export function GruistaDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { caseData, isLoading, error, submitDecision, isSubmitting, generateWorkshopLink } =
+    const { caseData, isLoading, error, submitDecision, isSubmitting, generateWorkshopLink, refresh, isRefreshing } =
         useGruistaCase(id);
 
     const handleBack = () => {
         navigate('/carretera/g/dashboard');
-    };
-
-    const handleCallClient = () => {
-        if (caseData) {
-            window.location.href = `tel:${caseData.clientPhone}`;
-        }
-    };
-
-    const handleOpenMaps = () => {
-        if (caseData && caseData.location) {
-            const query = encodeURIComponent(`${caseData.location} ${caseData.clientName}`);
-            const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-            window.open(url, '_blank');
-        }
-    };
-
-    const handleCopyLocation = async () => {
-        if (caseData && caseData.location) {
-            try {
-                await navigator.clipboard.writeText(caseData.location);
-                enqueueSnackbar('📋 Ubicación copiada', { variant: 'success' });
-            } catch (err) {
-                enqueueSnackbar('Error al copiar ubicación', { variant: 'error' });
-            }
-        }
     };
 
     const handleDecision = async (decision: any, notes?: string) => {
@@ -103,77 +78,51 @@ export function GruistaDetail() {
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
                                 <h1 className="text-xl font-bold">Caso {caseData.caseNumber}</h1>
+                                {isRefreshing && (
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-200" />
+                                )}
                             </div>
                             <p className="text-sm text-blue-100">{caseData.vehiclePlate}</p>
                         </div>
+                        {/* Manual refresh button */}
+                        <button
+                            onClick={refresh}
+                            disabled={isRefreshing}
+                            className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95 disabled:opacity-50"
+                            title="Actualizar"
+                        >
+                            <RefreshCw className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        </button>
                     </div>
                 </div>
             </div>
 
             {/* Content */}
             <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-                {/* Vehicle Info */}
+                {/* Case Info - Unified card */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Car className="h-5 w-5 text-blue-600" />
-                        <h2 className="text-lg font-bold text-gray-900">Información del Vehículo</h2>
-                    </div>
-                    <div className="space-y-3">
+                    <div className="flex items-start justify-between mb-4">
                         <div>
-                            <p className="text-sm text-gray-600">Matrícula</p>
+                            <p className="text-sm text-gray-500">Matrícula</p>
                             <p className="text-2xl font-bold text-gray-900">{caseData.vehiclePlate}</p>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Síntoma Reportado</p>
-                            <p className="text-base text-gray-900">{caseData.symptom}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Client Info */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <User className="h-5 w-5 text-blue-600" />
-                        <h2 className="text-lg font-bold text-gray-900">Información del Cliente</h2>
-                    </div>
-                    <div className="space-y-4">
-                        <div>
-                            <p className="text-sm text-gray-600">Nombre</p>
+                        <div className="text-right">
+                            <p className="text-sm text-gray-500">Cliente</p>
                             <p className="text-lg font-semibold text-gray-900">{caseData.clientName}</p>
                         </div>
-                        <div>
-                            <p className="text-sm text-gray-600 mb-2">Teléfono</p>
-                            <button
-                                onClick={handleCallClient}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors active:scale-95"
-                            >
-                                <Phone className="h-5 w-5" />
-                                <span>{caseData.clientPhone}</span>
-                            </button>
-                        </div>
-                        {caseData.location && (
-                            <div>
-                                <p className="text-sm text-gray-600 mb-2">Ubicación</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleOpenMaps}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors active:scale-95"
-                                    >
-                                        <MapPin className="h-5 w-5" />
-                                        <span>Ver en Mapa</span>
-                                    </button>
-                                    <button
-                                        onClick={handleCopyLocation}
-                                        className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors active:scale-95"
-                                        title="Copiar ubicación"
-                                    >
-                                        <Copy className="h-5 w-5" />
-                                    </button>
-                                </div>
-                                <p className="text-sm text-gray-600 mt-2">{caseData.location}</p>
-                            </div>
-                        )}
                     </div>
+
+                    <div className="border-t border-gray-100 pt-4">
+                        <p className="text-sm text-gray-500 mb-1">Sintoma</p>
+                        <p className="text-base text-gray-900">{caseData.symptom}</p>
+                    </div>
+
+                    {caseData.location && (
+                        <div className="border-t border-gray-100 pt-4 mt-4">
+                            <p className="text-sm text-gray-500 mb-1">Ubicacion</p>
+                            <p className="text-sm text-gray-700">{caseData.location}</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Q&A Thread */}
@@ -186,12 +135,20 @@ export function GruistaDetail() {
                 {/* AI Assessment */}
                 <AIAssessmentSummary assessment={caseData.aiAssessment} />
 
-                {/* Traffic Light Decision */}
-                <TrafficLightDecision
-                    aiRecommendation={caseData.aiAssessment.recommendation}
-                    onDecision={handleDecision}
-                    isSubmitting={isSubmitting}
-                />
+                {/* Traffic Light Decision - Only show when diagnosis is ready */}
+                {caseData.aiAssessment.status === 'ready' ? (
+                    <TrafficLightDecision
+                        aiRecommendation={caseData.aiAssessment.recommendation}
+                        onDecision={handleDecision}
+                        isSubmitting={isSubmitting}
+                    />
+                ) : (
+                    <div className="bg-gray-100 rounded-lg p-6 text-center">
+                        <p className="text-gray-600 font-medium">
+                            Los botones de decisión aparecerán cuando el diagnóstico IA esté listo
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );
