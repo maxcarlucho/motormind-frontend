@@ -23,9 +23,9 @@ export function useCreateCase(): UseCreateCaseReturn {
     const [error, setError] = useState<string | null>(null);
     const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
 
-    // Use the correct APIs for diagnosis (not damage-assessment)
+    // Use the correct APIs for diagnosis
+    // GET /cars/vin-or-plate automatically gets vehicle data from TecDoc by plate
     const { execute: getOrCreateVehicle } = useApi<Car>('get', '/cars/vin-or-plate');
-    const { execute: createVehicle } = useApi<Car>('post', '/cars');
     const { execute: createDiagnosis } = useApi<Diagnosis>('post', '/cars/:carId/questions');
 
     const createCase = async (data: CaseFormData): Promise<string> => {
@@ -38,44 +38,57 @@ export function useCreateCase(): UseCreateCaseReturn {
             let generatedQuestions: string[] = [];
 
             try {
-                // Step 1: Get or create vehicle by license plate
-                console.log('🚗 Step 1: Looking up vehicle by plate:', data.vehiclePlate);
+                // Step 1: Get or create vehicle by license plate using TecDoc
+                // The backend automatically fetches vehicle data from TecDoc API
+                console.log('🚗 Step 1: Looking up vehicle by plate (TecDoc):', data.vehiclePlate);
 
-                let vehicleResponse;
-                try {
-                    // Try the get-or-create endpoint first
-                    vehicleResponse = await getOrCreateVehicle(undefined, {
-                        plate: data.vehiclePlate.toUpperCase()
-                    });
-                } catch (getError: any) {
-                    // If get-or-create doesn't exist (404), create vehicle directly
-                    if (getError.response?.status === 404) {
-                        console.log('Get-or-create endpoint not found, creating vehicle directly');
-                        vehicleResponse = await createVehicle({
-                            plate: data.vehiclePlate.toUpperCase(),
-                            brand: 'Unknown',
-                            model: 'Unknown',
-                            year: new Date().getFullYear().toString(),
-                        });
-                    } else {
-                        throw getError;
-                    }
-                }
+                const vehicleResponse = await getOrCreateVehicle(undefined, {
+                    plate: data.vehiclePlate.toUpperCase()
+                });
 
                 if (!vehicleResponse?.data?._id) {
-                    throw new Error('No vehicle ID returned');
+                    throw new Error('No vehicle ID returned from TecDoc lookup');
                 }
 
                 carId = vehicleResponse.data._id;
+                const vehicleData = vehicleResponse.data;
                 console.log('✅ Vehicle found/created:', carId);
+                console.log('🚗 Vehicle data from TecDoc:', {
+                    brand: vehicleData.brand,
+                    model: vehicleData.model,
+                    year: vehicleData.year,
+                    plate: vehicleData.plate
+                });
 
                 // Step 2: Create diagnosis for this vehicle
                 console.log('📋 Step 2: Creating diagnosis for vehicle');
 
+                // IMPORTANTE: Contexto de servicio en carretera
+                // El vehículo está VARADO, necesitamos:
+                // 1. Preguntas rápidas y enfocadas (no diagnóstico extenso de taller)
+                // 2. Determinar si es reparable in-situ o requiere remolque
+                // 3. Priorizar seguridad del cliente
+                const roadsideContext = `
+CONTEXTO CRÍTICO: SERVICIO DE ASISTENCIA EN CARRETERA
+- El vehículo está VARADO y el cliente espera en el lugar
+- Objetivo: Determinar rápidamente si el problema es reparable in-situ o requiere remolque al taller
+- Las preguntas deben ser CONCISAS y orientadas a:
+  * Identificar síntomas clave para diagnóstico rápido
+  * Evaluar si el gruista puede resolver con herramientas básicas
+  * Determinar urgencia y seguridad del cliente
+- NO hacer preguntas extensas de taller, solo lo esencial para decidir: REPARAR IN-SITU o REMOLCAR
+
+Datos del servicio:
+- Cliente: ${data.clientName}
+- Teléfono: ${data.clientPhone}
+- Ubicación: ${data.location || 'No especificada'}
+${data.notes ? `- Notas adicionales: ${data.notes}` : ''}
+`.trim();
+
                 const diagnosisResponse = await createDiagnosis(
                     {
                         fault: data.symptom,
-                        notes: data.notes || `Cliente: ${data.clientName}, Teléfono: ${data.clientPhone}, Ubicación: ${data.location || 'No especificada'}`
+                        notes: roadsideContext
                     },
                     undefined,
                     { carId }
@@ -124,13 +137,13 @@ export function useCreateCase(): UseCreateCaseReturn {
                 const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 diagnosisId = `local-${uniqueId}`;
                 console.log('📝 Using local diagnosis ID:', diagnosisId);
-                // Use default questions when API fails
+                // Use default questions when API fails - optimized for roadside assistance
                 generatedQuestions = [
-                    "¿Qué síntoma presenta el vehículo?",
-                    "¿Cuándo comenzó el problema?",
-                    "¿El vehículo hace algún ruido extraño?",
-                    "¿Has notado algún olor inusual?",
-                    "¿El problema es constante o intermitente?"
+                    "¿El motor arranca o no arranca en absoluto?",
+                    "¿Hay algún testigo o luz de avería encendida en el tablero?",
+                    "¿El problema ocurrió de repente o fue gradual?",
+                    "¿Puedes mover el vehículo aunque sea unos metros?",
+                    "¿Estás en un lugar seguro mientras esperas?"
                 ];
             }
 
@@ -165,6 +178,13 @@ export function useCreateCase(): UseCreateCaseReturn {
             const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
             const caseNumber = `C-${String(caseCount).padStart(3, '0')}`;
 
+            // Generate client URL with token for API access
+            // The client needs this token to save answers and generate preliminary diagnosis
+            const operatorToken = localStorage.getItem('token') || '';
+            const clientLink = operatorToken && carId
+                ? `/carretera/c/${caseId}?t=${encodeURIComponent(operatorToken)}&car=${carId}`
+                : `/carretera/c/${caseId}`;
+
             const newCase: OperatorCase = {
                 id: caseId,
                 caseNumber,
@@ -176,7 +196,7 @@ export function useCreateCase(): UseCreateCaseReturn {
                 status: 'pending',
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                clientLink: `/carretera/c/${caseId}`,
+                clientLink, // URL with token for client API access
                 workshopLink: `/carretera/t/${caseId}`, // Add workshop link
                 diagnosisId, // Store diagnosis ID reference
             } as OperatorCase & { diagnosisId: string };
