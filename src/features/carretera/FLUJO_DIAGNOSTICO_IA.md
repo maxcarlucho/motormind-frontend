@@ -89,9 +89,8 @@ El operador genera un link **CON TOKEN** para que el cliente pueda interactuar c
 3. Ve interfaz tipo chat con preguntas
 4. Responde cada pregunta secuencialmente
 5. **Al responder la última pregunta:**
-   - Se muestra pantalla "Generando diagnóstico..."
-   - Se llama automáticamente a `/preliminary`
-   - Se muestra pantalla de "Completado"
+   - Ve inmediatamente pantalla "¡Gracias! La grúa está en camino"
+   - En segundo plano se llama a `/preliminary` (el cliente no lo ve)
 
 ### Backend (MongoDB)
 ```
@@ -349,6 +348,17 @@ src/features/carretera/
 ---
 
 ## Changelog
+
+### v2.2 (2024-11-30)
+- **Taller OBD funcional**: Flujo completo del taller con códigos OBD funcionando correctamente
+- **Diagnóstico IA con OBD**: El taller puede añadir códigos OBD (ej: C1384, P171C) y regenerar diagnóstico completo
+- **Posibles Averías y Soluciones**: La IA genera lista de posibles causas con:
+  - Probabilidad (🔴 Alta 85%, 🟡 Media 65%, 🟢 Baja 45%)
+  - Descripción detallada del problema
+  - Pasos para solucionar
+  - Herramientas requeridas
+- **Mensaje de tiempo estimado**: Añadido mensaje "Este proceso puede tardar entre 1-2 minutos" mientras genera diagnóstico OBD
+- **Fix crash taller**: Corregido error `failures.map is not a function` - ahora `failures` siempre es array
 
 ### v2.1 (2024-11-30)
 - **UX mejorada para cliente**: Eliminada pantalla "Generando diagnóstico...". El cliente ve directamente "¡Gracias! La grúa está en camino" mientras la IA procesa en segundo plano

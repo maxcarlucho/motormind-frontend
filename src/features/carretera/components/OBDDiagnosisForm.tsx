@@ -230,9 +230,20 @@ export function OBDDiagnosisForm({
                 </button>
 
                 {/* Info note */}
-                <p className="text-xs text-center text-gray-500">
-                    El sistema combinará los códigos OBD, tus observaciones y las respuestas del cliente para generar un diagnóstico preciso.
-                </p>
+                {isProcessing ? (
+                    <div className="text-center space-y-2">
+                        <p className="text-sm text-indigo-600 font-medium">
+                            La IA está analizando los códigos OBD y generando el diagnóstico...
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            Este proceso puede tardar entre 1-2 minutos. Por favor, no cierres esta ventana.
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-xs text-center text-gray-500">
+                        El sistema combinará los códigos OBD, tus observaciones y las respuestas del cliente para generar un diagnóstico preciso.
+                    </p>
+                )}
             </form>
         </div>
     );
