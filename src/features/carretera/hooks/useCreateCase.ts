@@ -5,6 +5,7 @@ import { useApi } from '@/hooks/useApi';
 import { Car } from '@/types/Car';
 import { Diagnosis } from '@/types/Diagnosis';
 import carreteraApi from '../services/carreteraApi.service';
+import { generateAccessToken } from '../utils/accessToken';
 
 interface UseCreateCaseReturn {
     createCase: (data: CaseFormData) => Promise<string>;
@@ -63,32 +64,30 @@ export function useCreateCase(): UseCreateCaseReturn {
                 // Step 2: Create diagnosis for this vehicle
                 console.log('📋 Step 2: Creating diagnosis for vehicle');
 
-                // IMPORTANTE: Contexto de servicio en carretera
-                // El vehículo está VARADO, necesitamos:
-                // 1. Preguntas rápidas y enfocadas (no diagnóstico extenso de taller)
-                // 2. Determinar si es reparable in-situ o requiere remolque
-                // 3. Priorizar seguridad del cliente
-                const roadsideContext = `
-CONTEXTO CRÍTICO: SERVICIO DE ASISTENCIA EN CARRETERA
-- El vehículo está VARADO y el cliente espera en el lugar
-- Objetivo: Determinar rápidamente si el problema es reparable in-situ o requiere remolque al taller
-- Las preguntas deben ser CONCISAS y orientadas a:
-  * Identificar síntomas clave para diagnóstico rápido
-  * Evaluar si el gruista puede resolver con herramientas básicas
-  * Determinar urgencia y seguridad del cliente
-- NO hacer preguntas extensas de taller, solo lo esencial para decidir: REPARAR IN-SITU o REMOLCAR
+                // WORKAROUND: El backend NO usa el campo "notes" en el prompt de generación de preguntas
+                // (ver FLUJO_DIAGNOSTICO_IA.md v2.3 - Bug documentado)
+                // Solución temporal: Incluir el contexto de carretera DENTRO del síntoma (fault)
+                // ya que {FAULT} sí se usa en el prompt template del backend
 
-Datos del servicio:
-- Cliente: ${data.clientName}
-- Teléfono: ${data.clientPhone}
-- Ubicación: ${data.location || 'No especificada'}
-${data.notes ? `- Notas adicionales: ${data.notes}` : ''}
+                // Contexto conciso para incluir en el síntoma
+                const roadsideContextForFault = `[ASISTENCIA CARRETERA - Cliente varado, preguntas rápidas para decidir: REPARAR IN-SITU o REMOLCAR]`;
+
+                // Síntoma enriquecido con contexto de carretera
+                const enrichedSymptom = `${data.symptom}\n\n${roadsideContextForFault}`;
+
+                // Notas adicionales (para referencia, aunque el backend no las usa en el prompt)
+                const additionalNotes = `
+Servicio: Asistencia en Carretera
+Cliente: ${data.clientName}
+Teléfono: ${data.clientPhone}
+Ubicación: ${data.location || 'No especificada'}
+${data.notes ? `Notas operador: ${data.notes}` : ''}
 `.trim();
 
                 const diagnosisResponse = await createDiagnosis(
                     {
-                        fault: data.symptom,
-                        notes: roadsideContext
+                        fault: enrichedSymptom,
+                        notes: additionalNotes
                     },
                     undefined,
                     { carId }
@@ -178,12 +177,21 @@ ${data.notes ? `- Notas adicionales: ${data.notes}` : ''}
             const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
             const caseNumber = `C-${String(caseCount).padStart(3, '0')}`;
 
-            // Generate client URL with token for API access
-            // The client needs this token to save answers and generate preliminary diagnosis
-            const operatorToken = localStorage.getItem('token') || '';
-            const clientLink = operatorToken && carId
-                ? `/carretera/c/${caseId}?t=${encodeURIComponent(operatorToken)}&car=${carId}`
-                : `/carretera/c/${caseId}`;
+            // Generate SCOPED tokens for client and workshop
+            // These tokens are LIMITED - they only grant access to THIS specific case
+            // They do NOT expose the operator's full JWT token
+            const clientToken = await generateAccessToken('client', caseId, {
+                carId: carId || undefined,
+                diagnosisId,
+            });
+            const workshopToken = await generateAccessToken('workshop', caseId, {
+                carId: carId || undefined,
+                diagnosisId,
+            });
+
+            // Build secure links with scoped tokens
+            const clientLink = `/carretera/c/${caseId}?token=${encodeURIComponent(clientToken)}`;
+            const workshopLink = `/carretera/t/${caseId}?token=${encodeURIComponent(workshopToken)}`;
 
             const newCase: OperatorCase = {
                 id: caseId,
@@ -196,8 +204,8 @@ ${data.notes ? `- Notas adicionales: ${data.notes}` : ''}
                 status: 'pending',
                 createdAt: new Date(),
                 updatedAt: new Date(),
-                clientLink, // URL with token for client API access
-                workshopLink: `/carretera/t/${caseId}`, // Add workshop link
+                clientLink, // URL with SCOPED token (not operator JWT!)
+                workshopLink, // URL with SCOPED token for workshop access
                 diagnosisId, // Store diagnosis ID reference
             } as OperatorCase & { diagnosisId: string };
 

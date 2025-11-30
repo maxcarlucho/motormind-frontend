@@ -71,7 +71,8 @@ export const ClientLanding = () => {
             Asistencia en Carretera
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            {assessment.symptom}
+            {/* Limpiar el síntoma: quitar el contexto técnico [ASISTENCIA CARRETERA...] */}
+            {assessment.symptom?.split('[ASISTENCIA')[0]?.trim() || assessment.symptom}
           </p>
         </div>
       </div>

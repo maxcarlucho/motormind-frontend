@@ -349,6 +349,15 @@ src/features/carretera/
 
 ## Changelog
 
+### v2.3 (2024-11-30)
+- **Bug documentado**: El campo `notes` enviado al backend NO se usa en el prompt de generación de preguntas
+  - **Ubicación del problema**: Backend `scripts/update-questions-prompt-v3-6.ts` - El prompt template no incluye `{NOTES}`
+  - **Impacto**: El contexto de carretera enviado desde el frontend es ignorado
+  - **Workaround aplicado**: Se incluye el contexto directamente en el campo `fault` (síntoma)
+  - **Solución permanente requerida**: Actualizar el prompt de QUESTIONS_GENERATION en el backend para incluir `{NOTES}`
+- **Servicio de recomendación IA para Gruista**: Nuevo servicio `gruistaRecommendation.service.ts` que genera recomendaciones contextualizadas
+- **Flujo de escalación**: Nuevo estado `repair-failed` para cuando el gruista intenta reparar pero falla
+
 ### v2.2 (2024-11-30)
 - **Taller OBD funcional**: Flujo completo del taller con códigos OBD funcionando correctamente
 - **Diagnóstico IA con OBD**: El taller puede añadir códigos OBD (ej: C1384, P171C) y regenerar diagnóstico completo
