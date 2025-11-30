@@ -77,26 +77,52 @@ export function OperatorDashboard() {
         setSelectedCase(null);
     };
 
+    // Calculate stats
+    const todayCases = cases.filter(c => {
+        const today = new Date();
+        const caseDate = new Date(c.createdAt);
+        return caseDate.toDateString() === today.toDateString();
+    }).length;
+
+    const pendingCases = cases.filter(c => c.status === 'pending').length;
+    const inProgressCases = cases.filter(c => c.status === 'in-progress').length;
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
                                 <span>🚗</span>
                                 <span>Asistencia en Carretera</span>
                             </h1>
-                            <p className="mt-1 text-sm text-gray-600">Panel de Operador</p>
+                            <p className="mt-1 text-sm text-blue-100">Panel de Operador</p>
                         </div>
                         <button
                             onClick={() => setIsModalOpen(true)}
-                            className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 font-semibold rounded-lg hover:bg-blue-50 transition-colors shadow-lg"
                         >
                             <Plus className="h-5 w-5" />
                             <span>Crear Nuevo Caso</span>
                         </button>
+                    </div>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-3 gap-4 mt-6">
+                        <div className="bg-white/10 backdrop-blur rounded-lg px-4 py-3">
+                            <p className="text-2xl font-bold">{todayCases}</p>
+                            <p className="text-xs text-blue-100">Casos hoy</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur rounded-lg px-4 py-3">
+                            <p className="text-2xl font-bold text-yellow-300">{pendingCases}</p>
+                            <p className="text-xs text-blue-100">Pendientes</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur rounded-lg px-4 py-3">
+                            <p className="text-2xl font-bold text-green-300">{inProgressCases}</p>
+                            <p className="text-xs text-blue-100">En curso</p>
+                        </div>
                     </div>
                 </div>
             </div>

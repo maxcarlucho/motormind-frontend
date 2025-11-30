@@ -164,7 +164,7 @@ function AccessDeniedScreen({
     tokenType: AccessTokenType;
 }) {
     const titles: Record<typeof error, string> = {
-        missing: 'Enlace Incompleto',
+        missing: 'Enlace Antiguo o Incompleto',
         invalid: 'Enlace No Válido',
         expired: 'Enlace Expirado',
         'wrong-case': 'Acceso Denegado',
@@ -172,7 +172,7 @@ function AccessDeniedScreen({
 
     const messages: Record<typeof error, string> = {
         missing:
-            'Este enlace no contiene la autorización necesaria. Por favor, solicita un nuevo enlace.',
+            'Este enlace no contiene la autorización necesaria. Si es un caso antiguo, el operador debe regenerar el enlace desde el panel.',
         invalid:
             'El enlace de acceso no es válido. Puede haber sido modificado o es incorrecto.',
         expired:

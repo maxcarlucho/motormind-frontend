@@ -1,4 +1,5 @@
-import { Copy, MessageCircle, Loader2, Eye } from 'lucide-react';
+import { useState } from 'react';
+import { Copy, MessageCircle, Loader2, Eye, CheckCircle } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { OperatorCase } from '../types/carretera.types';
 import { CaseStatusBadge } from './CaseStatusBadge';
@@ -10,6 +11,9 @@ interface CaseListTableProps {
     isLoading: boolean;
     onCaseClick?: (caseData: OperatorCase) => void;
 }
+
+// Track which cases have had WhatsApp sent recently
+type SentStatus = { [caseId: string]: boolean };
 
 /**
  * Helper to format phone number for WhatsApp
@@ -36,6 +40,8 @@ function formatPhoneForWhatsApp(phone: string): string {
  * Responsive: Table on desktop, cards on mobile
  */
 export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTableProps) {
+    const [whatsappSent, setWhatsappSent] = useState<SentStatus>({});
+
     const copyClientLink = async (operatorCase: OperatorCase) => {
         const link = `${window.location.origin}/carretera/c/${operatorCase.id}`;
 
@@ -71,6 +77,15 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
         const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
 
         window.open(whatsappUrl, '_blank');
+
+        // Mark as sent and show feedback
+        setWhatsappSent(prev => ({ ...prev, [id]: true }));
+        enqueueSnackbar(`WhatsApp enviado a ${clientName}`, { variant: 'success' });
+
+        // Reset after 30 seconds
+        setTimeout(() => {
+            setWhatsappSent(prev => ({ ...prev, [id]: false }));
+        }, 30000);
     };
 
     if (isLoading) {
@@ -188,10 +203,18 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
                                                 e.stopPropagation();
                                                 sendToWhatsApp(operatorCase);
                                             }}
-                                            className="p-2 bg-green-100 text-green-700 hover:bg-green-600 hover:text-white rounded-lg transition-colors"
-                                            title="Enviar por WhatsApp"
+                                            className={`p-2 rounded-lg transition-colors ${
+                                                whatsappSent[operatorCase.id]
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-green-100 text-green-700 hover:bg-green-600 hover:text-white'
+                                            }`}
+                                            title={whatsappSent[operatorCase.id] ? 'WhatsApp enviado' : 'Enviar por WhatsApp'}
                                         >
-                                            <MessageCircle className="h-5 w-5" />
+                                            {whatsappSent[operatorCase.id] ? (
+                                                <CheckCircle className="h-5 w-5" />
+                                            ) : (
+                                                <MessageCircle className="h-5 w-5" />
+                                            )}
                                         </button>
                                     </div>
                                 </td>
@@ -252,10 +275,23 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
                                     e.stopPropagation();
                                     sendToWhatsApp(operatorCase);
                                 }}
-                                className="flex items-center justify-center gap-2 px-4 py-3 text-base font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                                className={`flex items-center justify-center gap-2 px-4 py-3 text-base font-bold text-white rounded-lg transition-colors ${
+                                    whatsappSent[operatorCase.id]
+                                        ? 'bg-green-700'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                }`}
                             >
-                                <MessageCircle className="h-5 w-5" />
-                                Enviar WhatsApp
+                                {whatsappSent[operatorCase.id] ? (
+                                    <>
+                                        <CheckCircle className="h-5 w-5" />
+                                        WhatsApp Enviado
+                                    </>
+                                ) : (
+                                    <>
+                                        <MessageCircle className="h-5 w-5" />
+                                        Enviar WhatsApp
+                                    </>
+                                )}
                             </button>
                             {/* Secondary actions */}
                             <div className="flex gap-2">

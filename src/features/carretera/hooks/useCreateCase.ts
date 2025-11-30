@@ -146,32 +146,6 @@ ${data.notes ? `Notas operador: ${data.notes}` : ''}
                 ];
             }
 
-            // Step 2: Try to create case in carretera backend
-            // If carretera backend is available, use it. Otherwise, fallback to localStorage
-            try {
-                // Check if carretera backend is available
-                const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
-
-                if (isBackendAvailable) {
-                    // Use real backend
-                    const caseWithDiagnosis = {
-                        ...data,
-                        diagnosisId // Link to core diagnosis
-                    } as any;
-                    const response = await carreteraApi.createCase(caseWithDiagnosis);
-
-                    setCreatedCaseId(response.data.id);
-                    enqueueSnackbar(`✅ Caso ${response.data.caseNumber} creado exitosamente`, {
-                        variant: 'success'
-                    });
-
-                    return response.data.id;
-                }
-            } catch (apiError) {
-                console.log('Carretera backend not available, using localStorage fallback');
-            }
-
-            // Fallback: Use localStorage if carretera backend is not available
             // Use diagnosisId directly as caseId to avoid confusion
             const caseId = diagnosisId;
             const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
@@ -234,6 +208,22 @@ ${data.notes ? `Notas operador: ${data.notes}` : ''}
                 carId, // Store car ID for future API calls
             };
             localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+
+            // Try to sync with carretera backend (non-blocking)
+            try {
+                const isBackendAvailable = await carreteraApi.healthCheck().catch(() => false);
+                if (isBackendAvailable) {
+                    await carreteraApi.createCase({
+                        ...data,
+                        diagnosisId,
+                        clientLink,
+                        workshopLink,
+                    } as any);
+                    console.log('Case synced with carretera backend');
+                }
+            } catch (syncError) {
+                console.log('Could not sync with carretera backend:', syncError);
+            }
 
             setCreatedCaseId(caseId);
             enqueueSnackbar(`✅ Caso ${caseNumber} creado exitosamente`, { variant: 'success' });

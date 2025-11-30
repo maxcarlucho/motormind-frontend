@@ -168,13 +168,13 @@ export function WorkshopReception() {
                                 <p className="text-3xl font-bold text-gray-900 font-mono">{caseData.vehiclePlate}</p>
                             </div>
                             {/* Vehicle details if available */}
-                            {caseData.vehicleInfo && (
+                            {(caseData as any).vehicleInfo && (
                                 <div className="text-right">
                                     <p className="text-sm font-semibold text-gray-800">
-                                        {caseData.vehicleInfo.brand} {caseData.vehicleInfo.model}
+                                        {(caseData as any).vehicleInfo.brand} {(caseData as any).vehicleInfo.model}
                                     </p>
-                                    {caseData.vehicleInfo.year && (
-                                        <p className="text-sm text-gray-600">{caseData.vehicleInfo.year}</p>
+                                    {(caseData as any).vehicleInfo.year && (
+                                        <p className="text-sm text-gray-600">{(caseData as any).vehicleInfo.year}</p>
                                     )}
                                 </div>
                             )}
