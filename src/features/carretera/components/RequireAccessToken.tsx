@@ -88,9 +88,13 @@ export function RequireAccessToken({
 
             try {
                 // Decode and validate token
+                console.log('🔐 Validating token for caseId:', caseId);
+                console.log('🔐 Token type expected:', tokenType);
                 const result = await decodeAccessToken(token, tokenType, caseId);
+                console.log('🔐 Token validation result:', result);
 
                 if (!result.isValid) {
+                    console.error('🔐 Token invalid:', result.error);
                     if (result.isExpired) {
                         setError('expired');
                     } else if (result.error?.includes('not valid for this case')) {
@@ -103,9 +107,10 @@ export function RequireAccessToken({
                 }
 
                 // Token is valid!
+                console.log('🔐 Token valid! Decoded:', result);
                 setDecoded(result);
             } catch (err) {
-                console.error('Token validation error:', err);
+                console.error('🔐 Token validation error:', err);
                 setError('invalid');
             } finally {
                 setIsValidating(false);

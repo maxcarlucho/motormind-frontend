@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
@@ -5,12 +6,16 @@ import { useGruistaCase } from '../hooks/useGruistaCase';
 import { ClientQAThread } from '../components/ClientQAThread';
 import { AIAssessmentSummary } from '../components/AIAssessmentSummary';
 import { TrafficLightDecision } from '../components/TrafficLightDecision';
+import { WorkshopLinkModal } from '../components/WorkshopLinkModal';
 
 export function GruistaDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { caseData, isLoading, error, submitDecision, isSubmitting, generateWorkshopLink, refresh, isRefreshing } =
         useGruistaCase(id);
+
+    const [showWorkshopModal, setShowWorkshopModal] = useState(false);
+    const [workshopLink, setWorkshopLink] = useState('');
 
     const handleBack = () => {
         navigate('/carretera/g/dashboard');
@@ -19,24 +24,24 @@ export function GruistaDetail() {
     const handleDecision = async (decision: any, notes?: string) => {
         await submitDecision(decision, notes);
 
-        // If towing, generate and show workshop link with secure token
+        // If towing, generate workshop link and show modal
         if (decision === 'tow') {
-            const workshopLink = await generateWorkshopLink();
-            enqueueSnackbar(
-                `🔴 Link del taller: ${workshopLink}`,
-                { variant: 'info', autoHideDuration: 10000 }
-            );
-            // Copy to clipboard for easy sharing
-            if (navigator.clipboard) {
-                await navigator.clipboard.writeText(workshopLink);
-                enqueueSnackbar('Link copiado al portapapeles', { variant: 'success' });
-            }
+            const link = await generateWorkshopLink();
+            setWorkshopLink(link);
+            setShowWorkshopModal(true);
+            // Don't auto-navigate, let user close modal
+        } else {
+            // For repair, show success and navigate back
+            enqueueSnackbar('Decisión guardada: Reparar in-situ', { variant: 'success' });
+            setTimeout(() => {
+                navigate('/carretera/g/dashboard');
+            }, 1500);
         }
+    };
 
-        // Navigate back after 2 seconds
-        setTimeout(() => {
-            navigate('/carretera/g/dashboard');
-        }, 2000);
+    const handleCloseWorkshopModal = () => {
+        setShowWorkshopModal(false);
+        navigate('/carretera/g/dashboard');
     };
 
     if (isLoading) {
@@ -70,6 +75,17 @@ export function GruistaDetail() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
+            {/* Workshop Link Modal */}
+            {showWorkshopModal && caseData && (
+                <WorkshopLinkModal
+                    isOpen={showWorkshopModal}
+                    workshopLink={workshopLink}
+                    vehiclePlate={caseData.vehiclePlate}
+                    symptom={caseData.symptom}
+                    onClose={handleCloseWorkshopModal}
+                />
+            )}
+
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg sticky top-0 z-20">
                 <div className=" px-4 py-4">

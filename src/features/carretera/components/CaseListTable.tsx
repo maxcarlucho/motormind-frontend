@@ -62,7 +62,9 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
 
     const sendToWhatsApp = (operatorCase: OperatorCase) => {
         const { clientPhone, clientName, symptom, id } = operatorCase;
-        const clientLink = `${window.location.origin}/carretera/c/${id}`;
+        // Use pre-generated clientLink with secure token
+        const baseLink = operatorCase.clientLink || `/carretera/c/${id}`;
+        const clientLink = baseLink.startsWith('http') ? baseLink : `${window.location.origin}${baseLink}`;
 
         const message = encodeURIComponent(
             `Hola ${clientName},\n\n` +

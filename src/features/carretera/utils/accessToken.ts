@@ -71,15 +71,14 @@ async function generateSignature(payload: string, secret: string): Promise<strin
 
 /**
  * Get the secret key for token signing
+ * IMPORTANT: This secret must be consistent across all browser sessions
  * In production, this should come from environment variables
- * and be different for each environment
  */
 function getTokenSecret(): string {
-    // Use a combination of factors to create a secret
-    // In production, this should be a proper environment variable
-    const baseSecret = 'carretera-access-token-v1';
-    const envSuffix = import.meta.env.VITE_API_URL || 'local';
-    return `${baseSecret}-${envSuffix}`;
+    // Use a fixed secret for token signing
+    // This ensures tokens work across different browser sessions (incognito, different browsers, etc.)
+    // In production, use: import.meta.env.VITE_TOKEN_SECRET
+    return import.meta.env.VITE_TOKEN_SECRET || 'motormind-carretera-secret-2024';
 }
 
 /**

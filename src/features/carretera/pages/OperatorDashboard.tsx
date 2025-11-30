@@ -32,24 +32,32 @@ export function OperatorDashboard() {
         // Refresh the list to show the newly created case
         refresh();
 
-        // Build the new case object to show in detail modal
-        const newCase: OperatorCase = {
-            id: caseId,
-            caseNumber: `C-${String(cases.length + 1).padStart(3, '0')}`,
-            vehiclePlate: formData.vehiclePlate,
-            clientName: formData.clientName,
-            clientPhone: formData.clientPhone,
-            symptom: formData.symptom,
-            location: formData.location,
-            status: 'pending',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            clientLink: `/carretera/c/${caseId}`,
-        };
+        // Get the actual case from localStorage (includes secure token in clientLink)
+        const operatorCases = JSON.parse(localStorage.getItem('carretera_operator_cases') || '[]');
+        const createdCase = operatorCases.find((c: OperatorCase) => c.id === caseId);
 
-        // Open detail modal with the newly created case
-        setSelectedCase(newCase);
-        setIsDetailModalOpen(true);
+        if (createdCase) {
+            // Open detail modal with the real case (has token in clientLink)
+            setSelectedCase(createdCase);
+            setIsDetailModalOpen(true);
+        } else {
+            // Fallback: build case object (shouldn't happen)
+            const newCase: OperatorCase = {
+                id: caseId,
+                caseNumber: `C-${String(cases.length + 1).padStart(3, '0')}`,
+                vehiclePlate: formData.vehiclePlate,
+                clientName: formData.clientName,
+                clientPhone: formData.clientPhone,
+                symptom: formData.symptom,
+                location: formData.location,
+                status: 'pending',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                clientLink: `/carretera/c/${caseId}`,
+            };
+            setSelectedCase(newCase);
+            setIsDetailModalOpen(true);
+        }
     };
 
     const handleStatusFilter = (status: AssessmentStatus | 'all') => {

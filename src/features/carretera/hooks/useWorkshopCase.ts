@@ -18,13 +18,19 @@ interface UseWorkshopCaseReturn {
     isProcessing: boolean;
 }
 
+interface WorkshopCaseOptions {
+    carId?: string;       // Car ID from validated token (works in incognito)
+    diagnosisId?: string; // Diagnosis ID from validated token (works in incognito)
+}
+
 /**
  * Hook to manage workshop case reception and updates
- * 
+ *
  * @param caseId - Workshop case ID
+ * @param options - Optional carId and diagnosisId from validated token
  * @returns Case data, loading states, and action handlers
  */
-export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
+export function useWorkshopCase(caseId?: string, options: WorkshopCaseOptions = {}): UseWorkshopCaseReturn {
     const [caseData, setCaseData] = useState<WorkshopCaseDetailed | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -34,6 +40,8 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
     const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
     const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
 
+    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = options;
+
     useEffect(() => {
         if (!caseId) {
             setIsLoading(false);
@@ -41,7 +49,7 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
         }
 
         loadCase();
-    }, [caseId]);
+    }, [caseId, tokenCarId, tokenDiagnosisId]);
 
     const loadCase = async () => {
         setIsLoading(true);
@@ -74,16 +82,83 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
             // This handles cases that might not have been properly transferred
             const operatorCasesStr = localStorage.getItem('carretera_operator_cases');
             const clientCasesStr = localStorage.getItem('carretera_client_cases');
+            const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
+            const clientCase = clientCases[caseId!] || {};
 
+            // Get IDs from token (works in incognito) or localStorage
+            const effectiveDiagnosisId = tokenDiagnosisId || clientCase?.diagnosisId;
+            const effectiveCarId = tokenCarId || clientCase?.carId;
+
+            // If we have diagnosis ID (from token), try to load from backend
+            // This is the PRIMARY path for incognito/shared links
+            if (effectiveDiagnosisId) {
+                try {
+                    console.log('🔄 Loading workshop case from backend...', { effectiveDiagnosisId, effectiveCarId });
+                    const diagnosisResponse = await getDiagnosis(undefined, undefined, {
+                        diagnosisId: effectiveDiagnosisId
+                    });
+                    const diagnosis = diagnosisResponse.data;
+                    console.log('✅ Diagnosis loaded:', diagnosis);
+
+                    // Extract data from diagnosis
+                    const workflow = (diagnosis as any).workflow || {};
+                    const diagnosisQuestions = diagnosis.questions || [];
+                    const diagnosisAnswers = diagnosis.answers ? diagnosis.answers.split('|') : [];
+
+                    // Build workshop case from backend data
+                    const workshopCase: WorkshopCaseDetailed = {
+                        id: caseId!,
+                        caseNumber: `C-${caseId?.slice(-3) || '000'}`,
+                        vehiclePlate: diagnosis.car?.plate || '',
+                        clientName: workflow.clientName || 'Cliente',
+                        clientPhone: workflow.clientPhone || '',
+                        symptom: diagnosis.fault || workflow.symptom || 'Asistencia en carretera',
+                        location: workflow.location || 'No especificada',
+                        questions: diagnosisQuestions,
+                        answers: diagnosisAnswers,
+                        aiAssessment: {
+                            diagnosis: diagnosis.fault || 'Diagnóstico pendiente',
+                            confidence: 50,
+                            recommendation: 'tow',
+                            reasoning: ['Caso transferido al taller'],
+                        },
+                        gruistaDecision: {
+                            decision: 'tow',
+                            notes: 'Transferido al taller',
+                            decidedAt: new Date(),
+                            gruistaName: 'Gruista',
+                        },
+                        status: 'incoming',
+                        createdAt: new Date(diagnosis.createdAt || Date.now()),
+                        updatedAt: new Date(diagnosis.updatedAt || Date.now()),
+                    };
+
+                    // Enhance with preliminary diagnosis if available
+                    if (diagnosis.preliminary?.possibleReasons?.length > 0) {
+                        const topReason = diagnosis.preliminary.possibleReasons[0];
+                        workshopCase.aiAssessment = {
+                            diagnosis: topReason.title || diagnosis.fault,
+                            confidence: topReason.probability === 'Alta' ? 85 :
+                                        topReason.probability === 'Media' ? 65 : 45,
+                            recommendation: 'tow',
+                            reasoning: diagnosis.preliminary.possibleReasons.map((r: any) => r.reasonDetails),
+                        };
+                    }
+
+                    setCaseData(workshopCase);
+                    return;
+                } catch (apiError) {
+                    console.log('⚠️ Could not load from backend:', apiError);
+                    // Continue to try localStorage fallback
+                }
+            }
+
+            // Fallback: Try to build from localStorage (operator's browser)
             if (operatorCasesStr) {
                 const operatorCases = JSON.parse(operatorCasesStr);
-                const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
-
                 const opCase = operatorCases.find((c: any) => c.id === caseId);
 
                 if (opCase && caseId) {
-                    const clientCase = clientCases[caseId] || {};
-
                     // Build workshop case from available data
                     const workshopCase: WorkshopCaseDetailed = {
                         id: opCase.id,
@@ -112,49 +187,13 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
                         updatedAt: new Date(opCase.updatedAt),
                     };
 
-                    // Try to enhance with backend data if available
-                    const diagnosisId = clientCase.diagnosisId;
-                    const token = localStorage.getItem('token');
-
-                    if (diagnosisId && token) {
-                        try {
-                            const diagnosisResponse = await getDiagnosis(undefined, undefined, {
-                                diagnosisId
-                            });
-                            const diagnosis = diagnosisResponse.data;
-
-                            if (diagnosis.preliminary?.possibleReasons?.length > 0) {
-                                const topReason = diagnosis.preliminary.possibleReasons[0];
-                                workshopCase.aiAssessment = {
-                                    diagnosis: topReason.title || diagnosis.fault,
-                                    confidence: topReason.probability === 'Alta' ? 85 :
-                                                topReason.probability === 'Media' ? 65 : 45,
-                                    recommendation: 'tow',
-                                    reasoning: diagnosis.preliminary.possibleReasons.map((r: any) => r.reasonDetails),
-                                };
-                            }
-                        } catch (apiError) {
-                            console.log('Could not fetch backend diagnosis');
-                        }
-                    }
-
-                    // Save to workshop_cases for future access
-                    const existingWorkshopCases = workshopCasesStr ? JSON.parse(workshopCasesStr) : [];
-                    existingWorkshopCases.unshift(workshopCase);
-                    localStorage.setItem('carretera_workshop_cases', JSON.stringify(existingWorkshopCases));
-
                     setCaseData(workshopCase);
                     return;
                 }
             }
 
-            // Fallback to mock data only if nothing found
-            const mockData = getMockWorkshopCase(caseId!);
-            if (mockData) {
-                setCaseData(mockData);
-            } else {
-                setError('Caso no encontrado');
-            }
+            // No data found anywhere
+            setError('Caso no encontrado. Verifica que el enlace sea correcto.');
         } catch (err) {
             console.error('Error loading workshop case:', err);
             setError('Error al cargar el caso');
@@ -414,9 +453,11 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
 }
 
 /**
- * Get mock workshop case for development
+ * Get mock workshop case for development - DEPRECATED
+ * Now we load cases from backend using diagnosis ID from token
+ * @deprecated Use backend loading with token instead
  */
-function getMockWorkshopCase(caseId: string): WorkshopCaseDetailed | null {
+export function getMockWorkshopCase(caseId: string): WorkshopCaseDetailed | null {
     // Try to load from localStorage first
     const storedCases = localStorage.getItem('carretera_workshop_cases');
     if (storedCases) {

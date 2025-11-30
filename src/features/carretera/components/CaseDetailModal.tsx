@@ -53,7 +53,19 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
 
     if (!isOpen) return null;
 
-    const getFullClientLink = () => `${window.location.origin}/carretera/c/${caseData.id}`;
+    // Use the pre-generated clientLink with secure token from caseData
+    // Fall back to basic link only if clientLink doesn't exist (legacy cases)
+    const getFullClientLink = () => {
+        if (caseData.clientLink) {
+            // If it's already a full URL, return as-is; otherwise prepend origin
+            if (caseData.clientLink.startsWith('http')) {
+                return caseData.clientLink;
+            }
+            return `${window.location.origin}${caseData.clientLink}`;
+        }
+        // Legacy fallback (cases created before token system)
+        return `${window.location.origin}/carretera/c/${caseData.id}`;
+    };
 
     const copyClientLink = async () => {
         const link = getFullClientLink();
@@ -93,7 +105,9 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
     };
 
     const openClientView = () => {
-        window.open(`/carretera/c/${caseData.id}`, '_blank');
+        // Use the link with token
+        const link = caseData.clientLink || `/carretera/c/${caseData.id}`;
+        window.open(link, '_blank');
     };
 
     return (

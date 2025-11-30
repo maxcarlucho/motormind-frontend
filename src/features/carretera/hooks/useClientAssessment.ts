@@ -139,30 +139,22 @@ export function useClientAssessment(
                 setIsLoading(true);
                 setError(null);
 
-                // First, try to get from localStorage to get diagnosis ID and local data
+                // Try to get from localStorage first (operator's browser has this)
                 const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
                 const localCaseData = clientCases[assessmentId];
 
-                if (!localCaseData) {
-                    setError('Caso no encontrado');
-                    setIsLoading(false);
-                    return;
-                }
+                // Get IDs from token (works in incognito) or localStorage (works for operator)
+                const effectiveCarId = tokenCarId || localCaseData?.carId;
+                const effectiveDiagnosisId = tokenDiagnosisId || localCaseData?.diagnosisId;
 
-                // Set carId from token or localStorage
-                const effectiveCarId = tokenCarId || localCaseData.carId;
                 if (effectiveCarId) setCarId(effectiveCarId);
-
-                // Set diagnosisId from token or localStorage
-                const effectiveDiagnosisId = tokenDiagnosisId || localCaseData.diagnosisId;
                 if (effectiveDiagnosisId) setDiagnosisId(effectiveDiagnosisId);
 
-                // Try to fetch from backend if we have auth token
-                const token = localStorage.getItem('token');
-
-                if (effectiveDiagnosisId && token) {
+                // If we have diagnosisId (from token or localStorage), fetch from backend
+                // This works even in incognito mode since the token contains the IDs
+                if (effectiveDiagnosisId) {
                     try {
-                        console.log('🔄 Fetching diagnosis from backend with token...');
+                        console.log('🔄 Fetching diagnosis from backend...', { effectiveDiagnosisId, effectiveCarId });
                         const diagnosis = await apiCall<Diagnosis>(
                             'get',
                             `/cars/diagnosis/${effectiveDiagnosisId}`
@@ -174,19 +166,27 @@ export function useClientAssessment(
                         const diagnosisQuestions = diagnosis.questions || DIAGNOSTIC_QUESTIONS;
                         const diagnosisAnswers = diagnosis.answers ? diagnosis.answers.split('|') : [];
 
-                        // Create assessment from real diagnosis data
+                        // Extract client info from diagnosis workflow or localStorage
+                        // The workflow contains client data submitted during case creation
+                        const workflow = (diagnosis as any).workflow || {};
+                        const clientName = workflow.clientName || localCaseData?.clientName || 'Cliente';
+                        const clientPhone = workflow.clientPhone || localCaseData?.clientPhone || '';
+                        const symptom = diagnosis.fault || workflow.symptom || localCaseData?.symptom || 'Asistencia en carretera';
+
+                        // Create assessment from backend diagnosis data
+                        // Works in incognito because all data comes from backend
                         const carreteraAssessment: CarreteraAssessment = {
                             id: assessmentId,
-                            clientName: localCaseData.clientName,
-                            clientPhone: localCaseData.clientPhone,
-                            symptom: diagnosis.fault || localCaseData.symptom,
+                            clientName,
+                            clientPhone,
+                            symptom,
                             questions: diagnosisQuestions,
                             answers: diagnosisAnswers,
                             status: diagnosis.status === 'completed' ? 'completed' : 'in-progress',
-                            createdAt: new Date(diagnosis.createdAt || localCaseData.createdAt),
-                            updatedAt: new Date(diagnosis.updatedAt || localCaseData.updatedAt),
+                            createdAt: new Date(diagnosis.createdAt || Date.now()),
+                            updatedAt: new Date(diagnosis.updatedAt || Date.now()),
                             vehicleInfo: {
-                                plate: diagnosis.car?.plate || localCaseData.vehiclePlate,
+                                plate: diagnosis.car?.plate || localCaseData?.vehiclePlate || '',
                             },
                         };
 
@@ -206,14 +206,26 @@ export function useClientAssessment(
                         // Update carId from diagnosis if available
                         if (diagnosis.car?._id) setCarId(diagnosis.car._id);
 
+                        // Data loaded from backend successfully
+                        return;
+
                     } catch (apiError) {
-                        console.log('⚠️ Could not fetch from backend, using local data:', apiError);
-                        loadLocalData(localCaseData);
+                        console.log('⚠️ Could not fetch from backend:', apiError);
+                        // If we have local data, use it as fallback
+                        if (localCaseData) {
+                            loadLocalData(localCaseData);
+                            return;
+                        }
+                        // No backend and no local data - show error
+                        setError('No se pudo cargar el caso. Verifica tu conexión.');
                     }
-                } else {
-                    // No token or diagnosisId - use local data
-                    console.log('📦 Using local data (no token or diagnosisId)');
+                } else if (localCaseData) {
+                    // No diagnosisId but have local data - use it
+                    console.log('📦 Using local data (no diagnosisId in token)');
                     loadLocalData(localCaseData);
+                } else {
+                    // No diagnosisId and no local data - can't load
+                    setError('No se pudo cargar el caso.');
                 }
             } catch (err) {
                 console.error('Error loading assessment:', err);
