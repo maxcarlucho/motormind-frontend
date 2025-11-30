@@ -1,4 +1,4 @@
-import { Brain, TrendingUp } from 'lucide-react';
+import { Brain, TrendingUp, Clock, Loader2, CheckCircle, MessageSquare } from 'lucide-react';
 import { AIAssessment } from '../types/carretera.types';
 
 interface AIAssessmentSummaryProps {
@@ -6,9 +6,139 @@ interface AIAssessmentSummaryProps {
 }
 
 /**
- * Component to display AI diagnosis and confidence level
+ * Component to display AI diagnosis status and results
+ * Shows different states based on diagnosis progress
  */
 export function AIAssessmentSummary({ assessment }: AIAssessmentSummaryProps) {
+    const status = assessment.status || 'ready';
+    const progress = assessment.clientProgress;
+
+    // If diagnosis is not ready, show waiting/progress state
+    if (status !== 'ready') {
+        return <DiagnosisPendingState status={status} symptom={assessment.diagnosis} progress={progress} />;
+    }
+
+    // Diagnosis is ready - show full assessment
+    return <DiagnosisReadyState assessment={assessment} />;
+}
+
+/**
+ * Shows when diagnosis is still pending (client answering or generating)
+ */
+function DiagnosisPendingState({
+    status,
+    symptom,
+    progress
+}: {
+    status: 'waiting-client' | 'client-answering' | 'generating';
+    symptom: string;
+    progress?: { answered: number; total: number };
+}) {
+    const progressPercent = progress && progress.total > 0
+        ? Math.round((progress.answered / progress.total) * 100)
+        : 0;
+
+    const getStatusConfig = () => {
+        switch (status) {
+            case 'waiting-client':
+                return {
+                    icon: <Clock className="h-8 w-8" />,
+                    title: 'Esperando al Cliente',
+                    subtitle: 'El cliente aún no ha comenzado a responder',
+                    bgGradient: 'from-gray-500 to-gray-600',
+                    borderColor: 'border-gray-300',
+                    bgColor: 'from-gray-50 to-gray-100',
+                };
+            case 'client-answering':
+                return {
+                    icon: <MessageSquare className="h-8 w-8" />,
+                    title: 'Cliente Respondiendo',
+                    subtitle: `${progress?.answered || 0} de ${progress?.total || 0} preguntas contestadas`,
+                    bgGradient: 'from-blue-500 to-blue-600',
+                    borderColor: 'border-blue-300',
+                    bgColor: 'from-blue-50 to-indigo-50',
+                };
+            case 'generating':
+                return {
+                    icon: <Loader2 className="h-8 w-8 animate-spin" />,
+                    title: 'Generando Diagnóstico IA',
+                    subtitle: 'El cliente terminó. Analizando respuestas...',
+                    bgGradient: 'from-purple-500 to-indigo-600',
+                    borderColor: 'border-purple-300',
+                    bgColor: 'from-purple-50 to-indigo-50',
+                };
+        }
+    };
+
+    const config = getStatusConfig();
+
+    return (
+        <div className={`bg-gradient-to-br ${config.bgColor} rounded-lg border-2 ${config.borderColor} overflow-hidden`}>
+            {/* Header */}
+            <div className={`bg-gradient-to-r ${config.bgGradient} px-4 py-3`}>
+                <div className="flex items-center gap-2 text-white">
+                    <Brain className="h-5 w-5" />
+                    <h3 className="font-bold text-lg">Diagnóstico IA</h3>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+                <div className="flex flex-col items-center text-center space-y-4">
+                    {/* Status Icon */}
+                    <div className={`p-4 rounded-full bg-white shadow-md text-gray-600`}>
+                        {config.icon}
+                    </div>
+
+                    {/* Status Text */}
+                    <div>
+                        <h4 className="text-xl font-bold text-gray-900 mb-1">{config.title}</h4>
+                        <p className="text-gray-600">{config.subtitle}</p>
+                    </div>
+
+                    {/* Symptom */}
+                    <div className="w-full bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">Síntoma reportado:</p>
+                        <p className="text-sm font-medium text-gray-800">{symptom}</p>
+                    </div>
+
+                    {/* Progress Bar (only for client-answering) */}
+                    {status === 'client-answering' && progress && (
+                        <div className="w-full">
+                            <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-600">Progreso</span>
+                                <span className="font-semibold text-blue-600">{progressPercent}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Generating animation */}
+                    {status === 'generating' && (
+                        <div className="flex items-center gap-2 text-purple-600">
+                            <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                            <span className="text-sm">Procesando con IA...</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Shows when diagnosis is ready with full AI assessment
+ */
+function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
     const getConfidenceColor = (confidence: number) => {
         if (confidence >= 80) return 'text-green-600';
         if (confidence >= 60) return 'text-yellow-600';
@@ -31,18 +161,11 @@ export function AIAssessmentSummary({ assessment }: AIAssessmentSummaryProps) {
                     textColor: 'text-green-800',
                     borderColor: 'border-green-300',
                 };
-            case 'info':
-                return {
-                    icon: '🟡',
-                    label: 'NECESITA MÁS INFO',
-                    bgColor: 'bg-yellow-100',
-                    textColor: 'text-yellow-800',
-                    borderColor: 'border-yellow-300',
-                };
             case 'tow':
+            default:
                 return {
                     icon: '🔴',
-                    label: 'REMOLCAR',
+                    label: 'REMOLCAR AL TALLER',
                     bgColor: 'bg-red-100',
                     textColor: 'text-red-800',
                     borderColor: 'border-red-300',
@@ -56,9 +179,15 @@ export function AIAssessmentSummary({ assessment }: AIAssessmentSummaryProps) {
         <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
-                <div className="flex items-center gap-2 text-white">
-                    <Brain className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">Diagnóstico IA</h3>
+                <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-2">
+                        <Brain className="h-5 w-5" />
+                        <h3 className="font-bold text-lg">Diagnóstico IA</h3>
+                    </div>
+                    <div className="flex items-center gap-1 text-green-300">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="text-xs font-medium">Listo</span>
+                    </div>
                 </div>
             </div>
 

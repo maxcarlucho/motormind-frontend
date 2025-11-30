@@ -29,15 +29,8 @@ export function GruistaDecisionSummary({
                     bgColor: 'bg-green-50',
                     borderColor: 'border-green-300',
                 };
-            case 'info':
-                return {
-                    emoji: '🟡',
-                    label: 'NECESITA MÁS INFO',
-                    color: 'text-yellow-700',
-                    bgColor: 'bg-yellow-50',
-                    borderColor: 'border-yellow-300',
-                };
             case 'tow':
+            default:
                 return {
                     emoji: '🔴',
                     label: 'REMOLCAR AL TALLER',

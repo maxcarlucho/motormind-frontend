@@ -12,22 +12,30 @@ interface UseGruistaCaseReturn {
     submitDecision: (decision: TrafficLightDecisionType, notes?: string) => Promise<void>;
     isSubmitting: boolean;
     generateWorkshopLink: () => string;
+    refresh: () => Promise<void>; // Manual refresh
+    isRefreshing: boolean;
 }
 
 /**
  * Hook to manage single gruista case details and decision submission
  * Now connects with backend to get real AI diagnosis
  */
+// Polling interval in milliseconds (5 seconds)
+const POLLING_INTERVAL = 5000;
+
 export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn {
     const [caseData, setCaseData] = useState<GruistaCaseDetailed | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { user } = useAuth();
 
-    // API hook to get diagnosis from backend
+    // API hooks for backend
     const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
+    const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
 
+    // Initial load
     useEffect(() => {
         if (!caseId) {
             setError('No se proporcionó ID de caso');
@@ -35,13 +43,41 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             return;
         }
 
-        loadCase(caseId);
+        loadCase(caseId, true); // true = initial load
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [caseId, user]); // Re-load when user changes
+    }, [caseId, user]);
 
-    const loadCase = async (id: string) => {
+    // Auto-polling: refresh every 5 seconds while diagnosis is not ready
+    useEffect(() => {
+        if (!caseId || !caseData) return;
+
+        // Only poll if diagnosis is NOT ready yet
+        const diagnosisStatus = caseData.aiAssessment?.status;
+        if (diagnosisStatus === 'ready') {
+            console.log('Diagnosis ready, stopping polling');
+            return; // Stop polling once ready
+        }
+
+        console.log('Setting up polling, current status:', diagnosisStatus);
+        const interval = setInterval(() => {
+            console.log('Polling for updates...');
+            loadCase(caseId, false); // false = refresh (not initial load)
+        }, POLLING_INTERVAL);
+
+        return () => {
+            console.log('Clearing polling interval');
+            clearInterval(interval);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [caseId, caseData?.aiAssessment?.status]);
+
+    const loadCase = async (id: string, isInitialLoad: boolean = true) => {
         try {
-            setIsLoading(true);
+            if (isInitialLoad) {
+                setIsLoading(true);
+            } else {
+                setIsRefreshing(true);
+            }
             setError(null);
 
             // Load from localStorage first
@@ -72,61 +108,151 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
                 opCase.status === 'assigned' ? 'in-progress' :
                     opCase.status;
 
-            // Try to get AI Assessment from backend if we have a diagnosisId
-            let aiAssessment: AIAssessment = clientCase.aiAssessment || {
-                diagnosis: 'Pendiente de evaluación del cliente',
-                confidence: 0,
-                recommendation: 'tow',
-                reasoning: ['Caso en espera de respuestas del cliente'],
-            };
+            // Get data from localStorage FIRST (client saves here)
+            const localAnswers = clientCase.answers || [];
+            const localQuestions = clientCase.questions || [];
+            const totalQuestions = localQuestions.length || 4; // Default to 4 if no questions
+            const answeredCount = localAnswers.length;
 
-            // PROBLEM 3 FIX: Fetch real diagnosis from backend
+            // Build AI Assessment based on LOCAL data first
+            let aiAssessment: AIAssessment;
+
+            // Check if we already have a ready aiAssessment from client completing
+            if (clientCase.aiAssessment?.status === 'ready') {
+                // Client already completed and generated diagnosis
+                aiAssessment = clientCase.aiAssessment;
+                console.log('Using cached ready aiAssessment from localStorage');
+            } else if (answeredCount >= totalQuestions && totalQuestions > 0) {
+                // Client finished all questions but diagnosis not generated yet
+                // AUTO-GENERATE: Gruista has token, so we generate the preliminary automatically!
+                const diagnosisId = clientCase.diagnosisId;
+                const carId = clientCase.carId;
+                const token = localStorage.getItem('token');
+
+                if (diagnosisId && carId && token) {
+                    console.log('Client finished - Auto-generating preliminary diagnosis...');
+                    try {
+                        const preliminaryResponse = await generatePreliminary(
+                            { obdCodes: [] }, // No OBD codes for pre-diagnosis
+                            undefined,
+                            { carId, diagnosisId }
+                        );
+
+                        const diagnosis = preliminaryResponse.data;
+                        console.log('Preliminary generated:', diagnosis);
+
+                        if (diagnosis.preliminary?.possibleReasons?.length > 0) {
+                            const possibleReasons = diagnosis.preliminary.possibleReasons;
+                            const topReason = possibleReasons[0];
+
+                            aiAssessment = {
+                                status: 'ready',
+                                diagnosis: topReason.title || diagnosis.fault,
+                                confidence: topReason.probability === 'Alta' ? 85 :
+                                            topReason.probability === 'Media' ? 65 : 45,
+                                recommendation: determineRecommendation(diagnosis.preliminary),
+                                reasoning: possibleReasons.map((r: any) => r.reasonDetails).filter(Boolean),
+                                clientProgress: { answered: answeredCount, total: totalQuestions },
+                            };
+
+                            // Save to localStorage
+                            clientCases[opCase.id].aiAssessment = aiAssessment;
+                            localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+                            console.log('Pre-diagnosis READY and saved!');
+                        } else {
+                            // Backend didn't return possibleReasons yet, keep as generating
+                            aiAssessment = {
+                                status: 'generating',
+                                diagnosis: opCase.symptom,
+                                confidence: 0,
+                                recommendation: 'tow', // Default to tow until diagnosis is ready
+                                reasoning: [],
+                                clientProgress: { answered: answeredCount, total: totalQuestions },
+                            };
+                        }
+                    } catch (apiError) {
+                        console.error('Error generating preliminary:', apiError);
+                        // Keep as generating, will retry on next poll
+                        aiAssessment = {
+                            status: 'generating',
+                            diagnosis: opCase.symptom,
+                            confidence: 0,
+                            recommendation: 'tow', // Default to tow until diagnosis is ready
+                            reasoning: [],
+                            clientProgress: { answered: answeredCount, total: totalQuestions },
+                        };
+                    }
+                } else {
+                    // No diagnosisId/carId/token - show generating state
+                    aiAssessment = {
+                        status: 'generating',
+                        diagnosis: opCase.symptom,
+                        confidence: 0,
+                        recommendation: 'tow', // Default to tow until diagnosis is ready
+                        reasoning: [],
+                        clientProgress: { answered: answeredCount, total: totalQuestions },
+                    };
+                    console.log('Missing diagnosisId/carId/token for auto-generation');
+                }
+            } else if (answeredCount > 0) {
+                // Client is answering questions
+                aiAssessment = {
+                    status: 'client-answering',
+                    diagnosis: opCase.symptom,
+                    confidence: 0,
+                    recommendation: 'tow', // Default to tow until diagnosis is ready
+                    reasoning: [],
+                    clientProgress: { answered: answeredCount, total: totalQuestions },
+                };
+                console.log(`Client answering: ${answeredCount}/${totalQuestions}`);
+            } else {
+                // No answers yet
+                aiAssessment = {
+                    status: 'waiting-client',
+                    diagnosis: opCase.symptom,
+                    confidence: 0,
+                    recommendation: 'tow', // Default to tow until diagnosis is ready
+                    reasoning: [],
+                    clientProgress: { answered: 0, total: totalQuestions },
+                };
+                console.log('Waiting for client to start');
+            }
+
+            // NOW try to enrich with backend data if available
             const diagnosisId = clientCase.diagnosisId;
             const token = localStorage.getItem('token');
 
-            if (diagnosisId && token) {
+            if (diagnosisId && token && aiAssessment.status !== 'ready') {
                 try {
-                    console.log('Fetching diagnosis from backend:', diagnosisId);
+                    console.log('Checking backend for updates:', diagnosisId);
                     const diagnosisResponse = await getDiagnosis(undefined, undefined, {
                         diagnosisId
                     });
 
                     const diagnosis = diagnosisResponse.data;
-                    console.log('Backend diagnosis received:', diagnosis);
 
-                    // Extract AI assessment from backend preliminary data
+                    // Only update if backend has preliminary diagnosis ready
                     if (diagnosis.preliminary?.possibleReasons?.length > 0) {
                         const possibleReasons = diagnosis.preliminary.possibleReasons;
                         const topReason = possibleReasons[0];
 
                         aiAssessment = {
+                            status: 'ready',
                             diagnosis: topReason.title || diagnosis.fault,
                             confidence: topReason.probability === 'Alta' ? 85 :
                                         topReason.probability === 'Media' ? 65 : 45,
                             recommendation: determineRecommendation(diagnosis.preliminary),
                             reasoning: possibleReasons.map((r: any) => r.reasonDetails).filter(Boolean),
+                            clientProgress: { answered: answeredCount, total: totalQuestions },
                         };
 
-                        // Update localStorage with backend data for future use
-                        if (clientCases[opCase.id]) {
-                            clientCases[opCase.id].aiAssessment = aiAssessment;
-                            clientCases[opCase.id].backendDiagnosis = diagnosis;
-                            localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
-                        }
-
-                        console.log('AI Assessment updated from backend:', aiAssessment);
-                    } else if (diagnosis.fault && !clientCase.aiAssessment) {
-                        // At least show the symptom if no preliminary yet
-                        aiAssessment = {
-                            diagnosis: diagnosis.fault,
-                            confidence: 30,
-                            recommendation: 'info',
-                            reasoning: ['Diagnóstico IA en proceso', 'Esperando respuestas del cliente'],
-                        };
+                        // Save to localStorage for future use
+                        clientCases[opCase.id].aiAssessment = aiAssessment;
+                        localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+                        console.log('Backend diagnosis READY, saved to localStorage');
                     }
                 } catch (apiError) {
-                    console.log('Could not fetch diagnosis from backend, using local data:', apiError);
-                    // Keep using local aiAssessment
+                    console.log('Backend not available, using localStorage data');
                 }
             }
 
@@ -154,32 +280,38 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             setCaseData(transformedCase);
         } catch (err) {
             console.error('Error loading case:', err);
-            setError('Error al cargar el caso');
+            if (isInitialLoad) {
+                setError('Error al cargar el caso');
+            }
         } finally {
             setIsLoading(false);
+            setIsRefreshing(false);
         }
     };
 
-    // Helper function to determine recommendation
-    function determineRecommendation(preliminary: any): 'repair' | 'info' | 'tow' {
+    // Helper function to determine recommendation (only 'repair' or 'tow')
+    function determineRecommendation(preliminary: any): 'repair' | 'tow' {
         if (!preliminary?.possibleReasons?.length) return 'tow';
 
         const topReason = preliminary.possibleReasons[0];
         const requiredTools = topReason.requiredTools || [];
-        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas'];
+        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas', 'batería', 'cargador'];
 
         const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
             simpleTools.some(simple => tool.toLowerCase().includes(simple))
         );
 
+        // Repair in-situ: Alta probabilidad con herramientas simples
         if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
             return 'repair';
         }
 
-        if (topReason.probability === 'Media') {
-            return 'info';
+        // Media probabilidad con herramientas simples: también puede ser reparable in-situ
+        if (topReason.probability === 'Media' && hasSimpleTools && requiredTools.length <= 1) {
+            return 'repair';
         }
 
+        // Por defecto: remolcar al taller (es más seguro)
         return 'tow';
     }
 
@@ -204,15 +336,11 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             switch (decision) {
                 case 'repair':
                     newStatus = 'completed';
-                    successMessage = '✅ Caso marcado como reparado';
-                    break;
-                case 'info':
-                    newStatus = 'needs-info';
-                    successMessage = '🟡 Solicitud de información guardada';
+                    successMessage = 'Caso marcado como reparado';
                     break;
                 case 'tow':
                     newStatus = 'towing';
-                    successMessage = '🔴 Caso marcado para remolque';
+                    successMessage = 'Caso marcado para remolque';
                     // Generate workshop link
                     submission.workshopId = 'workshop-001'; // Mock
                     break;
@@ -264,6 +392,13 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
         return `${window.location.origin}/carretera/t/${caseData.id}`;
     };
 
+    // Manual refresh function
+    const refresh = async () => {
+        if (caseId) {
+            await loadCase(caseId, false);
+        }
+    };
+
     return {
         caseData,
         isLoading,
@@ -271,6 +406,8 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
         submitDecision,
         isSubmitting,
         generateWorkshopLink,
+        refresh,
+        isRefreshing,
     };
 }
 

@@ -119,14 +119,27 @@ export interface GruistaCaseDetailed {
     updatedAt: Date;
 }
 
+// Status of the AI diagnosis process
+export type DiagnosisStatus =
+    | 'waiting-client'      // Client hasn't answered yet
+    | 'client-answering'    // Client is answering questions
+    | 'generating'          // Client finished, AI is generating diagnosis
+    | 'ready';              // Pre-diagnosis is ready
+
 export interface AIAssessment {
     diagnosis: string;
     confidence: number; // 0-100
     recommendation: TrafficLightDecisionType;
     reasoning: string[];
+    // New fields for tracking diagnosis status
+    status?: DiagnosisStatus;
+    clientProgress?: {
+        answered: number;
+        total: number;
+    };
 }
 
-export type TrafficLightDecisionType = 'repair' | 'info' | 'tow';
+export type TrafficLightDecisionType = 'repair' | 'tow';
 
 export interface DecisionSubmission {
     decision: TrafficLightDecisionType;
