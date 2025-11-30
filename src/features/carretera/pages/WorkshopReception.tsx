@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Car, User, Phone, MapPin, Loader2, Cpu, Wrench } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Loader2, Cpu, Wrench, CheckCircle, ChevronDown, ChevronUp, AlertTriangle, Clock } from 'lucide-react';
 import { useWorkshopCase } from '../hooks/useWorkshopCase';
 import { ClientQAThread } from '../components/ClientQAThread';
 import { AIAssessmentSummary } from '../components/AIAssessmentSummary';
@@ -8,19 +8,24 @@ import { GruistaDecisionSummary } from '../components/GruistaDecisionSummary';
 import { WorkshopActions } from '../components/WorkshopActions';
 import { OBDDiagnosisForm } from '../components/OBDDiagnosisForm';
 import { WorkshopWelcomeModal } from '../components/WorkshopWelcomeModal';
+import { useAccessToken } from '../components/RequireAccessToken';
 
 export function WorkshopReception() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+
+    // Get validated token data from RequireAccessToken context
+    const { carId: tokenCarId, diagnosisId: tokenDiagnosisId } = useAccessToken();
+
     const { caseData, isLoading, error, acceptCase, rejectCase, submitOBDDiagnosis, isProcessing } =
-        useWorkshopCase(id);
+        useWorkshopCase(id, { carId: tokenCarId, diagnosisId: tokenDiagnosisId });
     const [showOBDForm, setShowOBDForm] = useState(false);
     const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+    const [showMoreInfo, setShowMoreInfo] = useState(false);
 
     // Show welcome modal for incoming cases (first time viewing)
     useEffect(() => {
         if (caseData && caseData.status === 'incoming') {
-            // Check if we've already shown the modal for this case
             const shownModalKey = `workshop_welcome_shown_${id}`;
             const hasShownModal = sessionStorage.getItem(shownModalKey);
             if (!hasShownModal) {
@@ -37,22 +42,20 @@ export function WorkshopReception() {
     const handleAccept = async () => {
         const serviceOrderNumber = await acceptCase();
         console.log('Service order created:', serviceOrderNumber);
-        // Show OBD form after accepting the case
         setShowOBDForm(true);
     };
 
     const handleOBDSubmit = async (obdCodes: string[], comments: string) => {
         await submitOBDDiagnosis(obdCodes, comments);
         setShowOBDForm(false);
-        // The AI diagnosis is generated and stored in caseData.obdDiagnosis
     };
 
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 className="h-16 w-16 text-indigo-600 animate-spin mx-auto mb-4" />
-                    <p className="text-lg font-semibold text-gray-700">Cargando caso...</p>
+                    <Loader2 className="h-16 w-16 text-orange-500 animate-spin mx-auto mb-4" />
+                    <p className="text-lg font-semibold text-gray-700">Cargando...</p>
                 </div>
             </div>
         );
@@ -67,7 +70,7 @@ export function WorkshopReception() {
                     <p className="text-gray-600 mb-6">{error || 'Caso no encontrado'}</p>
                     <button
                         onClick={handleBack}
-                        className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                        className="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-900 transition-colors"
                     >
                         Volver
                     </button>
@@ -79,10 +82,12 @@ export function WorkshopReception() {
     const isAccepted = caseData.status === 'accepted' || caseData.status === 'in-repair';
     const isRejected = caseData.status === 'rejected';
     const isIncoming = caseData.status === 'incoming';
+    const hasOBDDiagnosis = isAccepted && caseData.obdDiagnosis;
+    const needsOBD = isAccepted && !caseData.obdDiagnosis;
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            {/* Welcome Modal for new incoming cases */}
+        <div className="min-h-screen bg-gray-100">
+            {/* Welcome Modal */}
             {showWelcomeModal && caseData && (
                 <WorkshopWelcomeModal
                     caseNumber={caseData.caseNumber}
@@ -95,173 +100,125 @@ export function WorkshopReception() {
                 />
             )}
 
-            {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg sticky top-0 z-20">
-                <div className="px-4 py-4">
+            {/* Header - Compact */}
+            <div className="bg-slate-800 text-white sticky top-0 z-20">
+                <div className="px-4 py-3">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleBack}
-                            className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95"
+                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                         >
-                            <ArrowLeft className="h-6 w-6" />
+                            <ArrowLeft className="h-5 w-5" />
                         </button>
-                        <div className="flex-1">
-                            <h1 className="text-xl font-bold">Recepción Taller</h1>
-                            <p className="text-sm text-purple-100">Caso {caseData.caseNumber}</p>
+                        <div className="flex-1 flex items-center gap-3">
+                            <Car className="h-6 w-6 text-slate-400" />
+                            <span className="text-xl font-bold font-mono">{caseData.vehiclePlate}</span>
                         </div>
+                        {isAccepted && caseData.serviceOrderNumber && (
+                            <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
+                                OS: {caseData.serviceOrderNumber}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-                {/* Workshop Actions - MOVED TO TOP for incoming cases */}
+            {/* Main Content */}
+            <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+
+                {/* STEP 1: Incoming - Accept or Reject */}
                 {isIncoming && (
-                    <div className="sticky top-[72px] z-10 -mx-4 px-4 py-3 bg-gradient-to-b from-gray-50 via-gray-50 to-transparent">
+                    <>
+                        {/* The Problem */}
+                        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                            <div className="bg-amber-500 px-4 py-2">
+                                <p className="text-white font-bold text-sm flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    PROBLEMA REPORTADO
+                                </p>
+                            </div>
+                            <div className="p-4">
+                                <p className="text-gray-800 text-lg">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                                <p className="text-gray-500 text-sm mt-2">Cliente: {caseData.clientName} · {caseData.clientPhone}</p>
+                            </div>
+                        </div>
+
+                        {/* Accept/Reject Actions */}
                         <WorkshopActions
                             onAccept={handleAccept}
                             onReject={rejectCase}
                             isProcessing={isProcessing}
                         />
-                    </div>
-                )}
 
-                {/* Status Banner */}
-                {isAccepted && (
-                    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="text-3xl">✅</div>
-                            <div>
-                                <p className="font-bold text-green-800 text-lg">Caso Aceptado</p>
-                                <p className="text-sm text-green-700">
-                                    Orden de servicio: <span className="font-mono font-bold">{caseData.serviceOrderNumber}</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        {/* Expandable: More Info */}
+                        <button
+                            onClick={() => setShowMoreInfo(!showMoreInfo)}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                            {showMoreInfo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {showMoreInfo ? 'Ocultar detalles' : 'Ver más detalles del caso'}
+                        </button>
 
-                {isRejected && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="text-3xl">❌</div>
-                            <div>
-                                <p className="font-bold text-red-800 text-lg">Caso Rechazado</p>
-                                <p className="text-sm text-red-700">Este caso no fue aceptado por el taller</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Vehicle Info - Enhanced for technician */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-5 py-3">
-                        <div className="flex items-center gap-2 text-white">
-                            <Car className="h-5 w-5" />
-                            <h2 className="text-lg font-bold">Información del Vehículo</h2>
-                        </div>
-                    </div>
-                    <div className="p-5 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">Matrícula</p>
-                                <p className="text-3xl font-bold text-gray-900 font-mono">{caseData.vehiclePlate}</p>
-                            </div>
-                            {/* Vehicle details if available */}
-                            {(caseData as any).vehicleInfo && (
-                                <div className="text-right">
-                                    <p className="text-sm font-semibold text-gray-800">
-                                        {(caseData as any).vehicleInfo.brand} {(caseData as any).vehicleInfo.model}
-                                    </p>
-                                    {(caseData as any).vehicleInfo.year && (
-                                        <p className="text-sm text-gray-600">{(caseData as any).vehicleInfo.year}</p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <div className="border-t pt-4">
-                            <p className="text-sm font-semibold text-gray-700 mb-2">Síntoma Reportado</p>
-                            <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r">
-                                <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Client Info */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                        <User className="h-5 w-5 text-indigo-600" />
-                        <h2 className="text-lg font-bold text-gray-900">Información del Cliente</h2>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <p className="text-sm text-gray-600">Nombre</p>
-                            <p className="text-lg font-semibold text-gray-900">{caseData.clientName}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-gray-600" />
-                            <p className="text-base text-gray-700">{caseData.clientPhone}</p>
-                        </div>
-                        {caseData.location && (
-                            <div className="flex items-start gap-2">
-                                <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
-                                <p className="text-sm text-gray-700">{caseData.location}</p>
+                        {showMoreInfo && (
+                            <div className="space-y-4">
+                                <ClientQAThread
+                                    questions={caseData.questions}
+                                    answers={caseData.answers}
+                                    isCollapsible={false}
+                                />
+                                <AIAssessmentSummary assessment={caseData.aiAssessment} />
+                                <GruistaDecisionSummary
+                                    decision={caseData.gruistaDecision.decision}
+                                    notes={caseData.gruistaDecision.notes}
+                                    decidedAt={caseData.gruistaDecision.decidedAt}
+                                    gruistaName={caseData.gruistaDecision.gruistaName}
+                                />
                             </div>
                         )}
+                    </>
+                )}
+
+                {/* Rejected State */}
+                {isRejected && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 text-center">
+                        <div className="text-5xl mb-3">❌</div>
+                        <p className="font-bold text-red-800 text-lg">Caso Rechazado</p>
+                        <p className="text-red-600 text-sm mt-1">Este caso no fue aceptado</p>
                     </div>
-                </div>
+                )}
 
-                {/* Q&A Thread */}
-                <div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">Historial de Evaluación</h2>
-                    <ClientQAThread
-                        questions={caseData.questions}
-                        answers={caseData.answers}
-                        isCollapsible={true}
-                    />
-                </div>
-
-                {/* AI Assessment */}
-                <div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">Diagnóstico IA</h2>
-                    <AIAssessmentSummary assessment={caseData.aiAssessment} />
-                </div>
-
-                {/* Gruista Decision */}
-                <div>
-                    <h2 className="text-lg font-bold text-gray-900 mb-3">Decisión del Gruista</h2>
-                    <GruistaDecisionSummary
-                        decision={caseData.gruistaDecision.decision}
-                        notes={caseData.gruistaDecision.notes}
-                        decidedAt={caseData.gruistaDecision.decidedAt}
-                        gruistaName={caseData.gruistaDecision.gruistaName}
-                    />
-                </div>
-
-                {/* OBD Diagnosis Section - Shows immediately after accepting */}
-                {isAccepted && !caseData.obdDiagnosis && (
-                    <div className="space-y-6">
-                        {!showOBDForm ? (
-                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                                <div className="flex items-start gap-4">
-                                    <Cpu className="h-8 w-8 text-blue-600 flex-shrink-0 mt-1" />
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-blue-900 mb-2">
-                                            Diagnóstico OBD Pendiente
-                                        </h3>
-                                        <p className="text-blue-800 mb-4">
-                                            Conecta el escáner OBD al vehículo para obtener los códigos de error y generar un diagnóstico detallado con IA.
-                                        </p>
-                                        <button
-                                            onClick={() => setShowOBDForm(true)}
-                                            className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                                        >
-                                            <Cpu className="h-5 w-5" />
-                                            Introducir Códigos OBD
-                                        </button>
-                                    </div>
+                {/* STEP 2: Accepted - Need OBD Codes */}
+                {needsOBD && (
+                    <>
+                        {/* Success Banner */}
+                        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                            <div className="flex items-center gap-3">
+                                <CheckCircle className="h-8 w-8 text-green-600" />
+                                <div>
+                                    <p className="font-bold text-green-800">Caso Aceptado</p>
+                                    <p className="text-green-700 text-sm">
+                                        Orden: <span className="font-mono font-bold">{caseData.serviceOrderNumber}</span>
+                                    </p>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* OBD Form or CTA */}
+                        {!showOBDForm ? (
+                            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white text-center">
+                                <Cpu className="h-12 w-12 mx-auto mb-4 opacity-90" />
+                                <h3 className="text-xl font-bold mb-2">Siguiente paso: Diagnóstico OBD</h3>
+                                <p className="text-blue-100 mb-6 text-sm">
+                                    Conecta el escáner OBD al vehículo y mete los códigos de error.
+                                    El sistema te dará un diagnóstico automático.
+                                </p>
+                                <button
+                                    onClick={() => setShowOBDForm(true)}
+                                    className="w-full px-6 py-4 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Cpu className="h-5 w-5" />
+                                    Introducir Códigos OBD
+                                </button>
                             </div>
                         ) : (
                             <OBDDiagnosisForm
@@ -269,127 +226,175 @@ export function WorkshopReception() {
                                 isProcessing={isProcessing}
                                 caseNumber={caseData.caseNumber}
                                 vehiclePlate={caseData.vehiclePlate}
-                                symptom={caseData.symptom}
+                                symptom={caseData.symptom || ''}
                             />
                         )}
-                    </div>
+
+                        {/* Collapsible: Case Background */}
+                        <button
+                            onClick={() => setShowMoreInfo(!showMoreInfo)}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                            {showMoreInfo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {showMoreInfo ? 'Ocultar historial' : 'Ver historial del caso'}
+                        </button>
+
+                        {showMoreInfo && (
+                            <div className="space-y-4">
+                                {/* Problem Summary */}
+                                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Problema reportado</p>
+                                    <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                                </div>
+                                <ClientQAThread
+                                    questions={caseData.questions}
+                                    answers={caseData.answers}
+                                    isCollapsible={false}
+                                />
+                                <AIAssessmentSummary assessment={caseData.aiAssessment} />
+                            </div>
+                        )}
+                    </>
                 )}
 
-                {/* AI Generated Diagnosis Results */}
-                {isAccepted && caseData.obdDiagnosis && (
-                    <div className="space-y-6">
-                        {/* OBD Codes Summary */}
-                        <div className="bg-white rounded-lg border-2 border-indigo-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3">
-                                <div className="flex items-center gap-2 text-white">
-                                    <Cpu className="h-5 w-5" />
-                                    <h3 className="font-bold text-lg">Diagnóstico OBD Completado</h3>
+                {/* STEP 3: Has OBD Diagnosis - Show Results */}
+                {hasOBDDiagnosis && (
+                    <>
+                        {/* Success Banner */}
+                        <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4">
+                            <div className="flex items-center gap-3">
+                                <CheckCircle className="h-8 w-8 text-green-600" />
+                                <div>
+                                    <p className="font-bold text-green-800">Diagnóstico Completado</p>
+                                    <p className="text-green-700 text-sm">
+                                        Orden: <span className="font-mono font-bold">{caseData.serviceOrderNumber}</span>
+                                    </p>
                                 </div>
                             </div>
-                            <div className="p-4 space-y-3">
-                                <div>
-                                    <p className="text-sm text-gray-600 mb-1">Códigos OBD detectados:</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {caseData.obdDiagnosis.obdCodes?.map((code: string, index: number) => (
-                                            <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-800 font-mono font-semibold rounded-lg">
-                                                {code}
-                                            </span>
-                                        ))}
-                                    </div>
+                        </div>
+
+                        {/* OBD Codes */}
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                            <div className="bg-slate-700 px-4 py-2">
+                                <p className="text-white font-bold text-sm flex items-center gap-2">
+                                    <Cpu className="h-4 w-4" />
+                                    CÓDIGOS OBD
+                                </p>
+                            </div>
+                            <div className="p-4">
+                                <div className="flex flex-wrap gap-2">
+                                    {caseData.obdDiagnosis.obdCodes?.map((code: string, index: number) => (
+                                        <span key={index} className="px-3 py-2 bg-slate-100 text-slate-800 font-mono font-bold rounded-lg text-lg">
+                                            {code}
+                                        </span>
+                                    ))}
                                 </div>
                                 {caseData.obdDiagnosis.technicianComments && (
-                                    <div>
-                                        <p className="text-sm text-gray-600 mb-1">Observaciones del técnico:</p>
-                                        <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">
-                                            {caseData.obdDiagnosis.technicianComments}
-                                        </p>
+                                    <div className="mt-4 pt-4 border-t">
+                                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tus observaciones</p>
+                                        <p className="text-gray-700 text-sm">{caseData.obdDiagnosis.technicianComments}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* AI Generated Possible Failures and Solutions */}
-                        <div className="bg-white rounded-lg border-2 border-green-200 overflow-hidden">
-                            <div className="bg-gradient-to-r from-green-600 to-teal-600 px-4 py-3">
-                                <div className="flex items-center gap-2 text-white">
+                        {/* AI Diagnosis Results */}
+                        <div className="bg-white rounded-xl border-2 border-green-200 overflow-hidden">
+                            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-3">
+                                <p className="text-white font-bold flex items-center gap-2">
                                     <Wrench className="h-5 w-5" />
-                                    <h3 className="font-bold text-lg">Posibles Averías y Soluciones</h3>
-                                </div>
+                                    POSIBLES AVERÍAS
+                                </p>
                             </div>
                             <div className="p-4">
                                 {caseData.obdDiagnosis.diagnosisGenerated && Array.isArray(caseData.obdDiagnosis.failures) && caseData.obdDiagnosis.failures.length > 0 ? (
                                     <div className="space-y-4">
                                         {caseData.obdDiagnosis.failures.map((failure: any, index: number) => (
-                                            <div key={index} className="border border-gray-200 rounded-lg p-4">
-                                                <div className="flex items-start gap-2 mb-3">
-                                                    <span className="text-2xl flex-shrink-0">
+                                            <div key={index} className={`p-4 rounded-lg ${index === 0 ? 'bg-red-50 border-2 border-red-200' : index === 1 ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50 border border-gray-200'}`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className="text-2xl">
                                                         {index === 0 ? '🔴' : index === 1 ? '🟡' : '🟢'}
                                                     </span>
                                                     <div className="flex-1">
-                                                        <h4 className="font-semibold text-gray-900 mb-1">
-                                                            {failure.part || `Avería ${index + 1}`}
-                                                        </h4>
-                                                        {failure.probability && (
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <span className="text-sm text-gray-600">Probabilidad:</span>
-                                                                <div className="flex-1 max-w-xs bg-gray-200 rounded-full h-2">
-                                                                    <div
-                                                                        className={`h-2 rounded-full ${
-                                                                            failure.probability > 75 ? 'bg-red-500' :
-                                                                            failure.probability > 50 ? 'bg-yellow-500' :
-                                                                            'bg-green-500'
-                                                                        }`}
-                                                                        style={{ width: `${failure.probability}%` }}
-                                                                    />
-                                                                </div>
-                                                                <span className="text-sm font-semibold">{failure.probability}%</span>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <h4 className="font-bold text-gray-900">
+                                                                {failure.part || `Posible avería ${index + 1}`}
+                                                            </h4>
+                                                            {failure.probability && (
+                                                                <span className={`text-sm font-bold px-2 py-1 rounded ${failure.probability > 75 ? 'bg-red-200 text-red-800' : failure.probability > 50 ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
+                                                                    {failure.probability}%
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-gray-700 text-sm mb-3">{failure.description}</p>
+
+                                                        {failure.steps && failure.steps.length > 0 && (
+                                                            <div className="bg-white rounded-lg p-3 border">
+                                                                <p className="text-xs font-bold text-gray-500 uppercase mb-2">Cómo solucionarlo:</p>
+                                                                <ol className="text-sm text-gray-700 space-y-1">
+                                                                    {failure.steps.map((step: string, stepIndex: number) => (
+                                                                        <li key={stepIndex} className="flex gap-2">
+                                                                            <span className="font-bold text-gray-400">{stepIndex + 1}.</span>
+                                                                            <span>{step}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ol>
                                                             </div>
+                                                        )}
+
+                                                        {failure.estimatedTime && (
+                                                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                                                <Clock className="h-3 w-3" />
+                                                                Tiempo estimado: {failure.estimatedTime}
+                                                            </p>
                                                         )}
                                                     </div>
                                                 </div>
-
-                                                <p className="text-gray-700 mb-3">{failure.description}</p>
-
-                                                {failure.steps && failure.steps.length > 0 && (
-                                                    <div className="bg-gray-50 rounded-lg p-3">
-                                                        <p className="text-sm font-semibold text-gray-700 mb-2">
-                                                            Pasos para solucionar:
-                                                        </p>
-                                                        <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
-                                                            {failure.steps.map((step: string, stepIndex: number) => (
-                                                                <li key={stepIndex}>{step}</li>
-                                                            ))}
-                                                        </ol>
-                                                    </div>
-                                                )}
-
-                                                {failure.estimatedTime && (
-                                                    <p className="text-xs text-gray-500 mt-2">
-                                                        ⏱ Tiempo estimado: {failure.estimatedTime}
-                                                    </p>
-                                                )}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
-                                        <div className="bg-amber-50 border-l-4 border-amber-500 p-4">
-                                            <p className="text-amber-800 text-sm">
-                                                <strong>⏳ Generando diagnóstico con IA...</strong>
-                                                <br/>El análisis de posibles averías se está procesando basándose en:
-                                            </p>
-                                            <ul className="text-sm text-amber-700 mt-2 list-disc list-inside">
-                                                <li>Códigos OBD: {caseData.obdDiagnosis.obdCodes?.join(', ')}</li>
-                                                <li>Síntoma: {caseData.symptom}</li>
-                                            </ul>
-                                        </div>
+                                    <div className="text-center py-8">
+                                        <Loader2 className="h-10 w-10 animate-spin text-green-500 mx-auto mb-3" />
+                                        <p className="font-semibold text-gray-700">Analizando códigos OBD...</p>
+                                        <p className="text-sm text-gray-500 mt-1">El diagnóstico estará listo en unos segundos</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                )}
 
+                        {/* Collapsible: Full History */}
+                        <button
+                            onClick={() => setShowMoreInfo(!showMoreInfo)}
+                            className="w-full flex items-center justify-center gap-2 py-3 text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                            {showMoreInfo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {showMoreInfo ? 'Ocultar historial' : 'Ver historial completo'}
+                        </button>
+
+                        {showMoreInfo && (
+                            <div className="space-y-4 pb-8">
+                                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Problema original</p>
+                                    <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                                    <p className="text-gray-500 text-sm mt-2">Cliente: {caseData.clientName} · {caseData.clientPhone}</p>
+                                </div>
+                                <ClientQAThread
+                                    questions={caseData.questions}
+                                    answers={caseData.answers}
+                                    isCollapsible={false}
+                                />
+                                <AIAssessmentSummary assessment={caseData.aiAssessment} />
+                                <GruistaDecisionSummary
+                                    decision={caseData.gruistaDecision.decision}
+                                    notes={caseData.gruistaDecision.notes}
+                                    decidedAt={caseData.gruistaDecision.decidedAt}
+                                    gruistaName={caseData.gruistaDecision.gruistaName}
+                                />
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );
