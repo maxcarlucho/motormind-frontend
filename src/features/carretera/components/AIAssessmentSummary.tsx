@@ -1,4 +1,4 @@
-import { Brain, TrendingUp, Clock, Loader2, CheckCircle, MessageSquare } from 'lucide-react';
+import { Brain, TrendingUp, Clock, Loader2, CheckCircle, MessageSquare, Wrench, AlertTriangle, ListChecks } from 'lucide-react';
 import { AIAssessment } from '../types/carretera.types';
 
 interface AIAssessmentSummaryProps {
@@ -137,6 +137,7 @@ function DiagnosisPendingState({
 
 /**
  * Shows when diagnosis is ready with full AI assessment
+ * Now includes extended fields: actionSteps, risks, estimatedTime
  */
 function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
     const getConfidenceColor = (confidence: number) => {
@@ -160,6 +161,14 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                     bgColor: 'bg-green-100',
                     textColor: 'text-green-800',
                     borderColor: 'border-green-300',
+                };
+            case 'repair-failed':
+                return {
+                    icon: '🟡',
+                    label: 'REPARACIÓN FALLIDA',
+                    bgColor: 'bg-amber-100',
+                    textColor: 'text-amber-800',
+                    borderColor: 'border-amber-300',
                 };
             case 'tow':
             default:
@@ -193,6 +202,15 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
 
             {/* Content */}
             <div className="p-4 space-y-4">
+                {/* Summary (new field - short headline for gruista) */}
+                {assessment.summary && (
+                    <div className="bg-white rounded-lg p-3 border border-indigo-200">
+                        <p className="text-lg font-bold text-gray-900">
+                            {assessment.summary}
+                        </p>
+                    </div>
+                )}
+
                 {/* Diagnosis */}
                 <div>
                     <p className="text-base text-gray-900 leading-relaxed font-medium">
@@ -200,26 +218,39 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                     </p>
                 </div>
 
-                {/* Confidence */}
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-                            <TrendingUp className="h-4 w-4" />
-                            Nivel de Confianza
-                        </span>
-                        <span className={`text-lg font-bold ${getConfidenceColor(assessment.confidence)}`}>
-                            {assessment.confidence}%
-                        </span>
+                {/* Confidence & Estimated Time Row */}
+                <div className="flex items-center gap-4">
+                    {/* Confidence */}
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                                <TrendingUp className="h-4 w-4" />
+                                Confianza
+                            </span>
+                            <span className={`text-lg font-bold ${getConfidenceColor(assessment.confidence)}`}>
+                                {assessment.confidence}%
+                            </span>
+                        </div>
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div
+                                className={`h-full rounded-full transition-all duration-500 ${getConfidenceBarColor(
+                                    assessment.confidence
+                                )}`}
+                                style={{ width: `${assessment.confidence}%` }}
+                            />
+                        </div>
                     </div>
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-500 ${getConfidenceBarColor(
-                                assessment.confidence
-                            )}`}
-                            style={{ width: `${assessment.confidence}%` }}
-                        />
-                    </div>
+
+                    {/* Estimated Time (new field) */}
+                    {assessment.estimatedTime && (
+                        <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 rounded-lg">
+                            <Clock className="h-4 w-4 text-gray-600" />
+                            <span className="text-sm font-semibold text-gray-700">
+                                {assessment.estimatedTime}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Recommendation */}
@@ -236,7 +267,10 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                 {/* Reasoning */}
                 {assessment.reasoning && assessment.reasoning.length > 0 && (
                     <div>
-                        <p className="text-sm font-semibold text-gray-700 mb-2">Razones:</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <Brain className="h-4 w-4" />
+                            Por qué:
+                        </p>
                         <ul className="space-y-2">
                             {assessment.reasoning.map((reason, index) => (
                                 <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
@@ -245,6 +279,57 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                                 </li>
                             ))}
                         </ul>
+                    </div>
+                )}
+
+                {/* Action Steps (new field) */}
+                {assessment.actionSteps && assessment.actionSteps.length > 0 && (
+                    <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1">
+                            <ListChecks className="h-4 w-4" />
+                            Pasos a Seguir:
+                        </p>
+                        <ol className="space-y-2">
+                            {assessment.actionSteps.map((step, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-green-700">
+                                    <span className="bg-green-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        {index + 1}
+                                    </span>
+                                    <span className="flex-1">{step}</span>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
+
+                {/* Risks (new field) */}
+                {assessment.risks && assessment.risks.length > 0 && (
+                    <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+                        <p className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1">
+                            <AlertTriangle className="h-4 w-4" />
+                            Riesgos a Considerar:
+                        </p>
+                        <ul className="space-y-2">
+                            {assessment.risks.map((risk, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
+                                    <span className="text-amber-600 font-bold mt-0.5">⚠</span>
+                                    <span className="flex-1">{risk}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {/* Alternative Consideration (new field) */}
+                {assessment.alternativeConsideration && (
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <p className="text-sm font-semibold text-blue-800 mb-1 flex items-center gap-1">
+                            <Wrench className="h-4 w-4" />
+                            Si la situación cambia:
+                        </p>
+                        <p className="text-sm text-blue-700">
+                            {assessment.alternativeConsideration}
+                        </p>
                     </div>
                 )}
             </div>

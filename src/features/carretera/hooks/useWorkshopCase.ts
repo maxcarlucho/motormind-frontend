@@ -81,7 +81,7 @@ export function useWorkshopCase(caseId?: string): UseWorkshopCaseReturn {
 
                 const opCase = operatorCases.find((c: any) => c.id === caseId);
 
-                if (opCase) {
+                if (opCase && caseId) {
                     const clientCase = clientCases[caseId] || {};
 
                     // Build workshop case from available data

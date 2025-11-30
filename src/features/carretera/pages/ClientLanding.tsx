@@ -1,11 +1,17 @@
-import { useParams } from 'react-router-dom';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { AlertCircle, Loader2, Brain } from 'lucide-react';
 import { useClientAssessment } from '../hooks/useClientAssessment';
 import { ChatInterface } from '../components/ChatInterface';
 import { ClientComplete } from '../components/ClientComplete';
 
 export const ClientLanding = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+
+  // Extract token and carId from URL query params
+  // These are needed for the client to call backend APIs
+  const urlToken = searchParams.get('t') || undefined;
+  const urlCarId = searchParams.get('car') || undefined;
 
   const {
     assessment,
@@ -13,9 +19,10 @@ export const ClientLanding = () => {
     answers,
     isLoading,
     isComplete,
+    isGeneratingDiagnosis,
     error,
     submitAnswer,
-  } = useClientAssessment(id);
+  } = useClientAssessment(id, { token: urlToken, carId: urlCarId });
 
   // Loading state
   if (isLoading) {
@@ -24,6 +31,35 @@ export const ClientLanding = () => {
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
           <p className="text-gray-600 text-lg">Cargando información...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Generating diagnosis state - show while AI is processing
+  if (isGeneratingDiagnosis) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100">
+        <div className="text-center space-y-6 p-8">
+          <div className="relative">
+            <Brain className="h-16 w-16 text-purple-600 mx-auto animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-20 w-20 border-4 border-purple-300 border-t-purple-600 rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-gray-900">
+              Generando diagnóstico...
+            </h2>
+            <p className="text-gray-600">
+              Nuestra IA está analizando tus respuestas
+            </p>
+          </div>
+          <div className="flex justify-center gap-1">
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );

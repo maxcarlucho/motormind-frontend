@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { enqueueSnackbar } from 'notistack';
-import { GruistaCaseDetailed, TrafficLightDecisionType, DecisionSubmission, WorkshopCaseDetailed, AIAssessment } from '../types/carretera.types';
+import { GruistaCaseDetailed, TrafficLightDecisionType, DecisionSubmission, WorkshopCaseDetailed, AIAssessment, PossibleReason } from '../types/carretera.types';
 import { useAuth } from '@/context/Auth.context';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
+import { gruistaRecommendationService, GruistaRecommendationInput } from '../services/gruistaRecommendation.service';
 
 interface UseGruistaCaseReturn {
     caseData: GruistaCaseDetailed | null;
@@ -33,6 +34,7 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
 
     // API hooks for backend
     const { execute: getDiagnosis } = useApi<Diagnosis>('get', '/cars/diagnosis/:diagnosisId');
+    const { execute: saveAnswers } = useApi<Diagnosis>('put', '/cars/:carId/diagnosis/:diagnosisId/answers');
     const { execute: generatePreliminary } = useApi<Diagnosis>('post', '/cars/:carId/diagnosis/:diagnosisId/preliminary');
 
     // Initial load
@@ -117,11 +119,22 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             // Build AI Assessment based on LOCAL data first
             let aiAssessment: AIAssessment;
 
+            // Debug: Log what we have
+            console.log('📊 Case data:', {
+                caseId: opCase.id,
+                diagnosisId: clientCase.diagnosisId,
+                carId: clientCase.carId,
+                answeredCount,
+                totalQuestions,
+                hasAiAssessment: !!clientCase.aiAssessment,
+                aiAssessmentStatus: clientCase.aiAssessment?.status,
+            });
+
             // Check if we already have a ready aiAssessment from client completing
             if (clientCase.aiAssessment?.status === 'ready') {
                 // Client already completed and generated diagnosis
                 aiAssessment = clientCase.aiAssessment;
-                console.log('Using cached ready aiAssessment from localStorage');
+                console.log('✅ Using cached ready aiAssessment from localStorage');
             } else if (answeredCount >= totalQuestions && totalQuestions > 0) {
                 // Client finished all questions but diagnosis not generated yet
                 // AUTO-GENERATE: Gruista has token, so we generate the preliminary automatically!
@@ -132,6 +145,20 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
                 if (diagnosisId && carId && token) {
                     console.log('Client finished - Auto-generating preliminary diagnosis...');
                     try {
+                        // STEP 1: First, send client answers to backend
+                        // The client doesn't have a token, so Gruista sends answers on their behalf
+                        console.log('📤 Sending client answers to backend...');
+                        // Correct endpoint: PUT /cars/:carId/diagnosis/:diagnosisId/answers
+                        await saveAnswers(
+                            {
+                                answers: localAnswers.join('|'), // Core expects pipe-separated answers
+                            },
+                            undefined,
+                            { carId, diagnosisId }
+                        );
+                        console.log('✅ Client answers saved to backend');
+
+                        // STEP 2: Now generate preliminary with the answers in place
                         const preliminaryResponse = await generatePreliminary(
                             { obdCodes: [] }, // No OBD codes for pre-diagnosis
                             undefined,
@@ -289,8 +316,75 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
         }
     };
 
-    // Helper function to determine recommendation (only 'repair' or 'tow')
-    function determineRecommendation(preliminary: any): 'repair' | 'tow' {
+    /**
+     * Genera recomendación usando el servicio de IA
+     * Reemplaza la lógica hardcoded anterior con IA contextualizada
+     */
+    async function generateAIRecommendation(
+        preliminary: any,
+        caseInfo: {
+            vehiclePlate: string;
+            symptom: string;
+            location?: string;
+            questions: string[];
+            answers: string[];
+            vehicleBrand?: string;
+            vehicleModel?: string;
+            vehicleYear?: number;
+        }
+    ): Promise<Partial<AIAssessment>> {
+        try {
+            // Preparar input para el servicio de recomendación
+            const input: GruistaRecommendationInput = {
+                vehiclePlate: caseInfo.vehiclePlate,
+                vehicleBrand: caseInfo.vehicleBrand,
+                vehicleModel: caseInfo.vehicleModel,
+                vehicleYear: caseInfo.vehicleYear,
+                symptom: caseInfo.symptom,
+                location: caseInfo.location,
+                questions: caseInfo.questions,
+                answers: caseInfo.answers,
+                possibleReasons: (preliminary?.possibleReasons || []).map((r: any): PossibleReason => ({
+                    title: r.title,
+                    probability: r.probability,
+                    reasonDetails: r.reasonDetails,
+                    diagnosticRecommendations: r.diagnosticRecommendations || [],
+                    requiredTools: r.requiredTools || []
+                })),
+                isHighway: gruistaRecommendationService.detectHighway(caseInfo.location || '')
+            };
+
+            // Llamar al servicio de IA
+            const recommendation = await gruistaRecommendationService.generateRecommendation(input);
+
+            return {
+                recommendation: recommendation.recommendation,
+                confidence: recommendation.confidence,
+                reasoning: recommendation.reasoning,
+                summary: recommendation.summary,
+                actionSteps: recommendation.actionSteps,
+                risks: recommendation.risks,
+                estimatedTime: recommendation.estimatedTime,
+                alternativeConsideration: recommendation.alternativeConsideration
+            };
+        } catch (error) {
+            console.error('Error generating AI recommendation, using fallback:', error);
+            // Fallback a lógica simple si falla
+            return {
+                recommendation: determineRecommendationFallback(preliminary),
+                confidence: 50,
+                reasoning: preliminary?.possibleReasons?.[0]?.reasonDetails
+                    ? [preliminary.possibleReasons[0].reasonDetails]
+                    : ['Recomendación basada en análisis simplificado']
+            };
+        }
+    }
+
+    /**
+     * Fallback: Lógica simple para determinar recomendación si falla la IA
+     * Mantiene compatibilidad con el sistema anterior
+     */
+    function determineRecommendationFallback(preliminary: any): 'repair' | 'tow' {
         if (!preliminary?.possibleReasons?.length) return 'tow';
 
         const topReason = preliminary.possibleReasons[0];
@@ -336,11 +430,17 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             switch (decision) {
                 case 'repair':
                     newStatus = 'completed';
-                    successMessage = 'Caso marcado como reparado';
+                    successMessage = '✅ Caso marcado como reparado';
+                    break;
+                case 'repair-failed':
+                    // New status: repair was attempted but failed
+                    // Gruista can still escalate to tow from this state
+                    newStatus = 'repair-attempted';
+                    successMessage = '⚠️ Intento de reparación registrado. Puedes remolcar si es necesario.';
                     break;
                 case 'tow':
                     newStatus = 'towing';
-                    successMessage = 'Caso marcado para remolque';
+                    successMessage = '🚛 Caso marcado para remolque';
                     // Generate workshop link
                     submission.workshopId = 'workshop-001'; // Mock
                     break;
@@ -355,22 +455,56 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
                 // Map gruista status back to operator status
                 const operatorStatus = newStatus === 'completed' ? 'completed' :
                     newStatus === 'towing' ? 'towing' :
+                    newStatus === 'repair-attempted' ? 'repair-attempted' :
                         newStatus;
 
                 const updatedCases = operatorCases.map((c: any) =>
                     c.id === caseData.id
-                        ? { ...c, status: operatorStatus, updatedAt: new Date() }
+                        ? {
+                            ...c,
+                            status: operatorStatus,
+                            updatedAt: new Date(),
+                            // Track repair attempt for escalation
+                            ...(decision === 'repair-failed' && {
+                                repairAttempt: {
+                                    attemptedAt: new Date(),
+                                    notes: notes || '',
+                                    failureReason: notes || 'No especificado',
+                                    escalatedToTow: false
+                                }
+                            }),
+                            // Mark escalation if going from repair-attempted to tow
+                            ...(decision === 'tow' && c.repairAttempt && {
+                                repairAttempt: {
+                                    ...c.repairAttempt,
+                                    escalatedToTow: true
+                                }
+                            })
+                        }
                         : c
                 );
 
                 // Save back to operator cases
                 localStorage.setItem('carretera_operator_cases', JSON.stringify(updatedCases));
 
-                // Update local state
-                setCaseData({ ...caseData, status: newStatus, updatedAt: new Date() });
+                // Update local state with repair attempt info
+                const updatedCaseData: GruistaCaseDetailed = {
+                    ...caseData,
+                    status: newStatus,
+                    updatedAt: new Date(),
+                    ...(decision === 'repair-failed' && {
+                        repairAttempt: {
+                            attemptedAt: new Date(),
+                            notes: notes || '',
+                            failureReason: notes || 'No especificado',
+                            escalatedToTow: false
+                        }
+                    })
+                };
+                setCaseData(updatedCaseData);
             }
 
-            // PROBLEM 2 FIX: When towing, create the workshop case
+            // Create workshop case when towing (including escalation from repair-failed)
             if (decision === 'tow') {
                 createWorkshopCase(caseData, notes, user?.name || 'Gruista');
             }

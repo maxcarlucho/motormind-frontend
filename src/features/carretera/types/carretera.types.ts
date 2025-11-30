@@ -110,13 +110,29 @@ export interface GruistaCaseDetailed {
     clientPhone: string;
     symptom: string;
     location?: string;
-    status: 'new' | 'in-progress' | 'completed' | 'needs-info' | 'towing';
+    /**
+     * Case status flow:
+     * - new: Just created, gruista hasn't seen it
+     * - in-progress: Gruista is working on it
+     * - repair-attempted: Gruista tried to repair but failed (can escalate to towing)
+     * - completed: Successfully repaired on-site
+     * - needs-info: Needs more information (deprecated, use AI recommendations)
+     * - towing: Being towed to workshop
+     */
+    status: 'new' | 'in-progress' | 'repair-attempted' | 'completed' | 'needs-info' | 'towing';
     assignedTo: string; // Gruista name/ID
     questions: string[];
     answers: string[];
     aiAssessment: AIAssessment;
     createdAt: Date;
     updatedAt: Date;
+    // Track repair attempts for escalation
+    repairAttempt?: {
+        attemptedAt: Date;
+        notes: string;
+        failureReason?: string;
+        escalatedToTow?: boolean;
+    };
 }
 
 // Status of the AI diagnosis process
@@ -137,9 +153,21 @@ export interface AIAssessment {
         answered: number;
         total: number;
     };
+    // Extended fields from AI recommendation service
+    summary?: string; // Short summary for gruista (max 80 chars)
+    actionSteps?: string[]; // Steps to follow if choosing this option
+    risks?: string[]; // Risks if the attempt fails
+    estimatedTime?: '15-30 min' | '45-60 min' | '>1 hora';
+    alternativeConsideration?: string; // What to consider if situation changes
 }
 
-export type TrafficLightDecisionType = 'repair' | 'tow';
+/**
+ * Gruista decision types:
+ * - repair: Successfully repaired on-site (case completed)
+ * - repair-failed: Attempted repair but failed (can escalate to tow)
+ * - tow: Needs to be towed to workshop
+ */
+export type TrafficLightDecisionType = 'repair' | 'repair-failed' | 'tow';
 
 export interface DecisionSubmission {
     decision: TrafficLightDecisionType;

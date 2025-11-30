@@ -21,9 +21,16 @@
 
 ### Backend (MongoDB)
 ```
-POST /cars (crear vehículo si no existe)
-POST /cars/:carId/questions (crear diagnóstico con síntoma)
+GET /cars/vin-or-plate?plate=XXX  → Busca/crea vehículo via TecDoc
+POST /cars/:carId/questions       → Crea diagnóstico con síntoma + genera preguntas IA
 ```
+
+### TecDoc Integration
+El endpoint `GET /cars/vin-or-plate` automáticamente:
+1. Busca el vehículo en la BD por matrícula
+2. Si no existe, consulta la API de TecDoc
+3. Crea el vehículo con datos completos (marca, modelo, año, motor, etc.)
+4. Retorna el vehículo con `_id` para crear el diagnóstico
 
 ### Contexto para el Generador de Preguntas IA
 El campo `notes` (oculto al cliente) incluye contexto crítico para la IA:
@@ -38,22 +45,19 @@ CONTEXTO CRÍTICO: SERVICIO DE ASISTENCIA EN CARRETERA
 - NO hacer preguntas extensas de taller, solo lo esencial: REPARAR IN-SITU o REMOLCAR
 ```
 
-Este contexto ayuda a la IA a generar preguntas enfocadas en la decisión del gruista (🟢 reparar / 🔴 remolcar).
+### Link Generado para Cliente
+El operador genera un link **CON TOKEN** para que el cliente pueda interactuar con el backend:
+```
+/carretera/c/:caseId?t={JWT_TOKEN}&car={carId}
+```
 
-### Respuesta del Backend
-- Crea registro en `Diagnosis` con:
-  - `fault`: síntoma reportado
-  - `notes`: contexto de carretera (interno, no visible al cliente)
-  - `questions[]`: preguntas generadas por IA (optimizadas para carretera)
-  - `processedFault`: categoría del síntoma
-  - `status`: 'pending'
+**Importante**: El token permite al cliente:
+- Guardar respuestas en el backend
+- Generar el pre-diagnóstico automáticamente al terminar
 
 ### Datos Guardados (localStorage)
 - `carretera_operator_cases`: lista de casos creados
-- `carretera_client_cases[id]`: datos del caso con `diagnosisId`
-
-### Link Generado
-- Se genera URL para el cliente: `/carretera/c/:caseId`
+- `carretera_client_cases[id]`: datos del caso con `diagnosisId`, `carId`
 
 ---
 
@@ -61,29 +65,33 @@ Este contexto ayuda a la IA a generar preguntas enfocadas en la decisión del gr
 
 ### Acciones
 1. Cliente abre el link recibido (WhatsApp/SMS)
-2. Ve interfaz tipo chat con preguntas
-3. Responde cada pregunta secuencialmente
-4. Al terminar todas, presiona "Finalizar"
+2. El token en la URL permite acceso al backend
+3. Ve interfaz tipo chat con preguntas
+4. Responde cada pregunta secuencialmente
+5. **Al responder la última pregunta:**
+   - Se muestra pantalla "Generando diagnóstico..."
+   - Se llama automáticamente a `/preliminary`
+   - Se muestra pantalla de "Completado"
 
 ### Backend (MongoDB)
 ```
-GET /cars/diagnosis/:diagnosisId (cargar preguntas)
-PUT /cars/diagnosis/:diagnosisId (guardar respuestas)
-POST /cars/:carId/diagnosis/:diagnosisId/preliminary (generar pre-diagnóstico)
+GET /cars/diagnosis/:diagnosisId                    → Cargar preguntas
+PUT /cars/:carId/diagnosis/:diagnosisId/answers     → Guardar respuestas (con cada respuesta)
+POST /cars/:carId/diagnosis/:diagnosisId/preliminary → Generar pre-diagnóstico (automático al terminar)
 ```
 
-### Estados del Diagnóstico
-| Estado | Descripción |
-|--------|-------------|
-| `waiting-client` | Cliente no ha comenzado |
-| `client-answering` | Cliente respondiendo (ej: 2/4 preguntas) |
-| `generating` | Cliente terminó, IA procesando |
-| `ready` | Pre-diagnóstico listo |
+### Estados del Cliente
+| Estado | Pantalla |
+|--------|----------|
+| Cargando | Spinner "Cargando información..." |
+| Respondiendo | Chat con preguntas |
+| Generando | "Generando diagnóstico..." con animación IA |
+| Completado | "¡Gracias! La grúa está en camino" |
 
 ### Datos Guardados
-- `answers`: respuestas separadas por `|`
+- `answers`: respuestas separadas por `|` (backend)
 - `preliminary.possibleReasons[]`: diagnósticos posibles de IA
-- `aiAssessment`: resumen para el Gruista
+- `aiAssessment`: resumen con `status: 'ready'`
 
 ---
 
@@ -97,29 +105,24 @@ POST /cars/:carId/diagnosis/:diagnosisId/preliminary (generar pre-diagnóstico)
    - Si `waiting-client`: "Esperando al Cliente"
    - Si `client-answering`: "Cliente Respondiendo (2/4)"
    - Si `generating`: "Generando Diagnóstico IA..."
-   - Si `ready`: Diagnóstico completo con semáforo
+   - Si `ready`: **Diagnóstico completo con semáforo de decisión**
 
 ### Polling Automático
-- Mientras el estado NO sea `ready`, el sistema consulta el backend cada 5 segundos
+- Mientras el estado NO sea `ready`, el sistema consulta cada 5 segundos
 - Cuando llega a `ready`, el polling se detiene
 - También hay botón de refresh manual
 
-### Backend (MongoDB)
-```
-GET /cars/diagnosis/:diagnosisId (obtener estado actual)
-```
-
 ### Semáforo de Decisión (solo cuando `status === 'ready'`)
-| Color | Recomendación | Acción |
-|-------|--------------|--------|
+| Color | Recomendación | Descripción |
+|-------|--------------|-------------|
 | 🟢 Verde | Reparar in-situ | Problema simple, herramientas básicas |
-| 🟡 Amarillo | Evaluar en sitio | Necesita más información |
 | 🔴 Rojo | Remolcar al taller | Reparación compleja |
+
+**Nota**: La opción recomendada por la IA aparece destacada con badge "IA Recomienda"
 
 ### Decisiones Posibles
 1. **Reparar In-Situ** → Caso cerrado como `completed`
-2. **Necesito Más Info** → Caso queda en `needs-info`
-3. **Remolcar al Taller** → Genera link para taller
+2. **Remolcar al Taller** → Genera link para taller automáticamente
 
 ---
 
@@ -134,7 +137,7 @@ GET /cars/diagnosis/:diagnosisId (obtener estado actual)
 3. Taller abre el link y ve:
    - Pre-diagnóstico IA
    - Historial de preguntas/respuestas del cliente
-   - Decisión del Gruista
+   - Decisión del Gruista con notas
 4. Taller puede añadir:
    - Códigos OBD (ej: P0171, P0300)
    - Comentarios de inspección
@@ -158,7 +161,7 @@ Body: { obdCodes: ["P0171", "P0300"], technicianNotes: "..." }
 ```
 MongoDB (Diagnosis)
 ├── _id
-├── carId → Car
+├── carId → Car (con datos de TecDoc)
 ├── fault: "Testigo Motor encendido"
 ├── questions: ["¿Hace ruido?", "¿Desde cuándo?", ...]
 ├── answers: "Sí, mucho|Desde ayer|..."
@@ -183,13 +186,14 @@ MongoDB (Diagnosis)
 
 ```
 localStorage
-├── carretera_operator_cases: [{ id, caseNumber, symptom, ... }]
+├── carretera_operator_cases: [{ id, caseNumber, symptom, clientLink, ... }]
 ├── carretera_client_cases: {
 │   [caseId]: {
 │       diagnosisId,
+│       carId,
 │       questions,
 │       answers,
-│       aiAssessment: { status, diagnosis, confidence, recommendation }
+│       aiAssessment: { status, diagnosis, confidence, recommendation, reasoning }
 │   }
 │}
 └── carretera_workshop_cases: [{ id, aiAssessment, gruistaDecision, ... }]
@@ -204,7 +208,7 @@ interface AIAssessment {
     status: 'waiting-client' | 'client-answering' | 'generating' | 'ready';
     diagnosis: string;           // Título del problema
     confidence: number;          // 0-100%
-    recommendation: 'repair' | 'info' | 'tow';
+    recommendation: 'repair' | 'tow';  // Decisión recomendada
     reasoning: string[];         // Razones del diagnóstico
     clientProgress?: {
         answered: number;        // Preguntas respondidas
@@ -219,11 +223,10 @@ interface AIAssessment {
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/cars/vin-or-plate/:plate` | Buscar vehículo por matrícula |
-| POST | `/cars` | Crear vehículo nuevo |
+| GET | `/cars/vin-or-plate?plate=XXX` | Buscar/crear vehículo via TecDoc |
 | POST | `/cars/:carId/questions` | Crear diagnóstico con síntoma |
 | GET | `/cars/diagnosis/:diagnosisId` | Obtener diagnóstico |
-| PUT | `/cars/diagnosis/:diagnosisId` | Actualizar respuestas |
+| PUT | `/cars/:carId/diagnosis/:diagnosisId/answers` | Actualizar respuestas |
 | POST | `/cars/:carId/diagnosis/:diagnosisId/preliminary` | Generar pre-diagnóstico |
 
 ---
@@ -233,18 +236,20 @@ interface AIAssessment {
 ```
 src/features/carretera/
 ├── hooks/
-│   ├── useCreateCase.ts        # Operador: crear caso
-│   ├── useClientAssessment.ts  # Cliente: responder preguntas
-│   ├── useGruistaCase.ts       # Grúa: ver caso + polling
+│   ├── useCreateCase.ts        # Operador: crear caso + generar URL con token
+│   ├── useClientAssessment.ts  # Cliente: responder + auto-generar preliminary
+│   ├── useGruistaCase.ts       # Grúa: ver caso + polling + recomendación IA
 │   └── useWorkshopCase.ts      # Taller: diagnóstico OBD
 ├── components/
 │   ├── AIAssessmentSummary.tsx # Estados del diagnóstico IA
-│   ├── TrafficLightDecision.tsx # Semáforo de decisión
+│   ├── TrafficLightDecision.tsx # Botones de decisión (repair/tow)
 │   └── OBDDiagnosisForm.tsx    # Formulario códigos OBD
+├── services/
+│   └── gruistaRecommendation.service.ts # Servicio de recomendación IA
 └── pages/
     ├── OperatorDashboard.tsx   # Panel del operador
-    ├── ClientLanding.tsx       # Chat del cliente
-    ├── GruistaDetail.tsx       # Detalle caso grúa
+    ├── ClientLanding.tsx       # Chat del cliente + pantalla generando
+    ├── GruistaDetail.tsx       # Detalle caso grúa + decisión
     └── WorkshopReception.tsx   # Recepción taller
 ```
 
@@ -262,9 +267,16 @@ src/features/carretera/
                                              ▼
                               ┌──────────────────────────────┐
                               │         BACKEND              │
+                              │  GET /cars/vin-or-plate      │
+                              │  → Obtiene datos de TecDoc   │
                               │  POST /cars/:id/questions    │
                               │  → Genera preguntas IA       │
-                              │  → Guarda en MongoDB         │
+                              └──────────────┬───────────────┘
+                                             │
+                                             ▼
+                              ┌──────────────────────────────┐
+                              │   URL CON TOKEN GENERADA     │
+                              │ /carretera/c/:id?t=JWT&car=X │
                               └──────────────┬───────────────┘
                                              │
                                              ▼
@@ -272,6 +284,7 @@ src/features/carretera/
                                     │     CLIENTE      │
                                     │  Abre link chat  │
                                     │ Responde preguntas│
+                                    │  (usa token URL) │
                                     └────────┬─────────┘
                                              │
               ┌──────────────────────────────┼──────────────────────────────┐
@@ -284,6 +297,8 @@ src/features/carretera/
     │  Cliente"       │          │  Respondiendo"  │          │  Diagnóstico"   │
     └─────────────────┘          └─────────────────┘          └────────┬────────┘
                                                                        │
+                                                        AUTO: POST /preliminary
+                                                                       │
                                                                        ▼
                                                               ┌─────────────────┐
                                                               │     ready       │
@@ -292,19 +307,33 @@ src/features/carretera/
                                                               │  Listo ✓"       │
                                                               └────────┬────────┘
                                                                        │
-                                             ┌─────────────────────────┼─────────────────────────┐
-                                             │                         │                         │
-                                             ▼                         ▼                         ▼
-                                    ┌──────────────┐          ┌──────────────┐          ┌──────────────┐
-                                    │ 🟢 REPARAR   │          │ 🟡 MÁS INFO  │          │ 🔴 REMOLCAR  │
-                                    │   IN-SITU    │          │              │          │  AL TALLER   │
-                                    └──────┬───────┘          └──────┬───────┘          └──────┬───────┘
-                                           │                         │                         │
-                                           ▼                         ▼                         ▼
-                                    ┌──────────────┐          ┌──────────────┐          ┌──────────────┐
-                                    │    CASO      │          │    CASO      │          │   TALLER     │
-                                    │  CERRADO ✓   │          │ PENDIENTE    │          │ Añade OBD    │
-                                    │              │          │              │          │ Diagnóstico  │
-                                    └──────────────┘          └──────────────┘          │   completo   │
+                                             ┌─────────────────────────┴─────────────────────────┐
+                                             │                                                   │
+                                             ▼                                                   ▼
+                                    ┌──────────────┐                                    ┌──────────────┐
+                                    │ 🟢 REPARAR   │                                    │ 🔴 REMOLCAR  │
+                                    │   IN-SITU    │                                    │  AL TALLER   │
+                                    │ (IA Recom.)  │                                    │              │
+                                    └──────┬───────┘                                    └──────┬───────┘
+                                           │                                                   │
+                                           ▼                                                   ▼
+                                    ┌──────────────┐                                    ┌──────────────┐
+                                    │    CASO      │                                    │   TALLER     │
+                                    │  CERRADO ✓   │                                    │ Añade OBD    │
+                                    │              │                                    │ Diagnóstico  │
+                                    └──────────────┘                                    │   completo   │
                                                                                         └──────────────┘
 ```
+
+---
+
+## Changelog
+
+### v2.0 (2024-11-30)
+- **Token en URL del cliente**: El operador genera URL con JWT token para que el cliente pueda interactuar con el backend
+- **Auto-generación del preliminary**: Cuando el cliente termina, automáticamente se llama a `/preliminary`
+- **Pantalla "Generando diagnóstico"**: Nueva UI mientras la IA procesa
+- **TecDoc integration**: El vehículo se crea automáticamente con datos de TecDoc usando solo la matrícula
+- **Endpoints corregidos**: `PUT /cars/:carId/diagnosis/:diagnosisId/answers` (no `/cars/diagnosis/:id`)
+- **Semáforo simplificado**: Solo 2 opciones (repair/tow), eliminado "info"
+- **Servicio de recomendación IA**: Nueva capa de servicio para generar recomendaciones contextualizadas

@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Wrench, Truck, Loader2 } from 'lucide-react';
+import { Wrench, Truck, Loader2, AlertTriangle } from 'lucide-react';
 import { TrafficLightDecisionType } from '../types/carretera.types';
 
 interface TrafficLightDecisionProps {
     aiRecommendation: TrafficLightDecisionType;
     onDecision: (decision: TrafficLightDecisionType, notes?: string) => Promise<void>;
     isSubmitting: boolean;
+    /** If true, shows escalation options (repair failed -> tow) */
+    showEscalation?: boolean;
 }
 
 interface DecisionOption {
@@ -23,17 +25,20 @@ interface DecisionOption {
 
 /**
  * Traffic light decision interface for gruista
+ * Supports initial decision and escalation (repair-failed -> tow)
  */
 export function TrafficLightDecision({
     aiRecommendation,
     onDecision,
     isSubmitting,
+    showEscalation = false,
 }: TrafficLightDecisionProps) {
     const [selectedDecision, setSelectedDecision] = useState<TrafficLightDecisionType | null>(null);
     const [notes, setNotes] = useState('');
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-    const options: DecisionOption[] = [
+    // Standard options for initial decision
+    const standardOptions: DecisionOption[] = [
         {
             value: 'repair',
             icon: Wrench,
@@ -59,6 +64,48 @@ export function TrafficLightDecision({
             activeBg: 'bg-red-100',
         },
     ];
+
+    // Escalation options (when repair was attempted but failed)
+    const escalationOptions: DecisionOption[] = [
+        {
+            value: 'repair',
+            icon: Wrench,
+            emoji: '🟢',
+            label: 'Reparación Exitosa',
+            description: 'El problema se resolvió finalmente',
+            color: 'text-green-700',
+            bgColor: 'bg-green-50',
+            hoverColor: 'hover:bg-green-100',
+            borderColor: 'border-green-300',
+            activeBg: 'bg-green-100',
+        },
+        {
+            value: 'repair-failed',
+            icon: AlertTriangle,
+            emoji: '🟡',
+            label: 'Reparación Fallida',
+            description: 'Intenté reparar pero no funcionó',
+            color: 'text-amber-700',
+            bgColor: 'bg-amber-50',
+            hoverColor: 'hover:bg-amber-100',
+            borderColor: 'border-amber-300',
+            activeBg: 'bg-amber-100',
+        },
+        {
+            value: 'tow',
+            icon: Truck,
+            emoji: '🔴',
+            label: 'Remolcar al Taller',
+            description: 'Necesita diagnóstico completo en taller',
+            color: 'text-red-700',
+            bgColor: 'bg-red-50',
+            hoverColor: 'hover:bg-red-100',
+            borderColor: 'border-red-300',
+            activeBg: 'bg-red-100',
+        },
+    ];
+
+    const options = showEscalation ? escalationOptions : standardOptions;
 
     const handleDecisionClick = (decision: TrafficLightDecisionType) => {
         setSelectedDecision(decision);
@@ -138,14 +185,23 @@ export function TrafficLightDecision({
                         <p className="text-base text-gray-700">
                             ¿Estás seguro de que quieres marcar este caso como{' '}
                             <span className="font-bold">
-                                {selectedDecision === 'repair' ? 'REPARADO IN-SITU' : 'PARA REMOLCAR'}
+                                {selectedDecision === 'repair' ? 'REPARADO IN-SITU' :
+                                 selectedDecision === 'repair-failed' ? 'REPARACIÓN FALLIDA' : 'PARA REMOLCAR'}
                             </span>
                             ?
                         </p>
                         {selectedDecision === 'tow' && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <p className="text-sm text-blue-800">
-                                    Se generara automaticamente un link para el taller
+                                    Se generará automáticamente un link para el taller
+                                </p>
+                            </div>
+                        )}
+                        {selectedDecision === 'repair-failed' && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <p className="text-sm text-amber-800">
+                                    <strong>Importante:</strong> Describe qué intentaste y por qué no funcionó.
+                                    Podrás decidir si remolcar al taller después.
                                 </p>
                             </div>
                         )}
