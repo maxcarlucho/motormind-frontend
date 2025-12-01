@@ -5,6 +5,7 @@ import { useAuth } from '@/context/Auth.context';
 import { useApi } from '@/hooks/useApi';
 import { Diagnosis } from '@/types/Diagnosis';
 import { generateAccessToken } from '../utils/accessToken';
+import { getPublicClientUrl } from '../constants/publicUrl';
 
 interface UseGruistaCaseReturn {
     caseData: GruistaCaseDetailed | null;
@@ -473,7 +474,7 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             diagnosisId: clientCase.diagnosisId,
         });
 
-        return `${window.location.origin}/carretera/t/${caseData.id}?token=${encodeURIComponent(workshopToken)}`;
+        return getPublicClientUrl(`/carretera/t/${caseData.id}?token=${encodeURIComponent(workshopToken)}`);
     }, [caseData]);
 
     // Manual refresh function
