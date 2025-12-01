@@ -349,6 +349,22 @@ src/features/carretera/
 
 ## Changelog
 
+### v2.5 (2024-12-01)
+- **UI de Diagnóstico IA completamente rediseñada** (`AIAssessmentSummary.tsx`):
+  - Badge de recomendación más grande y prominente: "🔴 REMOLCAR AL TALLER" / "🟢 REPARABLE IN-SITU"
+  - Confianza y tiempo estimado en badges compactos junto a la recomendación
+  - Nuevo campo `summary` como título principal (más conciso que `diagnosis`)
+  - **Nueva sección "📋 Qué hacer"**: Lista numerada de `actionSteps` con pasos concretos para el gruista
+  - **Sección de riesgos mejorada**: Muestra hasta 2 riesgos con iconos de advertencia
+  - **Nueva sección "💡 Si la situación cambia"**: Muestra `alternativeConsideration` como nota al pie
+  - Layout responsive mejorado para móviles pequeños
+- **Campos de `AIAssessment` ahora utilizados en UI**:
+  - `summary` - Resumen corto (máx 80 chars)
+  - `actionSteps` - Pasos a seguir
+  - `risks` - Riesgos si falla
+  - `estimatedTime` - Tiempo estimado
+  - `alternativeConsideration` - Qué hacer si cambia la situación
+
 ### v2.4 (2024-11-30)
 - **Rediseño completo UX para Gruista**:
   - Resumen de diagnóstico IA más conciso con datos clave visibles de un vistazo
