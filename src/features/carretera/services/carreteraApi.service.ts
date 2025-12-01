@@ -24,12 +24,16 @@ import {
  * └── /workshop      - Workshop reception and tracking
  *
  * SECURITY NOTE:
- * This service supports two authentication modes:
+ * This service supports three authentication modes:
  * 1. Full auth (localStorage token) - For operators, gruistas logged in
- * 2. Scoped token (URL token) - For clients/workshops in incognito mode
+ * 2. Service token (env variable) - For clients/workshops in incognito mode
+ * 3. Scoped token (URL token) - Legacy, for case-specific validation
  *
- * The scoped token from URL grants LIMITED access to a single case only.
+ * The service token allows anonymous users to access the API without login.
  */
+
+// Service token for anonymous access (clients/workshops without login)
+const SERVICE_TOKEN = import.meta.env.VITE_CARRETERA_SERVICE_TOKEN || '';
 class CarreteraApiService {
     private api: AxiosInstance;
     private coreApi: AxiosInstance; // For core Motormind API calls
@@ -55,10 +59,10 @@ class CarreteraApiService {
             return config;
         });
 
-        // Add auth token interceptor for core API (supports both localStorage and scoped token)
+        // Add auth token interceptor for core API (supports localStorage, service token, or scoped token)
         this.coreApi.interceptors.request.use((config) => {
-            // Priority: 1. localStorage token (logged in user), 2. scoped token (incognito)
-            const token = localStorage.getItem('token') || this.scopedToken;
+            // Priority: 1. localStorage token (logged in user), 2. service token (anonymous), 3. scoped token (legacy)
+            const token = localStorage.getItem('token') || SERVICE_TOKEN || this.scopedToken;
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -105,17 +109,17 @@ class CarreteraApiService {
     }
 
     /**
-     * Get the current auth token (localStorage or scoped)
+     * Get the current auth token (localStorage, service token, or scoped)
      */
     getAuthToken(): string | null {
-        return localStorage.getItem('token') || this.scopedToken;
+        return localStorage.getItem('token') || SERVICE_TOKEN || this.scopedToken;
     }
 
     /**
-     * Check if we're in incognito mode (using scoped token, not full auth)
+     * Check if we're in incognito mode (using service token or scoped token, not full auth)
      */
     isIncognitoMode(): boolean {
-        return !localStorage.getItem('token') && !!this.scopedToken;
+        return !localStorage.getItem('token') && !!(SERVICE_TOKEN || this.scopedToken);
     }
 
     // =========================================================================
