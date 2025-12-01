@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { Truck, Wrench, Phone, Car, ArrowRight } from 'lucide-react';
 
+// Import debug tests for console access
+import '../debug/quickDiagnosisTest';
+
 /**
  * Landing page for Carretera MVP with quick navigation links
  * This helps with testing and demo purposes

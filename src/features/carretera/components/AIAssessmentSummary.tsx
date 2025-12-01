@@ -209,35 +209,35 @@ function extractKeyPoints(reasoning: string[]): string[] {
  * CONCISO: Datos clave para que el gruista tome decisión rápida
  */
 function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
-    const getConfidenceColor = (confidence: number) => {
-        if (confidence >= 80) return 'text-green-600 bg-green-100';
-        if (confidence >= 60) return 'text-amber-600 bg-amber-100';
-        return 'text-red-600 bg-red-100';
-    };
-
     const getRecommendationConfig = () => {
         switch (assessment.recommendation) {
             case 'repair':
                 return {
                     icon: '🟢',
-                    label: 'REPARABLE',
+                    label: 'REPARABLE IN-SITU',
                     bgColor: 'bg-green-500',
                     textColor: 'text-white',
+                    borderColor: 'border-green-500',
                 };
             case 'tow':
             default:
                 return {
                     icon: '🔴',
-                    label: 'REMOLCAR',
+                    label: 'REMOLCAR AL TALLER',
                     bgColor: 'bg-red-500',
                     textColor: 'text-white',
+                    borderColor: 'border-red-500',
                 };
         }
     };
 
     const rec = getRecommendationConfig();
 
-    // Extraer puntos clave del reasoning largo
+    // Usar actionSteps si existen, sino extraer puntos clave del reasoning
+    const actionSteps = assessment.actionSteps && assessment.actionSteps.length > 0
+        ? assessment.actionSteps
+        : [];
+
     const keyPoints = assessment.reasoning && assessment.reasoning.length > 0
         ? extractKeyPoints(assessment.reasoning)
         : [];
@@ -256,38 +256,66 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                 </div>
             </div>
 
-            {/* Contenido principal - MUY CONCISO */}
-            <div className="p-4 space-y-3">
-                {/* Fila 1: Recomendación + Confianza (lo más importante arriba) */}
-                <div className="flex items-center gap-3 flex-wrap">
-                    {/* Badge de recomendación grande */}
-                    <div className={`${rec.bgColor} ${rec.textColor} px-4 py-2 rounded-lg flex items-center gap-2`}>
-                        <span className="text-xl">{rec.icon}</span>
-                        <span className="font-bold">{rec.label}</span>
-                    </div>
-                    {/* Confianza */}
-                    <div className={`px-3 py-2 rounded-lg ${getConfidenceColor(assessment.confidence)}`}>
-                        <span className="font-bold">{assessment.confidence}%</span>
-                        <span className="text-xs ml-1 opacity-75">confianza</span>
-                    </div>
-                    {/* Tiempo estimado */}
-                    {assessment.estimatedTime && (
-                        <div className="flex items-center gap-1 text-gray-600 text-sm">
-                            <Clock className="h-4 w-4" />
-                            <span>{assessment.estimatedTime}</span>
+            {/* Contenido principal */}
+            <div className="p-4 space-y-4">
+                {/* Fila 1: Recomendación grande y clara */}
+                <div className={`${rec.bgColor} ${rec.textColor} px-4 py-3 rounded-lg`}>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">{rec.icon}</span>
+                            <span className="font-bold text-lg">{rec.label}</span>
                         </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Confianza */}
+                            <div className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                                <span className="font-bold">{assessment.confidence}%</span>
+                                <span className="ml-1 opacity-75">conf.</span>
+                            </div>
+                            {/* Tiempo estimado */}
+                            {assessment.estimatedTime && (
+                                <div className="flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-sm">
+                                    <Clock className="h-3 w-3" />
+                                    <span className="font-medium">{assessment.estimatedTime}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Summary o Diagnóstico - resumen claro para el gruista */}
+                <div className={`border-l-4 ${rec.borderColor} pl-3 py-2 bg-gray-50 rounded-r-lg`}>
+                    <p className="font-bold text-gray-900 text-lg">
+                        {assessment.summary || assessment.diagnosis}
+                    </p>
+                    {/* Si hay summary, mostrar diagnosis como subtítulo */}
+                    {assessment.summary && assessment.diagnosis !== assessment.summary && (
+                        <p className="text-sm text-gray-600 mt-1">{assessment.diagnosis}</p>
                     )}
                 </div>
 
-                {/* Diagnóstico - una línea clara */}
-                <div className="border-l-4 border-indigo-500 pl-3 py-1">
-                    <p className="font-semibold text-gray-900">{assessment.diagnosis}</p>
-                </div>
+                {/* Pasos a seguir - LO MÁS IMPORTANTE para el gruista */}
+                {actionSteps.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-xs font-bold text-blue-800 uppercase mb-3 flex items-center gap-2">
+                            <span>📋</span> Qué hacer
+                        </p>
+                        <ol className="space-y-2">
+                            {actionSteps.slice(0, 4).map((step, idx) => (
+                                <li key={idx} className="flex items-start gap-3 text-sm text-gray-800">
+                                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                        {idx + 1}
+                                    </span>
+                                    <span className="pt-0.5">{step}</span>
+                                </li>
+                            ))}
+                        </ol>
+                    </div>
+                )}
 
-                {/* Por qué - puntos clave extraídos, como bullets */}
+                {/* Por qué - razones del diagnóstico (colapsable si hay actionSteps) */}
                 {keyPoints.length > 0 && (
                     <div className="bg-gray-50 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Por qué</p>
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Por qué esta recomendación</p>
                         <ul className="space-y-1">
                             {keyPoints.map((point, idx) => (
                                 <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
@@ -299,14 +327,28 @@ function DiagnosisReadyState({ assessment }: { assessment: AIAssessment }) {
                     </div>
                 )}
 
-                {/* Riesgo si existe - destacado */}
+                {/* Riesgos - destacado en amarillo/rojo */}
                 {assessment.risks && assessment.risks.length > 0 && (
-                    <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <span className="font-semibold">Riesgo: </span>
-                            <span>{assessment.risks[0].length > 100 ? assessment.risks[0].substring(0, 100) + '...' : assessment.risks[0]}</span>
-                        </div>
+                    <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+                        <p className="text-xs font-bold text-amber-800 uppercase mb-2 flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4" /> Riesgos a considerar
+                        </p>
+                        <ul className="space-y-1">
+                            {assessment.risks.slice(0, 2).map((risk, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-sm text-amber-900">
+                                    <span className="text-amber-600 mt-1">⚠️</span>
+                                    <span>{risk.length > 120 ? risk.substring(0, 120) + '...' : risk}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {/* Consideración alternativa - nota al pie */}
+                {assessment.alternativeConsideration && (
+                    <div className="bg-gray-100 rounded-lg p-3 border-l-4 border-gray-400">
+                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">💡 Si la situación cambia</p>
+                        <p className="text-sm text-gray-700">{assessment.alternativeConsideration}</p>
                     </div>
                 )}
             </div>
