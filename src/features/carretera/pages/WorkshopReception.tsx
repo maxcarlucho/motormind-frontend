@@ -92,6 +92,9 @@ export function WorkshopReception() {
     const hasOBDDiagnosis = isAccepted && caseData.obdDiagnosis;
     const needsOBD = isAccepted && !caseData.obdDiagnosis;
 
+    // Limpiar síntoma de tags internos [ASISTENCIA CARRETERA...]
+    const cleanSymptom = caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom || '';
+
     return (
         <div className="min-h-screen bg-gray-100">
             {/* Welcome Modal - Al aceptar, va directo al OBD */}
@@ -99,7 +102,7 @@ export function WorkshopReception() {
                 <WorkshopWelcomeModal
                     caseNumber={caseData.caseNumber}
                     vehiclePlate={caseData.vehiclePlate}
-                    symptom={caseData.symptom}
+                    symptom={cleanSymptom}
                     clientName={caseData.clientName}
                     gruistaDecision={caseData.gruistaDecision?.decision || 'tow'}
                     onClose={() => setShowWelcomeModal(false)}
@@ -145,7 +148,7 @@ export function WorkshopReception() {
                                 </p>
                             </div>
                             <div className="p-4">
-                                <p className="text-gray-800 text-lg">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                                <p className="text-gray-800 text-lg">{cleanSymptom}</p>
                                 <p className="text-gray-500 text-sm mt-2">Cliente: {caseData.clientName} · {caseData.clientPhone}</p>
                             </div>
                         </div>
@@ -201,7 +204,7 @@ export function WorkshopReception() {
                         isProcessing={isProcessing}
                         caseNumber={caseData.caseNumber}
                         vehiclePlate={caseData.vehiclePlate}
-                        symptom={caseData.symptom || ''}
+                        symptom={cleanSymptom}
                         clientName={caseData.clientName}
                         questions={caseData.questions}
                         answers={caseData.answers}
@@ -328,7 +331,7 @@ export function WorkshopReception() {
                             <div className="space-y-4 pb-8">
                                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                                     <p className="text-xs text-gray-500 uppercase font-bold mb-2">Problema original</p>
-                                    <p className="text-gray-800">{caseData.symptom?.split('[ASISTENCIA')[0]?.trim() || caseData.symptom}</p>
+                                    <p className="text-gray-800">{cleanSymptom}</p>
                                     <p className="text-gray-500 text-sm mt-2">Cliente: {caseData.clientName} · {caseData.clientPhone}</p>
                                 </div>
                                 <ClientQAThread
