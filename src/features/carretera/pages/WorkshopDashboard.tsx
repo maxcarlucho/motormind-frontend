@@ -44,10 +44,8 @@ export function WorkshopDashboard() {
                 }));
                 setCases(cases);
             } else {
-                // Initialize with mock data
-                const mockCases = getMockWorkshopCases();
-                setCases(mockCases);
-                localStorage.setItem('carretera_workshop_cases', JSON.stringify(mockCases));
+                // No cases yet - return empty array
+                setCases([]);
             }
         } catch (error) {
             console.error('Error loading workshop cases:', error);
@@ -106,15 +104,16 @@ export function WorkshopDashboard() {
         <div className="min-h-screen bg-gray-50">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg sticky top-0 z-20">
-                <div className="px-4 py-4">
+                <div className="max-w-4xl mx-auto px-4 py-4">
                     <h1 className="text-2xl font-bold mb-2">Dashboard Taller</h1>
                     <p className="text-purple-100">Gestión de casos y reparaciones</p>
                 </div>
             </div>
 
             {/* Stats Bar */}
-            <div className="px-4 py-4 bg-white shadow-sm border-b">
-                <div className="flex gap-2 overflow-x-auto">
+            <div className="bg-white shadow-sm border-b">
+                <div className="max-w-4xl mx-auto px-4 py-4">
+                    <div className="flex gap-2 overflow-x-auto flex-nowrap pb-1">
                     <button
                         onClick={() => setStatusFilter('all')}
                         className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${statusFilter === 'all'
@@ -160,33 +159,36 @@ export function WorkshopDashboard() {
                     >
                         🎉 Completados ({statusCounts.completed})
                     </button>
+                    </div>
                 </div>
             </div>
 
             {/* Search and Actions */}
-            <div className="px-4 py-3 bg-white border-b">
-                <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por matrícula, cliente o caso..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+            <div className="bg-white border-b">
+                <div className="max-w-4xl mx-auto px-4 py-3">
+                    <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar por matrícula, cliente o caso..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                        <button
+                            onClick={loadCases}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                            <RefreshCw className="h-5 w-5" />
+                        </button>
                     </div>
-                    <button
-                        onClick={loadCases}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                        <RefreshCw className="h-5 w-5" />
-                    </button>
                 </div>
             </div>
 
             {/* Cases List */}
-            <div className="px-4 py-4 space-y-3">
+            <div className="max-w-4xl mx-auto px-4 py-4 space-y-3">
                 {isLoading ? (
                     <div className="text-center py-8">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -265,121 +267,3 @@ export function WorkshopDashboard() {
     );
 }
 
-/**
- * Generate mock workshop cases for development
- */
-function getMockWorkshopCases(): WorkshopCaseDetailed[] {
-    return [
-        {
-            id: 'workshop-case-001',
-            caseNumber: 'C-001',
-            vehiclePlate: 'ABC1234',
-            clientName: 'Juan Pérez',
-            clientPhone: '+34600123456',
-            symptom: 'Motor no arranca, hace click al girar la llave',
-            location: 'A-1 km 25 dirección Madrid',
-            questions: [
-                '¿El motor hace algún ruido al intentar arrancar?',
-                '¿Las luces del tablero encienden normalmente?',
-                '¿Cuándo fue la última vez que cambió la batería?',
-            ],
-            answers: [
-                'Sí, hace un click repetitivo',
-                'Sí, todas las luces funcionan normalmente',
-                'Hace aproximadamente 3 años',
-            ],
-            aiAssessment: {
-                diagnosis: 'Posible fallo en motor de arranque o batería descargada',
-                confidence: 75,
-                recommendation: 'tow',
-                reasoning: [
-                    'Click característico indica posible fallo del motor de arranque',
-                    'Luces funcionando sugiere batería con algo de carga',
-                ],
-            },
-            gruistaDecision: {
-                decision: 'tow',
-                notes: 'Motor de arranque no responde. Requiere diagnóstico en taller.',
-                decidedAt: new Date(Date.now() - 45 * 60 * 1000),
-                gruistaName: 'Paco García',
-            },
-            status: 'incoming',
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            updatedAt: new Date(Date.now() - 45 * 60 * 1000),
-        },
-        {
-            id: 'workshop-case-002',
-            caseNumber: 'C-002',
-            vehiclePlate: 'XYZ9876',
-            clientName: 'María González',
-            clientPhone: '+34611223344',
-            symptom: 'Pérdida de potencia y humo negro',
-            questions: [
-                '¿Desde cuándo nota la pérdida de potencia?',
-                '¿El humo aparece siempre o solo al acelerar?',
-            ],
-            answers: [
-                'Desde hace una semana aproximadamente',
-                'Principalmente al acelerar fuerte',
-            ],
-            aiAssessment: {
-                diagnosis: 'Posible problema con filtro de aire o inyectores',
-                confidence: 80,
-                recommendation: 'tow',
-                reasoning: [
-                    'Humo negro indica combustión incompleta',
-                    'Pérdida progresiva sugiere obstrucción o desgaste',
-                ],
-            },
-            gruistaDecision: {
-                decision: 'tow',
-                notes: 'Exceso de humo negro. No es seguro conducir.',
-                decidedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-                gruistaName: 'Carlos Ruiz',
-            },
-            status: 'accepted',
-            acceptedAt: new Date(Date.now() - 2.5 * 60 * 60 * 1000),
-            serviceOrderNumber: 'SO-123456',
-            repairStatus: 'inspecting',
-            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-            updatedAt: new Date(Date.now() - 2.5 * 60 * 60 * 1000),
-        },
-        {
-            id: 'workshop-case-003',
-            caseNumber: 'C-003',
-            vehiclePlate: 'DEF4567',
-            clientName: 'Pedro Martínez',
-            clientPhone: '+34622334455',
-            symptom: 'Ruido metálico al frenar',
-            questions: [
-                '¿El ruido aparece siempre que frena?',
-                '¿Ha notado vibración en el pedal del freno?',
-            ],
-            answers: [
-                'Sí, especialmente al frenar suave',
-                'Un poco de vibración, sí',
-            ],
-            aiAssessment: {
-                diagnosis: 'Pastillas de freno gastadas o disco deformado',
-                confidence: 90,
-                recommendation: 'tow',
-                reasoning: [
-                    'Ruido metálico típico de pastillas gastadas',
-                    'Vibración sugiere posible deformación del disco',
-                ],
-            },
-            gruistaDecision: {
-                decision: 'tow',
-                notes: 'Sistema de frenos comprometido. Remolque necesario por seguridad.',
-                decidedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-                gruistaName: 'Ana López',
-            },
-            status: 'in-repair',
-            acceptedAt: new Date(Date.now() - 23 * 60 * 60 * 1000),
-            serviceOrderNumber: 'SO-123455',
-            repairStatus: 'repairing',
-            createdAt: new Date(Date.now() - 25 * 60 * 60 * 1000),
-            updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        },
-    ];
-}

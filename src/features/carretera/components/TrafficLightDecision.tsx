@@ -160,11 +160,11 @@ export function TrafficLightDecision({
 
                                 {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Icon className={`h-5 w-5 ${option.color}`} />
+                                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <Icon className={`h-5 w-5 flex-shrink-0 ${option.color}`} />
                                         <h4 className={`font-bold text-lg ${option.color}`}>{option.label}</h4>
                                         {isRecommended && (
-                                            <span className="ml-auto text-xs bg-blue-500 text-white px-2 py-1 rounded-full font-semibold whitespace-nowrap">
+                                            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full font-semibold sm:ml-auto">
                                                 IA Recomienda
                                             </span>
                                         )}

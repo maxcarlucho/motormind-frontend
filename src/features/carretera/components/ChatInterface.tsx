@@ -170,12 +170,12 @@ export function ChatInterface({
                         <Button
                             type="submit"
                             disabled={!currentAnswer.trim() || isSubmitting || isLoading}
-                            className="min-h-[48px] min-w-[48px] rounded-lg px-4"
+                            className="min-h-[48px] min-w-[52px] sm:min-w-[48px] rounded-lg px-3 sm:px-4 flex-shrink-0"
                         >
                             {isSubmitting ? (
-                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <Loader2 className="h-5 w-5 sm:h-5 sm:w-5 animate-spin" />
                             ) : (
-                                <Send className="h-5 w-5" />
+                                <Send className="h-5 w-5 sm:h-5 sm:w-5" />
                             )}
                         </Button>
                     </form>

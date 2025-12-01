@@ -52,10 +52,15 @@ Utilizaremos una arquitectura de "Feature Module" para mantener el código de Ca
 
 ## Fase 5: Estilos y UX (Mobile First)
 
-- [ ] **Adaptación CSS**
-    - Asegurar que todos los componentes de `src/features/carretera` sean 100% responsive.
+- [x] **Adaptación CSS** ✅ (2024-12-01)
+    - Todos los componentes de `src/features/carretera` son 100% responsive.
     - Botones grandes (48px+ altura) para dedos con guantes (caso de uso gruista).
     - Alto contraste para visibilidad en exterior (sol).
+    - **Mejoras responsive aplicadas:**
+      - `WorkshopDashboard`: Contenedores con `max-w-4xl mx-auto` para consistencia en desktop
+      - Filtros con `flex-nowrap` para scroll horizontal sin wrap
+      - `TrafficLightDecision`: Badge "IA Recomienda" con `flex-wrap` para pantallas < 375px
+      - `ChatInterface`: Botón de envío con mejor área táctil (`min-w-[52px]`, `flex-shrink-0`)
 
 ## Dependencias Requeridas
 *   `lucide-react` (Iconos ya instalados).
