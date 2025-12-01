@@ -11,6 +11,8 @@ interface UseOperatorCasesReturn {
     filterByStatus: (status: AssessmentStatus | 'all') => void;
     searchCases: (query: string) => void;
     filteredCases: OperatorCase[];
+    deleteCase: (caseId: string) => Promise<void>;
+    deleteAllCases: () => Promise<void>;
 }
 
 /**
@@ -57,6 +59,57 @@ export function useOperatorCases(): UseOperatorCasesReturn {
 
     const refresh = async () => {
         await loadCases();
+    };
+
+    /**
+     * Elimina un caso de todos los storages (operador, cliente, taller)
+     */
+    const deleteCase = async (caseId: string) => {
+        try {
+            // 1. Eliminar de operator_cases
+            const operatorCases = JSON.parse(localStorage.getItem('carretera_operator_cases') || '[]');
+            const updatedOperatorCases = operatorCases.filter((c: OperatorCase) => c.id !== caseId);
+            localStorage.setItem('carretera_operator_cases', JSON.stringify(updatedOperatorCases));
+
+            // 2. Eliminar de client_cases
+            const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
+            if (clientCases[caseId]) {
+                delete clientCases[caseId];
+                localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+            }
+
+            // 3. Eliminar de workshop_cases
+            const workshopCases = JSON.parse(localStorage.getItem('carretera_workshop_cases') || '[]');
+            const updatedWorkshopCases = workshopCases.filter((c: any) => c.id !== caseId);
+            localStorage.setItem('carretera_workshop_cases', JSON.stringify(updatedWorkshopCases));
+
+            // 4. Actualizar estado local
+            setCases(prev => prev.filter(c => c.id !== caseId));
+
+            console.log(`✅ Caso ${caseId} eliminado de todos los storages`);
+        } catch (err) {
+            console.error('Error deleting case:', err);
+            throw new Error('Error al eliminar el caso');
+        }
+    };
+
+    /**
+     * Elimina TODOS los casos (operador, cliente, taller)
+     */
+    const deleteAllCases = async () => {
+        try {
+            localStorage.removeItem('carretera_operator_cases');
+            localStorage.removeItem('carretera_client_cases');
+            localStorage.removeItem('carretera_workshop_cases');
+            localStorage.removeItem('carretera_case_count');
+
+            setCases([]);
+
+            console.log('🧹 Todos los casos han sido eliminados');
+        } catch (err) {
+            console.error('Error deleting all cases:', err);
+            throw new Error('Error al eliminar todos los casos');
+        }
     };
 
     const filterByStatus = (status: AssessmentStatus | 'all') => {
@@ -118,6 +171,8 @@ export function useOperatorCases(): UseOperatorCasesReturn {
         filterByStatus,
         searchCases,
         filteredCases,
+        deleteCase,
+        deleteAllCases,
     };
 }
 

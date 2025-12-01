@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from 'react';
-import { X, Copy, MessageCircle, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Copy, MessageCircle, ExternalLink, Trash2, AlertTriangle } from 'lucide-react';
 import { enqueueSnackbar } from 'notistack';
 import { OperatorCase } from '../types/carretera.types';
 import { CaseStatusBadge } from './CaseStatusBadge';
@@ -11,6 +11,7 @@ interface CaseDetailModalProps {
     caseData: OperatorCase;
     isOpen: boolean;
     onClose: () => void;
+    onDelete?: (caseId: string) => Promise<void>;
 }
 
 /**
@@ -37,7 +38,10 @@ function formatPhoneForWhatsApp(phone: string): string {
  * Modal to display detailed information about a case
  * Phase 1: Basic information and actions
  */
-export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalProps) {
+export function CaseDetailModal({ caseData, isOpen, onClose, onDelete }: CaseDetailModalProps) {
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     // Handle ESC key to close modal
     const handleEscKey = useCallback((e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -106,6 +110,22 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
         // Use the link with token
         const link = caseData.clientLink || `/carretera/c/${caseData.id}`;
         window.open(link, '_blank');
+    };
+
+    const handleDelete = async () => {
+        if (!onDelete) return;
+
+        setIsDeleting(true);
+        try {
+            await onDelete(caseData.id);
+            enqueueSnackbar('Caso eliminado correctamente', { variant: 'success' });
+            onClose();
+        } catch (err) {
+            enqueueSnackbar('Error al eliminar el caso', { variant: 'error' });
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteConfirm(false);
+        }
     };
 
     return (
@@ -231,32 +251,74 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
 
                         {/* Footer Actions - WhatsApp more prominent */}
                         <div className="flex flex-col gap-3 p-6 bg-gray-50 border-t border-gray-200">
-                            {/* WhatsApp - Primary action, full width, more prominent */}
-                            <button
-                                onClick={sendToWhatsApp}
-                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg"
-                            >
-                                <MessageCircle className="h-6 w-6" />
-                                Enviar por WhatsApp
-                            </button>
+                            {/* Delete Confirmation */}
+                            {showDeleteConfirm ? (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <div className="flex items-center gap-2 text-red-800 mb-3">
+                                        <AlertTriangle className="h-5 w-5" />
+                                        <span className="font-semibold">¿Eliminar este caso?</span>
+                                    </div>
+                                    <p className="text-sm text-red-700 mb-4">
+                                        Se eliminará de operador, grúa y taller. Esta acción no se puede deshacer.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleDelete}
+                                            disabled={isDeleting}
+                                            className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(false)}
+                                            disabled={isDeleting}
+                                            className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* WhatsApp - Primary action, full width, more prominent */}
+                                    <button
+                                        onClick={sendToWhatsApp}
+                                        className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-green-600 text-white text-lg font-bold rounded-xl hover:bg-green-700 transition-colors shadow-lg"
+                                    >
+                                        <MessageCircle className="h-6 w-6" />
+                                        Enviar por WhatsApp
+                                    </button>
 
-                            {/* Secondary actions */}
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={openClientView}
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                                >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Ver como Cliente
-                                </button>
-                                <button
-                                    onClick={copyClientLink}
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
-                                >
-                                    <Copy className="h-4 w-4" />
-                                    Copiar Enlace
-                                </button>
-                            </div>
+                                    {/* Secondary actions */}
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={openClientView}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                            Ver como Cliente
+                                        </button>
+                                        <button
+                                            onClick={copyClientLink}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                            Copiar Enlace
+                                        </button>
+                                    </div>
+
+                                    {/* Delete button */}
+                                    {onDelete && (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 border border-red-200 font-medium rounded-lg transition-colors text-sm"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            Eliminar caso
+                                        </button>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

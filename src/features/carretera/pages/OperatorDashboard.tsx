@@ -15,6 +15,7 @@ export function OperatorDashboard() {
         filterByStatus,
         searchCases,
         filteredCases,
+        deleteCase,
     } = useOperatorCases();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,6 +240,7 @@ export function OperatorDashboard() {
                     caseData={selectedCase}
                     isOpen={isDetailModalOpen}
                     onClose={handleCloseDetailModal}
+                    onDelete={deleteCase}
                 />
             )}
         </div>
