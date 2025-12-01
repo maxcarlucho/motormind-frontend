@@ -5,6 +5,7 @@ import { OperatorCase } from '../types/carretera.types';
 import { CaseStatusBadge } from './CaseStatusBadge';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getPublicClientUrl } from '../constants/publicUrl';
 
 interface CaseListTableProps {
     cases: OperatorCase[];
@@ -43,7 +44,9 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
     const [whatsappSent, setWhatsappSent] = useState<SentStatus>({});
 
     const copyClientLink = async (operatorCase: OperatorCase) => {
-        const link = `${window.location.origin}/carretera/c/${operatorCase.id}`;
+        // Use pre-generated clientLink with secure token, or fallback
+        const basePath = operatorCase.clientLink || `/carretera/c/${operatorCase.id}`;
+        const link = getPublicClientUrl(basePath);
 
         try {
             await navigator.clipboard.writeText(link);
@@ -62,9 +65,9 @@ export function CaseListTable({ cases, isLoading, onCaseClick }: CaseListTablePr
 
     const sendToWhatsApp = (operatorCase: OperatorCase) => {
         const { clientPhone, clientName, symptom, id } = operatorCase;
-        // Use pre-generated clientLink with secure token
-        const baseLink = operatorCase.clientLink || `/carretera/c/${id}`;
-        const clientLink = baseLink.startsWith('http') ? baseLink : `${window.location.origin}${baseLink}`;
+        // Use pre-generated clientLink with secure token, always with public URL
+        const basePath = operatorCase.clientLink || `/carretera/c/${id}`;
+        const clientLink = getPublicClientUrl(basePath);
 
         const message = encodeURIComponent(
             `Hola ${clientName},\n\n` +

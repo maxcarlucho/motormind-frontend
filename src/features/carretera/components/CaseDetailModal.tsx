@@ -5,6 +5,7 @@ import { OperatorCase } from '../types/carretera.types';
 import { CaseStatusBadge } from './CaseStatusBadge';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getPublicClientUrl } from '../constants/publicUrl';
 
 interface CaseDetailModalProps {
     caseData: OperatorCase;
@@ -55,16 +56,13 @@ export function CaseDetailModal({ caseData, isOpen, onClose }: CaseDetailModalPr
 
     // Use the pre-generated clientLink with secure token from caseData
     // Fall back to basic link only if clientLink doesn't exist (legacy cases)
+    // Always uses VITE_CARRETERA_PUBLIC_URL for production links
     const getFullClientLink = () => {
         if (caseData.clientLink) {
-            // If it's already a full URL, return as-is; otherwise prepend origin
-            if (caseData.clientLink.startsWith('http')) {
-                return caseData.clientLink;
-            }
-            return `${window.location.origin}${caseData.clientLink}`;
+            return getPublicClientUrl(caseData.clientLink);
         }
         // Legacy fallback (cases created before token system)
-        return `${window.location.origin}/carretera/c/${caseData.id}`;
+        return getPublicClientUrl(`/carretera/c/${caseData.id}`);
     };
 
     const copyClientLink = async () => {

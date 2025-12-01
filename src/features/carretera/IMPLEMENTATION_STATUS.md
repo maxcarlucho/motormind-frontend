@@ -102,6 +102,22 @@ Para probar el flujo completo con localStorage:
 - **Preparado para API** - Solo descomentar líneas cuando backend esté listo
 - **Tipos TypeScript completos** - Todo tipado para evitar errores
 
+## 🌐 Configuración de URLs
+
+### Variable de entorno para URL pública
+Para que los links enviados a clientes apunten al dominio correcto (producción), configurar:
+
+```env
+VITE_CARRETERA_PUBLIC_URL=https://carretera-app.motormind.io
+```
+
+Esto permite que Sandra trabaje desde cualquier entorno (development, local) pero los links de WhatsApp y los que se copian siempre apunten al dominio de producción de Carretera.
+
+**Archivos relacionados:**
+- `constants/publicUrl.ts` - Función `getPublicClientUrl()` que genera URLs públicas
+- `components/CaseDetailModal.tsx` - Usa URL pública para copiar/WhatsApp
+- `components/CaseListTable.tsx` - Usa URL pública para copiar/WhatsApp
+
 ---
-*Última actualización: [fecha actual]*
+*Última actualización: 2025-12-01*
 *MVP listo para testing con localStorage y preparado para integración con backend*
