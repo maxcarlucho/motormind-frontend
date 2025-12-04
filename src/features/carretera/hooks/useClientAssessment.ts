@@ -140,12 +140,18 @@ export function useClientAssessment(
                         const diagnosisQuestions = diagnosis.questions || DIAGNOSTIC_QUESTIONS;
                         const diagnosisAnswers = diagnosis.answers ? diagnosis.answers.split('|') : [];
 
-                        // Extract client info from diagnosis workflow or localStorage
-                        // The workflow contains client data submitted during case creation
-                        const workflow = (diagnosis as any).workflow || {};
-                        const clientName = workflow.clientName || localCaseData?.clientName || 'Cliente';
-                        const clientPhone = workflow.clientPhone || localCaseData?.clientPhone || '';
-                        const symptom = diagnosis.fault || workflow.symptom || localCaseData?.symptom || 'Asistencia en carretera';
+                        // Extract client info from diagnosis notes or localStorage
+                        // The notes contain client data: "Cliente: Juan Pérez\nTeléfono: 666..."
+                        const notes = diagnosis.notes || '';
+                        const clientNameFromNotes = notes.match(/Cliente:\s*([^\n]+)/)?.[1]?.trim();
+                        const clientPhoneFromNotes = notes.match(/Teléfono:\s*([^\n]+)/)?.[1]?.trim();
+
+                        const clientName = clientNameFromNotes || localCaseData?.clientName || 'Cliente';
+                        const clientPhone = clientPhoneFromNotes || localCaseData?.clientPhone || '';
+
+                        // Clean symptom: remove the internal [ASISTENCIA CARRETERA...] tag
+                        const rawSymptom = diagnosis.fault || localCaseData?.symptom || 'Asistencia en carretera';
+                        const symptom = rawSymptom.replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '').trim();
 
                         // Create assessment from backend diagnosis data
                         // Works in incognito because all data comes from backend

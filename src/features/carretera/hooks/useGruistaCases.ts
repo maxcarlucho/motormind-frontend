@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GruistaCaseDetailed } from '../types/carretera.types';
 import { useAuth } from '@/context/Auth.context';
+import { useApi } from '@/hooks/useApi';
 
 interface UseGruistaCasesReturn {
     cases: GruistaCaseDetailed[];
@@ -13,22 +14,25 @@ interface UseGruistaCasesReturn {
 
 /**
  * Hook to fetch and manage gruista's assigned cases
+ * Now fetches from backend API (diagnoses) instead of localStorage
  */
 export function useGruistaCases(): UseGruistaCasesReturn {
     const [cases, setCases] = useState<GruistaCaseDetailed[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<'new' | 'in-progress' | 'all'>('all');
-    const { user } = useAuth(); // Get current user
+    const { user } = useAuth();
+
+    // API to fetch diagnoses from the backend (same endpoint as Diagnoses page)
+    const { execute: fetchDiagnoses } = useApi<{ data: any[]; total: number }>('get', '/diagnoses');
 
     const loadCases = async () => {
         try {
             setIsLoading(true);
             setError(null);
 
-            // For development, load from localStorage or use mock data
-            // Pass user information to fetch function
-            const gruistaCases = await fetchGruistaCasesFromStorage(user?.name || 'Gruista');
+            // Try to fetch from backend API first
+            const gruistaCases = await fetchGruistaCasesFromBackend(fetchDiagnoses, user?.name || 'Gruista');
             setCases(gruistaCases);
         } catch (err) {
             console.error('Error loading gruista cases:', err);
@@ -70,13 +74,102 @@ export function useGruistaCases(): UseGruistaCasesReturn {
 }
 
 /**
- * Fetch gruista cases from localStorage (development)
- * This function now reads from operator cases and automatically assigns them to the gruista
- * In production, this will call the backend API
+ * Fetch gruista cases from backend API
+ * Fetches diagnoses and transforms them to gruista case format
+ * Only shows diagnoses that have the roadside assistance context (carretera)
  */
-async function fetchGruistaCasesFromStorage(gruistaName: string): Promise<GruistaCaseDetailed[]> {
+async function fetchGruistaCasesFromBackend(
+    fetchDiagnoses: (data?: any, params?: any) => Promise<any>,
+    gruistaName: string
+): Promise<GruistaCaseDetailed[]> {
     try {
-        // First, try to get operator cases (these are the real cases created)
+        // Fetch all diagnoses from backend (same endpoint as Diagnoses page)
+        const response = await fetchDiagnoses(undefined, { limit: '100' });
+
+        if (!response?.data?.data) {
+            console.log('No diagnoses found in backend');
+            return [];
+        }
+
+        const diagnoses = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        console.log(`📋 Found ${diagnoses.length} total diagnoses in backend`);
+
+        // Filter only roadside assistance cases (contain [ASISTENCIA CARRETERA] in fault)
+        // and transform to gruista format
+        const gruistaCases: GruistaCaseDetailed[] = diagnoses
+            .filter((diagnosis: any) => {
+                // Check if it's a roadside assistance case
+                const fault = diagnosis.fault || '';
+                return fault.includes('ASISTENCIA CARRETERA') || fault.includes('CARRETERA');
+            })
+            .map((diagnosis: any) => {
+                // Extract info from diagnosis
+                const car = diagnosis.car || {};
+                const fault = diagnosis.fault || '';
+
+                // Clean up the symptom - remove the internal roadside context tag
+                const cleanSymptom = fault
+                    .replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '')
+                    .trim();
+
+                // Determine status based on diagnosis state
+                let status: 'new' | 'in-progress' | 'completed' = 'new';
+                if (diagnosis.preliminary) {
+                    status = 'in-progress';
+                }
+                if (diagnosis.failures && diagnosis.failures.length > 0) {
+                    status = 'completed';
+                }
+
+                // Build AI assessment from preliminary if available
+                const aiAssessment = diagnosis.preliminary ? {
+                    diagnosis: diagnosis.preliminary.diagnosis || 'Evaluación completada',
+                    confidence: diagnosis.preliminary.confidence || 70,
+                    recommendation: diagnosis.preliminary.recommendation || 'tow',
+                    reasoning: diagnosis.preliminary.reasoning || ['Evaluación preliminar completada'],
+                } : {
+                    diagnosis: 'Pendiente de evaluación del cliente',
+                    confidence: 0,
+                    recommendation: 'tow' as const,
+                    reasoning: ['Caso en espera de respuestas del cliente'],
+                };
+
+                return {
+                    id: diagnosis._id,
+                    caseNumber: `C-${diagnosis._id.slice(-4).toUpperCase()}`,
+                    vehiclePlate: car.plate || 'Sin matrícula',
+                    clientName: diagnosis.notes?.match(/Cliente:\s*([^\n]+)/)?.[1] || 'Cliente',
+                    clientPhone: diagnosis.notes?.match(/Teléfono:\s*([^\n]+)/)?.[1] || '',
+                    symptom: cleanSymptom || 'Sin síntoma registrado',
+                    location: diagnosis.notes?.match(/Ubicación:\s*([^\n]+)/)?.[1] || 'No especificada',
+                    status,
+                    assignedTo: gruistaName,
+                    questions: diagnosis.questions || [],
+                    answers: diagnosis.answers ? diagnosis.answers.split('\n').filter((a: string) => a.trim()) : [],
+                    aiAssessment,
+                    createdAt: new Date(diagnosis.createdAt || Date.now()),
+                    updatedAt: new Date(diagnosis.updatedAt || Date.now()),
+                };
+            });
+
+        // Sort by creation date (newest first)
+        gruistaCases.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        console.log(`✅ Loaded ${gruistaCases.length} roadside cases from backend`);
+        return gruistaCases;
+
+    } catch (err) {
+        console.error('Error fetching from backend:', err);
+        // Fallback to localStorage if backend fails
+        return fetchGruistaCasesFromLocalStorage(gruistaName);
+    }
+}
+
+/**
+ * Fallback: Fetch from localStorage if backend is unavailable
+ */
+function fetchGruistaCasesFromLocalStorage(gruistaName: string): GruistaCaseDetailed[] {
+    try {
         const operatorCasesStr = localStorage.getItem('carretera_operator_cases');
         const clientCasesStr = localStorage.getItem('carretera_client_cases');
 
@@ -84,12 +177,8 @@ async function fetchGruistaCasesFromStorage(gruistaName: string): Promise<Gruist
             const operatorCases = JSON.parse(operatorCasesStr);
             const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
 
-            // Transform operator cases to gruista format
             const gruistaCases = operatorCases.map((opCase: any) => {
-                // Get client case data if it exists
                 const clientCase = clientCases[opCase.id] || {};
-
-                // Map status: pending -> new (for gruista view)
                 const gruistaStatus = opCase.status === 'pending' ? 'new' :
                                      opCase.status === 'assigned' ? 'in-progress' :
                                      opCase.status;
@@ -103,60 +192,26 @@ async function fetchGruistaCasesFromStorage(gruistaName: string): Promise<Gruist
                     symptom: opCase.symptom,
                     location: opCase.location || 'No especificada',
                     status: gruistaStatus,
-                    assignedTo: gruistaName, // Assign to current user
-                    questions: clientCase.questions || [
-                        '¿Qué problema presenta el vehículo?',
-                        '¿Desde cuándo ocurre?',
-                        '¿Ha intentado alguna solución?'
-                    ],
+                    assignedTo: gruistaName,
+                    questions: clientCase.questions || [],
                     answers: clientCase.answers || [],
                     aiAssessment: clientCase.aiAssessment || {
-                        diagnosis: 'Pendiente de evaluación del cliente',
+                        diagnosis: 'Pendiente de evaluación',
                         confidence: 0,
-                        recommendation: 'tow', // Default to tow for safety
-                        reasoning: ['Caso en espera de respuestas del cliente'],
+                        recommendation: 'tow',
+                        reasoning: ['En espera'],
                     },
                     createdAt: new Date(opCase.createdAt),
                     updatedAt: new Date(opCase.updatedAt),
                 };
             });
 
-            // Sort by creation date (newest first)
             gruistaCases.sort((a: any, b: any) => b.createdAt - a.createdAt);
-
+            console.log(`📦 Loaded ${gruistaCases.length} cases from localStorage (fallback)`);
             return gruistaCases;
         }
-
-        // If no operator cases exist, check for legacy gruista_cases
-        const stored = localStorage.getItem('gruista_cases');
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            return parsed.map((c: any) => ({
-                ...c,
-                assignedTo: gruistaName, // Update assigned name
-                createdAt: new Date(c.createdAt),
-                updatedAt: new Date(c.updatedAt),
-            }));
-        }
     } catch (err) {
-        console.error('Error fetching gruista cases:', err);
+        console.error('Error fetching from localStorage:', err);
     }
-
-    // Return empty array instead of mock data - cleaner for production
-    // If you want to see mock data for testing, uncomment the next line:
-    // return getMockGruistaCases();
     return [];
 }
-
-// Mock data function removed - now we use real operator cases
-// If you need to restore mock data for testing, uncomment the function below:
-/*
-function getMockGruistaCases(): GruistaCaseDetailed[] {
-    return [
-        // ... mock cases here ...
-    ];
-}
-*/
-
-// Note: We no longer need to save gruista cases separately
-// Cases are automatically read from operator cases and transformed on the fly
