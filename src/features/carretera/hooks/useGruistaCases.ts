@@ -178,7 +178,7 @@ async function fetchGruistaCasesFromBackend(
                     status,
                     assignedTo: gruistaName,
                     questions: diagnosis.questions || [],
-                    answers: diagnosis.answers ? diagnosis.answers.split('\n').filter((a: string) => a.trim()) : [],
+                    answers: diagnosis.answers ? diagnosis.answers.split('|').filter((a: string) => a.trim()) : [],
                     aiAssessment,
                     createdAt: new Date(diagnosis.createdAt || Date.now()),
                     updatedAt: new Date(diagnosis.updatedAt || Date.now()),

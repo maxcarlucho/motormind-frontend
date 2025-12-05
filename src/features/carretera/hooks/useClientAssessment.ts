@@ -140,11 +140,24 @@ export function useClientAssessment(
                         const diagnosisQuestions = diagnosis.questions || DIAGNOSTIC_QUESTIONS;
                         const diagnosisAnswers = diagnosis.answers ? diagnosis.answers.split('|') : [];
 
-                        // Extract client info from diagnosis notes or localStorage
-                        // The notes contain client data: "Cliente: Juan Pérez\nTeléfono: 666..."
+                        // Extract client info from diagnosis notes (JSON format) or localStorage
+                        // Notes can be JSON: {"carretera": {"clientName": "...", ...}} or legacy text format
                         const notes = diagnosis.notes || '';
-                        const clientNameFromNotes = notes.match(/Cliente:\s*([^\n]+)/)?.[1]?.trim();
-                        const clientPhoneFromNotes = notes.match(/Teléfono:\s*([^\n]+)/)?.[1]?.trim();
+                        let carreteraData: any = null;
+                        try {
+                            if (notes.startsWith('{')) {
+                                const parsed = JSON.parse(notes);
+                                carreteraData = parsed.carretera || null;
+                            }
+                        } catch {
+                            carreteraData = null;
+                        }
+
+                        // Extract data from JSON or fallback to regex for old format
+                        const clientNameFromNotes = carreteraData?.clientName
+                            || notes.match(/Cliente:\s*([^\n]+)/)?.[1]?.trim();
+                        const clientPhoneFromNotes = carreteraData?.clientPhone
+                            || notes.match(/Teléfono:\s*([^\n]+)/)?.[1]?.trim();
 
                         const clientName = clientNameFromNotes || localCaseData?.clientName || 'Cliente';
                         const clientPhone = clientPhoneFromNotes || localCaseData?.clientPhone || '';
