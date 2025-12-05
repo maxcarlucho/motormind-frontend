@@ -236,7 +236,7 @@ async function fetchCasesFromBackendApi(
                 if (carreteraData?.status) {
                     status = carreteraData.status as AssessmentStatus;
                 } else if (diagnosis.preliminary) {
-                    status = 'assigned';
+                    status = 'in-progress';
                 }
 
                 return {
