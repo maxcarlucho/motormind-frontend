@@ -102,22 +102,69 @@ Para probar el flujo completo con localStorage:
 - **Preparado para API** - Solo descomentar líneas cuando backend esté listo
 - **Tipos TypeScript completos** - Todo tipado para evitar errores
 
-## 🌐 Configuración de URLs
+## 🌐 Configuración de URLs y Variables de Entorno
 
-### Variable de entorno para URL pública
-Para que los links enviados a clientes apunten al dominio correcto (producción), configurar:
+### Variables requeridas en Railway (Frontend)
 
 ```env
+# URL pública para links de clientes (WhatsApp, etc.)
 VITE_CARRETERA_PUBLIC_URL=https://carretera-app.motormind.io
+
+# Token de servicio para acceso anónimo (clientes sin login)
+# IMPORTANTE: Sin este token, los clientes no pueden guardar respuestas al backend
+VITE_CARRETERA_SERVICE_TOKEN=<JWT_token_de_servicio>
+
+# URL del backend (debe ser la misma en todos los frontends)
+VITE_API_URL=https://motormind-backend-development.up.railway.app
 ```
 
-Esto permite que Sandra trabaje desde cualquier entorno (development, local) pero los links de WhatsApp y los que se copian siempre apunten al dominio de producción de Carretera.
+### Arquitectura Multi-Dominio
+
+El sistema usa dos dominios de frontend:
+- **`carretera-app.motormind.io`** - Donde el cliente responde las preguntas
+- **`development-app.motormind.io`** - Donde el operador/gruista gestiona casos
+
+**Importante:** localStorage NO se comparte entre dominios, por lo que:
+1. El cliente guarda respuestas en el **backend** (usando SERVICE_TOKEN)
+2. El gruista obtiene respuestas del **backend** (usando su token de login)
+
+### Flujo de Sincronización
+
+```
+┌─────────────────────┐     ┌─────────────────────┐     ┌─────────────────────┐
+│   carretera-app     │     │      Backend        │     │  development-app    │
+│   (Cliente)         │     │   (Motormind API)   │     │  (Operador/Gruista) │
+└─────────────────────┘     └─────────────────────┘     └─────────────────────┘
+         │                           │                           │
+         │  1. Cliente responde      │                           │
+         │─────────────────────────>│                           │
+         │  PUT /cars/:id/diagnosis  │                           │
+         │  (SERVICE_TOKEN)          │                           │
+         │                           │                           │
+         │                           │  2. Gruista consulta      │
+         │                           │<─────────────────────────│
+         │                           │  GET /cars/diagnosis/:id  │
+         │                           │  (User Token)             │
+         │                           │                           │
+         │                           │  3. Respuestas del backend│
+         │                           │─────────────────────────>│
+```
 
 **Archivos relacionados:**
 - `constants/publicUrl.ts` - Función `getPublicClientUrl()` que genera URLs públicas
-- `components/CaseDetailModal.tsx` - Usa URL pública para copiar/WhatsApp
-- `components/CaseListTable.tsx` - Usa URL pública para copiar/WhatsApp
+- `services/carreteraApi.service.ts` - Usa SERVICE_TOKEN para acceso anónimo
+- `hooks/useGruistaCase.ts` - Siempre consulta backend para respuestas actualizadas
+- `hooks/useClientAssessment.ts` - Guarda respuestas en backend con SERVICE_TOKEN
+
+## 🐛 Bugs Resueltos
+
+### [2025-12-05] Respuestas no aparecían en vista del gruista
+**Problema:** El cliente respondía desde `carretera-app` pero el gruista en `development-app` veía "Sin respuesta".
+
+**Causa:** El hook `useGruistaCase` leía respuestas de localStorage en lugar del backend. Como son dominios diferentes, localStorage no se comparte.
+
+**Solución:** Modificado `useGruistaCase.ts` para SIEMPRE consultar el backend y obtener las respuestas más recientes, sincronizando luego con localStorage.
 
 ---
-*Última actualización: 2025-12-01*
-*MVP listo para testing con localStorage y preparado para integración con backend*
+*Última actualización: 2025-12-05*
+*MVP funcionando con sincronización backend entre dominios*
