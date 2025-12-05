@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { OperatorCase, CaseFilters, AssessmentStatus } from '../types/carretera.types';
 import { cleanDuplicateCases } from '../utils/cleanDuplicateCases';
+import { useApi } from '@/hooks/useApi';
 import '../utils/clearAllData'; // Auto-imports the duplicate checker
 
 interface UseOperatorCasesReturn {
@@ -17,6 +18,7 @@ interface UseOperatorCasesReturn {
 
 /**
  * Hook to fetch and manage operator's cases with filtering and search
+ * Now loads from backend (MongoDB) instead of just localStorage
  */
 export function useOperatorCases(): UseOperatorCasesReturn {
     const [cases, setCases] = useState<OperatorCase[]>([]);
@@ -29,19 +31,18 @@ export function useOperatorCases(): UseOperatorCasesReturn {
         sortOrder: 'desc',
     });
 
+    // API to fetch diagnoses from backend
+    const { execute: fetchDiagnoses } = useApi<{ data: any[]; total: number }>('get', '/diagnoses');
+
     const loadCases = async () => {
         try {
             setIsLoading(true);
             setError(null);
 
-            // For now, we'll fetch all assessments and filter client-side
-            // In production, this should be a backend endpoint: GET /api/carretera/cases
+            // Fetch from backend first, fallback to localStorage
+            const operatorCases: OperatorCase[] = await fetchCasesFromBackendApi(fetchDiagnoses);
 
-            // Using a mock data approach for development
-            // TODO: Replace with actual API call when backend is ready
-            const mockCases: OperatorCase[] = await fetchCasesFromBackend();
-
-            setCases(mockCases);
+            setCases(operatorCases);
         } catch (err) {
             console.error('Error loading cases:', err);
             setError('Error al cargar los casos');
@@ -177,15 +178,100 @@ export function useOperatorCases(): UseOperatorCasesReturn {
 }
 
 /**
- * Temporary function to fetch cases from backend
- * This will be replaced with actual API endpoint
+ * Fetch cases from backend API (MongoDB)
+ * Filters diagnoses that have [ASISTENCIA CARRETERA] in fault
  */
-async function fetchCasesFromBackend(): Promise<OperatorCase[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-
+async function fetchCasesFromBackendApi(
+    fetchDiagnoses: (data?: any, params?: any) => Promise<any>
+): Promise<OperatorCase[]> {
     try {
-        // For development, we'll use localStorage to persist mock data
+        // Fetch all diagnoses from backend
+        const response = await fetchDiagnoses(undefined, { limit: '100' });
+
+        if (!response?.data?.data) {
+            console.log('No diagnoses found in backend, falling back to localStorage');
+            return fetchCasesFromLocalStorage();
+        }
+
+        const diagnoses = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        console.log(`📋 Operator: Found ${diagnoses.length} total diagnoses in backend`);
+
+        // Filter only roadside assistance cases
+        const operatorCases: OperatorCase[] = diagnoses
+            .filter((diagnosis: any) => {
+                const fault = diagnosis.fault || '';
+                return fault.includes('ASISTENCIA CARRETERA') || fault.includes('CARRETERA');
+            })
+            .map((diagnosis: any) => {
+                const car = diagnosis.car || {};
+                const fault = diagnosis.fault || '';
+                const cleanSymptom = fault.replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '').trim();
+
+                // Parse carretera data from notes (JSON format)
+                let carreteraData: any = null;
+                try {
+                    if (diagnosis.notes && diagnosis.notes.startsWith('{')) {
+                        const parsed = JSON.parse(diagnosis.notes);
+                        carreteraData = parsed.carretera || null;
+                    }
+                } catch {
+                    carreteraData = null;
+                }
+
+                // Extract data from JSON or fallback to regex
+                const clientName = carreteraData?.clientName
+                    || diagnosis.notes?.match(/Cliente:\s*([^\n]+)/)?.[1]
+                    || 'Cliente';
+                const clientPhone = carreteraData?.clientPhone
+                    || diagnosis.notes?.match(/Teléfono:\s*([^\n]+)/)?.[1]
+                    || '';
+                const location = carreteraData?.location
+                    || diagnosis.notes?.match(/Ubicación:\s*([^\n]+)/)?.[1]
+                    || 'No especificada';
+                const caseNumber = carreteraData?.caseNumber
+                    || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
+
+                // Determine status
+                let status: AssessmentStatus = 'pending';
+                if (carreteraData?.status) {
+                    status = carreteraData.status as AssessmentStatus;
+                } else if (diagnosis.preliminary) {
+                    status = 'assigned';
+                }
+
+                return {
+                    id: diagnosis._id,
+                    caseNumber,
+                    vehiclePlate: car.plate || 'Sin matrícula',
+                    clientName,
+                    clientPhone,
+                    symptom: cleanSymptom || 'Sin síntoma registrado',
+                    location,
+                    status,
+                    createdAt: new Date(diagnosis.createdAt || Date.now()),
+                    updatedAt: new Date(diagnosis.updatedAt || Date.now()),
+                    clientLink: `/carretera/c/${diagnosis._id}`,
+                    workshopLink: `/carretera/t/${diagnosis._id}`,
+                };
+            });
+
+        // Sort by creation date (newest first)
+        operatorCases.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        console.log(`✅ Operator: Loaded ${operatorCases.length} roadside cases from backend`);
+        return operatorCases;
+
+    } catch (err) {
+        console.error('Error fetching from backend:', err);
+        return fetchCasesFromLocalStorage();
+    }
+}
+
+/**
+ * Fallback: Fetch from localStorage if backend is unavailable
+ */
+function fetchCasesFromLocalStorage(): OperatorCase[] {
+    try {
         const stored = localStorage.getItem('carretera_operator_cases');
         if (stored) {
             const parsed = JSON.parse(stored);
@@ -196,10 +282,8 @@ async function fetchCasesFromBackend(): Promise<OperatorCase[]> {
             }));
         }
     } catch (err) {
-        console.error('Error fetching cases:', err);
+        console.error('Error fetching from localStorage:', err);
     }
-
-    // Return empty array if no stored cases
     return [];
 }
 
