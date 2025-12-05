@@ -216,14 +216,64 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             }
 
             // Get client case data if it exists
-            const clientCase = clientCases[opCase.id] || {};
+            let clientCase = clientCases[opCase.id] || {};
 
             // Transform status for gruista view
             const gruistaStatus = opCase.status === 'pending' ? 'new' :
                 opCase.status === 'assigned' ? 'in-progress' :
                     opCase.status;
 
-            // Get data from localStorage FIRST (client saves here)
+            // ALWAYS fetch latest answers from backend (client saves there from different domain)
+            const diagnosisIdToFetch = clientCase.diagnosisId || opCase.id;
+            const authToken = localStorage.getItem('token');
+
+            if (authToken && diagnosisIdToFetch) {
+                try {
+                    console.log('🔄 Fetching latest answers from backend:', diagnosisIdToFetch);
+                    const diagnosisResponse = await getDiagnosis(undefined, undefined, {
+                        diagnosisId: diagnosisIdToFetch
+                    });
+                    const diagnosis = diagnosisResponse.data as any;
+
+                    if (diagnosis) {
+                        // Update clientCase with backend data (answers are the source of truth)
+                        const backendAnswers = diagnosis.answers
+                            ? diagnosis.answers.split('|').filter((a: string) => a.trim())
+                            : [];
+                        const backendQuestions = diagnosis.questions || clientCase.questions || [];
+
+                        console.log('📥 Backend answers:', backendAnswers.length, 'questions:', backendQuestions.length);
+
+                        // Merge backend data into clientCase
+                        clientCase = {
+                            ...clientCase,
+                            diagnosisId: diagnosis._id || clientCase.diagnosisId,
+                            carId: diagnosis.car?._id || clientCase.carId,
+                            questions: backendQuestions,
+                            answers: backendAnswers, // Backend is source of truth for answers
+                            // Update aiAssessment if backend has preliminary
+                            ...(diagnosis.preliminary?.possibleReasons?.length > 0 && {
+                                aiAssessment: {
+                                    status: 'ready' as const,
+                                    diagnosis: diagnosis.preliminary.possibleReasons[0].title || diagnosis.fault,
+                                    confidence: diagnosis.preliminary.possibleReasons[0].probability === 'Alta' ? 85 :
+                                                diagnosis.preliminary.possibleReasons[0].probability === 'Media' ? 65 : 45,
+                                    recommendation: determineRecommendation(diagnosis.preliminary),
+                                    reasoning: diagnosis.preliminary.possibleReasons.map((r: any) => r.reasonDetails).filter(Boolean),
+                                }
+                            })
+                        };
+
+                        // Update localStorage with latest backend data
+                        clientCases[opCase.id] = clientCase;
+                        localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+                    }
+                } catch (fetchErr) {
+                    console.log('⚠️ Could not fetch from backend, using localStorage:', fetchErr);
+                }
+            }
+
+            // Get data from localStorage/backend merged data
             const localAnswers = clientCase.answers || [];
             const localQuestions = clientCase.questions || [];
             const totalQuestions = localQuestions.length || 4; // Default to 4 if no questions
