@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { OperatorCase, CaseFilters, AssessmentStatus } from '../types/carretera.types';
 import { cleanDuplicateCases } from '../utils/cleanDuplicateCases';
 import { useApi } from '@/hooks/useApi';
+import apiService from '@/service/api.service';
 import '../utils/clearAllData'; // Auto-imports the duplicate checker
 
 interface UseOperatorCasesReturn {
@@ -63,31 +64,34 @@ export function useOperatorCases(): UseOperatorCasesReturn {
     };
 
     /**
-     * Elimina un caso de todos los storages (operador, cliente, taller)
+     * Elimina un caso del backend (MongoDB) y localStorage
      */
     const deleteCase = async (caseId: string) => {
         try {
-            // 1. Eliminar de operator_cases
+            // 1. Eliminar del backend (MongoDB)
+            console.log(`🗑️ Eliminando caso ${caseId} del backend...`);
+            await apiService.deleteDiagnosis(caseId);
+            console.log(`✅ Caso ${caseId} eliminado del backend`);
+
+            // 2. Eliminar de localStorage (cache local)
             const operatorCases = JSON.parse(localStorage.getItem('carretera_operator_cases') || '[]');
             const updatedOperatorCases = operatorCases.filter((c: OperatorCase) => c.id !== caseId);
             localStorage.setItem('carretera_operator_cases', JSON.stringify(updatedOperatorCases));
 
-            // 2. Eliminar de client_cases
             const clientCases = JSON.parse(localStorage.getItem('carretera_client_cases') || '{}');
             if (clientCases[caseId]) {
                 delete clientCases[caseId];
                 localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
             }
 
-            // 3. Eliminar de workshop_cases
             const workshopCases = JSON.parse(localStorage.getItem('carretera_workshop_cases') || '[]');
             const updatedWorkshopCases = workshopCases.filter((c: any) => c.id !== caseId);
             localStorage.setItem('carretera_workshop_cases', JSON.stringify(updatedWorkshopCases));
 
-            // 4. Actualizar estado local
+            // 3. Actualizar estado local
             setCases(prev => prev.filter(c => c.id !== caseId));
 
-            console.log(`✅ Caso ${caseId} eliminado de todos los storages`);
+            console.log(`✅ Caso ${caseId} eliminado completamente`);
         } catch (err) {
             console.error('Error deleting case:', err);
             throw new Error('Error al eliminar el caso');
@@ -231,27 +235,21 @@ async function fetchCasesFromBackendApi(
                 const caseNumber = carreteraData?.caseNumber
                     || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
 
-                // Determine status from backend diagnosis.status (source of truth)
-                // Para carretera: ASSIGN_OBD_CODES o PRELIMINARY = completado (flujo termina con pre-diagnóstico)
+                // Determine status based on OBD codes (flujo carretera)
+                // - Con OBD codes → Completado (taller ya puso códigos)
+                // - Sin OBD codes pero con respuestas → En curso (cliente respondió)
+                // - Sin respuestas → Pendiente
                 let status: AssessmentStatus = 'pending';
-                const backendStatus = diagnosis.status || '';
 
-                // Map backend status to operator status (flujo carretera)
-                if (backendStatus === 'REPAIRED' || backendStatus === 'IN_REPARATION' ||
-                    backendStatus === 'PRELIMINARY' || backendStatus === 'ASSIGN_OBD_CODES') {
-                    // En carretera, cuando llega al taller (OBD/PRELIMINARY) ya está "completado"
+                const hasObdCodes = diagnosis.obdCodes && diagnosis.obdCodes.length > 0;
+                const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
+
+                if (hasObdCodes) {
                     status = 'completed';
-                } else if (backendStatus === 'GUIDED_QUESTIONS') {
-                    // Check if client has answered questions
-                    const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
-                    status = hasAnswers ? 'in-progress' : 'pending';
+                } else if (hasAnswers || diagnosis.preliminary) {
+                    status = 'in-progress';
                 } else {
-                    // Fallback to carreteraData or default
-                    if (carreteraData?.status) {
-                        status = carreteraData.status as AssessmentStatus;
-                    } else if (diagnosis.preliminary) {
-                        status = 'completed';
-                    }
+                    status = 'pending';
                 }
 
                 return {

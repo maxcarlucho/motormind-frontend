@@ -138,29 +138,21 @@ async function fetchGruistaCasesFromBackend(
                 const caseNumber = carreteraData?.caseNumber
                     || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
 
-                // Determine status from backend diagnosis.status (source of truth)
-                // Para carretera: ASSIGN_OBD_CODES o PRELIMINARY = completado (flujo termina con pre-diagnóstico)
+                // Determine status based on OBD codes (flujo carretera)
+                // - Con OBD codes → Completado (taller ya puso códigos)
+                // - Sin OBD codes pero con respuestas → En curso (cliente respondió)
+                // - Sin respuestas → Nuevo
                 let status: 'new' | 'in-progress' | 'completed' = 'new';
-                const backendStatus = diagnosis.status || '';
 
-                // Map backend status to gruista status (flujo carretera)
-                if (backendStatus === 'REPAIRED' || backendStatus === 'IN_REPARATION' ||
-                    backendStatus === 'PRELIMINARY' || backendStatus === 'ASSIGN_OBD_CODES') {
-                    // En carretera, cuando llega al taller (OBD/PRELIMINARY) ya está "completado"
+                const hasObdCodes = diagnosis.obdCodes && diagnosis.obdCodes.length > 0;
+                const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
+
+                if (hasObdCodes) {
                     status = 'completed';
-                } else if (backendStatus === 'GUIDED_QUESTIONS') {
-                    // Check if client has answered questions
-                    const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
-                    status = hasAnswers ? 'in-progress' : 'new';
+                } else if (hasAnswers || diagnosis.preliminary) {
+                    status = 'in-progress';
                 } else {
-                    // Fallback to carreteraData or default
-                    if (carreteraData?.status) {
-                        status = carreteraData.status === 'pending' ? 'new' :
-                                 carreteraData.status === 'completed' ? 'completed' :
-                                 'in-progress';
-                    } else if (diagnosis.preliminary) {
-                        status = 'completed';
-                    }
+                    status = 'new';
                 }
 
                 // Build AI assessment from preliminary if available
