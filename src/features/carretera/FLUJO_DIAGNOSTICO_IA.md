@@ -349,6 +349,25 @@ src/features/carretera/
 
 ## Changelog
 
+### v2.6 (2024-12-05)
+- **Persistencia en MongoDB**: Todos los datos de carretera ahora se guardan y cargan desde MongoDB (backend)
+  - `useOperatorCases.ts`: Carga casos desde `/diagnoses` en vez de solo localStorage
+  - `useGruistaCases.ts`: Carga casos desde `/diagnoses` con filtro por [ASISTENCIA CARRETERA]
+  - `useGruistaCase.ts`: Fallback a backend cuando caso no existe en localStorage
+  - localStorage ahora es solo cache/fallback
+- **Lógica de estado basada en OBD**:
+  - Con códigos OBD → `completed` (taller ya procesó)
+  - Sin OBD pero con respuestas/preliminary → `in-progress` (cliente respondió)
+  - Sin respuestas → `pending`/`new` (esperando cliente)
+- **Eliminación de casos desde backend**:
+  - `deleteCase()` ahora llama a `apiService.deleteDiagnosis(caseId)` para eliminar de MongoDB
+  - Después limpia localStorage como cache
+  - Gruista y Operador ven los mismos casos después de eliminar
+- **JSON estructurado en campo `notes`**:
+  - Datos de carretera se guardan como JSON en el campo `notes` del Diagnosis
+  - Estructura: `{ carretera: { caseNumber, clientName, clientPhone, location, status, createdAt } }`
+  - Parsing con fallback a regex para compatibilidad con datos antiguos
+
 ### v2.5 (2024-12-01)
 - **UI de Diagnóstico IA completamente rediseñada** (`AIAssessmentSummary.tsx`):
   - Badge de recomendación más grande y prominente: "🔴 REMOLCAR AL TALLER" / "🟢 REPARABLE IN-SITU"

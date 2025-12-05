@@ -58,20 +58,28 @@
    - Tracker visual del progreso
    - Estados: pendiente → inspeccionando → esperando repuestos → reparando → probando → completado
 
-## 📡 Integración con Backend (Pendiente)
+## 📡 Integración con Backend (✅ Completado v2.6)
 
-### Endpoints necesarios en backend:
+### Endpoints utilizados actualmente:
 ```
-POST   /api/v1/carretera/workshop/cases/:id/accept
-POST   /api/v1/carretera/workshop/cases/:id/diagnosis
-PATCH  /api/v1/carretera/workshop/cases/:id/repair-status
-POST   /api/v1/carretera/workshop/cases/:id/reject
+GET    /diagnoses                                    → Listar casos (operador/gruista)
+GET    /cars/diagnosis/:diagnosisId                  → Obtener caso individual
+DELETE /diagnoses/:id                                → Eliminar caso
+GET    /cars/vin-or-plate?plate=XXX                  → Buscar/crear vehículo (TecDoc)
+POST   /cars/:carId/questions                        → Crear diagnóstico
+PUT    /cars/:carId/diagnosis/:diagnosisId/answers   → Guardar respuestas cliente
+POST   /cars/:carId/diagnosis/:diagnosisId/preliminary → Generar pre-diagnóstico
 ```
 
-### Cuando el backend esté listo:
-1. Descomentar líneas en hooks que llaman a `carreteraApi`
-2. Remover lógica de localStorage
-3. Testear integración completa
+### Estado actual:
+- ✅ Operador y Gruista cargan casos desde MongoDB (`/diagnoses`)
+- ✅ Eliminación de casos funciona en MongoDB (`apiService.deleteDiagnosis`)
+- ✅ Datos de carretera persistidos en campo `notes` como JSON
+- ✅ localStorage usado como cache/fallback
+- ✅ Lógica de estado basada en códigos OBD:
+  - Con OBD → `completed`
+  - Sin OBD pero con respuestas → `in-progress`
+  - Sin respuestas → `pending`/`new`
 
 ## 🧪 Testing Local
 
@@ -87,20 +95,20 @@ Para probar el flujo completo con localStorage:
 
 ## 🚀 Próximos Pasos
 
-1. **Backend** - Implementar endpoints en `/api/v1/carretera/workshop/*`
-2. **Integración** - Conectar frontend con API real
-3. **Testing E2E** - Probar flujo completo con backend
+1. ~~**Backend** - Implementar endpoints~~ ✅ Usando endpoints existentes de Motormind
+2. ~~**Integración** - Conectar frontend con API real~~ ✅ Completado v2.6
+3. **Testing E2E** - Probar flujo completo con backend en producción
 4. **Mejoras futuras**:
    - Subida de fotos desde el taller
-   - Integración con API de diagnóstico de Motormind existente
    - Notificaciones en tiempo real al cliente
+   - Endpoint dedicado `/api/v1/carretera/*` (opcional, actualmente reutilizamos `/diagnoses`)
 
 ## 📝 Notas Importantes
 
 - **NO se modifica el core de Motormind** - Todo está aislado en `/features/carretera`
-- **Compatible con localStorage** - Funciona sin backend para desarrollo
-- **Preparado para API** - Solo descomentar líneas cuando backend esté listo
+- **Backend integrado** - Datos persistidos en MongoDB, localStorage es solo cache
 - **Tipos TypeScript completos** - Todo tipado para evitar errores
+- **JSON en `notes`** - Datos de carretera se guardan como JSON estructurado en el campo `notes` del Diagnosis
 
 ## 🌐 Configuración de URLs y Variables de Entorno
 
