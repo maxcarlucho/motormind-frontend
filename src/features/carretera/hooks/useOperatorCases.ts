@@ -231,12 +231,26 @@ async function fetchCasesFromBackendApi(
                 const caseNumber = carreteraData?.caseNumber
                     || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
 
-                // Determine status
+                // Determine status from backend diagnosis.status (source of truth)
                 let status: AssessmentStatus = 'pending';
-                if (carreteraData?.status) {
-                    status = carreteraData.status as AssessmentStatus;
-                } else if (diagnosis.preliminary) {
+                const backendStatus = diagnosis.status || '';
+
+                // Map backend status to operator status
+                if (backendStatus === 'REPAIRED') {
+                    status = 'completed';
+                } else if (backendStatus === 'IN_REPARATION' || backendStatus === 'PRELIMINARY' || backendStatus === 'ASSIGN_OBD_CODES') {
                     status = 'in-progress';
+                } else if (backendStatus === 'GUIDED_QUESTIONS') {
+                    // Check if client has answered questions
+                    const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
+                    status = hasAnswers ? 'in-progress' : 'pending';
+                } else {
+                    // Fallback to carreteraData or default
+                    if (carreteraData?.status) {
+                        status = carreteraData.status as AssessmentStatus;
+                    } else if (diagnosis.preliminary) {
+                        status = 'in-progress';
+                    }
                 }
 
                 return {
