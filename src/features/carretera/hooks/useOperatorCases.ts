@@ -232,14 +232,15 @@ async function fetchCasesFromBackendApi(
                     || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
 
                 // Determine status from backend diagnosis.status (source of truth)
+                // Para carretera: ASSIGN_OBD_CODES o PRELIMINARY = completado (flujo termina con pre-diagnóstico)
                 let status: AssessmentStatus = 'pending';
                 const backendStatus = diagnosis.status || '';
 
-                // Map backend status to operator status
-                if (backendStatus === 'REPAIRED') {
+                // Map backend status to operator status (flujo carretera)
+                if (backendStatus === 'REPAIRED' || backendStatus === 'IN_REPARATION' ||
+                    backendStatus === 'PRELIMINARY' || backendStatus === 'ASSIGN_OBD_CODES') {
+                    // En carretera, cuando llega al taller (OBD/PRELIMINARY) ya está "completado"
                     status = 'completed';
-                } else if (backendStatus === 'IN_REPARATION' || backendStatus === 'PRELIMINARY' || backendStatus === 'ASSIGN_OBD_CODES') {
-                    status = 'in-progress';
                 } else if (backendStatus === 'GUIDED_QUESTIONS') {
                     // Check if client has answered questions
                     const hasAnswers = diagnosis.answers && diagnosis.answers.trim().length > 0;
@@ -249,7 +250,7 @@ async function fetchCasesFromBackendApi(
                     if (carreteraData?.status) {
                         status = carreteraData.status as AssessmentStatus;
                     } else if (diagnosis.preliminary) {
-                        status = 'in-progress';
+                        status = 'completed';
                     }
                 }
 
