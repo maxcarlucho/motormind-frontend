@@ -112,9 +112,42 @@ async function fetchGruistaCasesFromBackend(
                     .replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '')
                     .trim();
 
-                // Determine status based on diagnosis state
+                // Parse carretera data from notes (JSON format)
+                // Fallback to regex for backwards compatibility with old data
+                let carreteraData: any = null;
+                try {
+                    if (diagnosis.notes && diagnosis.notes.startsWith('{')) {
+                        const parsed = JSON.parse(diagnosis.notes);
+                        carreteraData = parsed.carretera || null;
+                    }
+                } catch {
+                    // Not JSON, try regex fallback for old format
+                    carreteraData = null;
+                }
+
+                // Extract data from JSON or fallback to regex
+                const clientName = carreteraData?.clientName
+                    || diagnosis.notes?.match(/Cliente:\s*([^\n]+)/)?.[1]
+                    || 'Cliente';
+                const clientPhone = carreteraData?.clientPhone
+                    || diagnosis.notes?.match(/Teléfono:\s*([^\n]+)/)?.[1]
+                    || '';
+                const location = carreteraData?.location
+                    || diagnosis.notes?.match(/Ubicación:\s*([^\n]+)/)?.[1]
+                    || 'No especificada';
+                const caseNumber = carreteraData?.caseNumber
+                    || `C-${diagnosis._id.slice(-4).toUpperCase()}`;
+
+                // Determine status: prioritize carreteraData.status, then diagnosis state
                 let status: 'new' | 'in-progress' | 'completed' = 'new';
-                if (diagnosis.preliminary) {
+                if (carreteraData?.status) {
+                    // Map carretera status to gruista status
+                    status = carreteraData.status === 'pending' ? 'new' :
+                             carreteraData.status === 'assigned' ? 'in-progress' :
+                             carreteraData.status === 'completed' ? 'completed' :
+                             carreteraData.status === 'towing' ? 'in-progress' :
+                             'new';
+                } else if (diagnosis.preliminary) {
                     status = 'in-progress';
                 }
                 if (diagnosis.failures && diagnosis.failures.length > 0) {
@@ -136,12 +169,12 @@ async function fetchGruistaCasesFromBackend(
 
                 return {
                     id: diagnosis._id,
-                    caseNumber: `C-${diagnosis._id.slice(-4).toUpperCase()}`,
+                    caseNumber,
                     vehiclePlate: car.plate || 'Sin matrícula',
-                    clientName: diagnosis.notes?.match(/Cliente:\s*([^\n]+)/)?.[1] || 'Cliente',
-                    clientPhone: diagnosis.notes?.match(/Teléfono:\s*([^\n]+)/)?.[1] || '',
+                    clientName,
+                    clientPhone,
                     symptom: cleanSymptom || 'Sin síntoma registrado',
-                    location: diagnosis.notes?.match(/Ubicación:\s*([^\n]+)/)?.[1] || 'No especificada',
+                    location,
                     status,
                     assignedTo: gruistaName,
                     questions: diagnosis.questions || [],

@@ -7,6 +7,34 @@ import { Diagnosis } from '@/types/Diagnosis';
 import { generateAccessToken } from '../utils/accessToken';
 import { getPublicClientUrl } from '../constants/publicUrl';
 
+/**
+ * Lógica para determinar recomendación basada en el pre-diagnóstico
+ */
+function determineRecommendation(preliminary: any): 'repair' | 'tow' {
+    if (!preliminary?.possibleReasons?.length) return 'tow';
+
+    const topReason = preliminary.possibleReasons[0];
+    const requiredTools = topReason.requiredTools || [];
+    const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas', 'batería', 'cargador'];
+
+    const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
+        simpleTools.some(simple => tool.toLowerCase().includes(simple))
+    );
+
+    // Repair in-situ: Alta probabilidad con herramientas simples
+    if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
+        return 'repair';
+    }
+
+    // Media probabilidad con herramientas simples: también puede ser reparable in-situ
+    if (topReason.probability === 'Media' && hasSimpleTools && requiredTools.length <= 1) {
+        return 'repair';
+    }
+
+    // Por defecto: remolcar al taller (es más seguro)
+    return 'tow';
+}
+
 interface UseGruistaCaseReturn {
     caseData: GruistaCaseDetailed | null;
     isLoading: boolean;
@@ -87,20 +115,104 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             const operatorCasesStr = localStorage.getItem('carretera_operator_cases');
             const clientCasesStr = localStorage.getItem('carretera_client_cases');
 
-            if (!operatorCasesStr) {
-                setError('No hay casos disponibles');
-                return;
-            }
-
-            const operatorCases = JSON.parse(operatorCasesStr);
+            const operatorCases = operatorCasesStr ? JSON.parse(operatorCasesStr) : [];
             const clientCases = clientCasesStr ? JSON.parse(clientCasesStr) : {};
 
-            // Find the specific case
-            const opCase = operatorCases.find((c: any) => c.id === id);
+            // Find the specific case in localStorage
+            let opCase = operatorCases.find((c: any) => c.id === id);
 
+            // If not found in localStorage, try to fetch from backend directly
             if (!opCase) {
-                setError('Caso no encontrado');
-                return;
+                console.log('📡 Case not in localStorage, fetching from backend:', id);
+                const token = localStorage.getItem('token');
+
+                if (token) {
+                    try {
+                        // Try to fetch the diagnosis directly from backend using the ID
+                        const response = await getDiagnosis(undefined, undefined, { diagnosisId: id });
+                        const diagnosis = response.data as any;
+
+                        if (diagnosis && diagnosis._id) {
+                            console.log('✅ Found diagnosis in backend:', diagnosis._id);
+
+                            // Transform backend diagnosis to operator case format
+                            const car = diagnosis.car || {};
+                            const fault = diagnosis.fault || '';
+                            const cleanSymptom = fault
+                                .replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '')
+                                .trim();
+
+                            // Parse carretera data from notes (JSON format)
+                            // Fallback to regex for backwards compatibility with old data
+                            let carreteraData: any = null;
+                            try {
+                                if (diagnosis.notes && diagnosis.notes.startsWith('{')) {
+                                    const parsed = JSON.parse(diagnosis.notes);
+                                    carreteraData = parsed.carretera || null;
+                                }
+                            } catch {
+                                carreteraData = null;
+                            }
+
+                            // Extract data from JSON or fallback to regex
+                            const clientName = carreteraData?.clientName
+                                || diagnosis.notes?.match(/Cliente:\s*([^\n]+)/)?.[1]
+                                || 'Cliente';
+                            const clientPhone = carreteraData?.clientPhone
+                                || diagnosis.notes?.match(/Teléfono:\s*([^\n]+)/)?.[1]
+                                || '';
+                            const location = carreteraData?.location
+                                || diagnosis.notes?.match(/Ubicación:\s*([^\n]+)/)?.[1]
+                                || 'No especificada';
+
+                            const diagnosisId = diagnosis._id as string;
+                            const caseNumber = carreteraData?.caseNumber
+                                || `C-${diagnosisId.slice(-4).toUpperCase()}`;
+
+                            opCase = {
+                                id: diagnosisId,
+                                caseNumber,
+                                vehiclePlate: car.plate || 'Sin matrícula',
+                                clientName,
+                                clientPhone,
+                                symptom: cleanSymptom || 'Sin síntoma registrado',
+                                location,
+                                status: carreteraData?.status || (diagnosis.preliminary ? 'assigned' : 'pending'),
+                                createdAt: diagnosis.createdAt || new Date().toISOString(),
+                                updatedAt: diagnosis.updatedAt || new Date().toISOString(),
+                            };
+
+                            // Also populate clientCases with backend data
+                            clientCases[id] = {
+                                diagnosisId: diagnosisId,
+                                carId: car._id || diagnosis.carId,
+                                questions: diagnosis.questions || [],
+                                answers: diagnosis.answers ? diagnosis.answers.split('|').filter((a: string) => a.trim()) : [],
+                                aiAssessment: diagnosis.preliminary?.possibleReasons?.length > 0 ? {
+                                    status: 'ready',
+                                    diagnosis: diagnosis.preliminary.possibleReasons[0].title || diagnosis.fault,
+                                    confidence: diagnosis.preliminary.possibleReasons[0].probability === 'Alta' ? 85 :
+                                                diagnosis.preliminary.possibleReasons[0].probability === 'Media' ? 65 : 45,
+                                    recommendation: determineRecommendation(diagnosis.preliminary),
+                                    reasoning: diagnosis.preliminary.possibleReasons.map((r: any) => r.reasonDetails).filter(Boolean),
+                                } : undefined,
+                            };
+
+                            // Save to localStorage for future use
+                            operatorCases.push(opCase);
+                            localStorage.setItem('carretera_operator_cases', JSON.stringify(operatorCases));
+                            localStorage.setItem('carretera_client_cases', JSON.stringify(clientCases));
+                            console.log('💾 Saved backend case to localStorage');
+                        }
+                    } catch (backendErr) {
+                        console.error('Error fetching from backend:', backendErr);
+                    }
+                }
+
+                if (!opCase) {
+                    setError('Caso no encontrado');
+                    return;
+                }
             }
 
             // Get client case data if it exists
@@ -316,34 +428,6 @@ export function useGruistaCase(caseId: string | undefined): UseGruistaCaseReturn
             setIsRefreshing(false);
         }
     };
-
-    /**
-     * Lógica para determinar recomendación basada en el pre-diagnóstico
-     */
-    function determineRecommendation(preliminary: any): 'repair' | 'tow' {
-        if (!preliminary?.possibleReasons?.length) return 'tow';
-
-        const topReason = preliminary.possibleReasons[0];
-        const requiredTools = topReason.requiredTools || [];
-        const simpleTools = ['llave', 'destornillador', 'multímetro', 'cables', 'pinzas', 'batería', 'cargador'];
-
-        const hasSimpleTools = requiredTools.length === 0 || requiredTools.every((tool: string) =>
-            simpleTools.some(simple => tool.toLowerCase().includes(simple))
-        );
-
-        // Repair in-situ: Alta probabilidad con herramientas simples
-        if (topReason.probability === 'Alta' && hasSimpleTools && requiredTools.length <= 2) {
-            return 'repair';
-        }
-
-        // Media probabilidad con herramientas simples: también puede ser reparable in-situ
-        if (topReason.probability === 'Media' && hasSimpleTools && requiredTools.length <= 1) {
-            return 'repair';
-        }
-
-        // Por defecto: remolcar al taller (es más seguro)
-        return 'tow';
-    }
 
     const submitDecision = async (decision: TrafficLightDecisionType, notes?: string) => {
         if (!caseData) {

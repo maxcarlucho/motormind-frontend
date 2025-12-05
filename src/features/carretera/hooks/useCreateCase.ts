@@ -38,6 +38,10 @@ export function useCreateCase(): UseCreateCaseReturn {
             let carId: string | null = null;
             let generatedQuestions: string[] = [];
 
+            // Calcular caseNumber y caseCount aquí para que estén disponibles en todo el scope
+            const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
+            const caseNumber = `C-${String(caseCount).padStart(3, '0')}`;
+
             try {
                 // Step 1: Get or create vehicle by license plate using TecDoc
                 // The backend automatically fetches vehicle data from TecDoc API
@@ -75,14 +79,22 @@ export function useCreateCase(): UseCreateCaseReturn {
                 // Síntoma enriquecido con contexto de carretera
                 const enrichedSymptom = `${data.symptom}\n\n${roadsideContextForFault}`;
 
-                // Notas adicionales (para referencia, aunque el backend no las usa en el prompt)
-                const additionalNotes = `
-Servicio: Asistencia en Carretera
-Cliente: ${data.clientName}
-Teléfono: ${data.clientPhone}
-Ubicación: ${data.location || 'No especificada'}
-${data.notes ? `Notas operador: ${data.notes}` : ''}
-`.trim();
+                // JSON estructurado para datos de carretera (persistido en MongoDB via notes)
+                // caseNumber ya está calculado arriba
+                const carreteraData = {
+                    carretera: {
+                        caseNumber,
+                        clientName: data.clientName,
+                        clientPhone: data.clientPhone,
+                        location: data.location || 'No especificada',
+                        status: 'pending',
+                        operatorNotes: data.notes || '',
+                        createdAt: new Date().toISOString(),
+                    }
+                };
+
+                // Guardamos JSON en notes para persistencia en MongoDB
+                const additionalNotes = JSON.stringify(carreteraData);
 
                 const diagnosisResponse = await createDiagnosis(
                     {
@@ -148,8 +160,6 @@ ${data.notes ? `Notas operador: ${data.notes}` : ''}
 
             // Use diagnosisId directly as caseId to avoid confusion
             const caseId = diagnosisId;
-            const caseCount = JSON.parse(localStorage.getItem('carretera_case_count') || '0') + 1;
-            const caseNumber = `C-${String(caseCount).padStart(3, '0')}`;
 
             // Generate SCOPED tokens for client and workshop
             // These tokens are LIMITED - they only grant access to THIS specific case
