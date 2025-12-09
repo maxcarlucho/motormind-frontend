@@ -107,8 +107,8 @@ export function CaseDetailModal({ caseData, isOpen, onClose, onDelete }: CaseDet
     };
 
     const openClientView = () => {
-        // Use the link with token
-        const link = caseData.clientLink || `/carretera/c/${caseData.id}`;
+        // Use the link with token, always with public URL
+        const link = getFullClientLink();
         window.open(link, '_blank');
     };
 

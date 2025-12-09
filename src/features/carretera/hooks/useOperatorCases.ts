@@ -3,6 +3,7 @@ import { OperatorCase, CaseFilters, AssessmentStatus } from '../types/carretera.
 import { cleanDuplicateCases } from '../utils/cleanDuplicateCases';
 import { useApi } from '@/hooks/useApi';
 import apiService from '@/service/api.service';
+import { generateAccessToken } from '../utils/accessToken';
 import '../utils/clearAllData'; // Auto-imports the duplicate checker
 
 interface UseOperatorCasesReturn {
@@ -201,12 +202,14 @@ async function fetchCasesFromBackendApi(
         console.log(`📋 Operator: Found ${diagnoses.length} total diagnoses in backend`);
 
         // Filter only roadside assistance cases
-        const operatorCases: OperatorCase[] = diagnoses
-            .filter((diagnosis: any) => {
-                const fault = diagnosis.fault || '';
-                return fault.includes('ASISTENCIA CARRETERA') || fault.includes('CARRETERA');
-            })
-            .map((diagnosis: any) => {
+        const carreteraDiagnoses = diagnoses.filter((diagnosis: any) => {
+            const fault = diagnosis.fault || '';
+            return fault.includes('ASISTENCIA CARRETERA') || fault.includes('CARRETERA');
+        });
+
+        // Process cases and generate tokens for incognito access
+        const operatorCases: OperatorCase[] = await Promise.all(
+            carreteraDiagnoses.map(async (diagnosis: any) => {
                 const car = diagnosis.car || {};
                 const fault = diagnosis.fault || '';
                 const cleanSymptom = fault.replace(/\[ASISTENCIA CARRETERA[^\]]*\]/g, '').trim();
@@ -252,8 +255,25 @@ async function fetchCasesFromBackendApi(
                     status = 'pending';
                 }
 
+                // Generate tokens for incognito access (client and workshop)
+                // These are regenerated on load since we use a consistent secret
+                const caseId = diagnosis._id;
+                const carId = car._id || diagnosis.carId;
+
+                const clientToken = await generateAccessToken('client', caseId, {
+                    carId,
+                    diagnosisId: caseId,
+                });
+                const workshopToken = await generateAccessToken('workshop', caseId, {
+                    carId,
+                    diagnosisId: caseId,
+                });
+
+                const clientLink = `/carretera/c/${caseId}?token=${encodeURIComponent(clientToken)}`;
+                const workshopLink = `/carretera/t/${caseId}?token=${encodeURIComponent(workshopToken)}`;
+
                 return {
-                    id: diagnosis._id,
+                    id: caseId,
                     caseNumber,
                     vehiclePlate: car.plate || 'Sin matrícula',
                     clientName,
@@ -263,10 +283,11 @@ async function fetchCasesFromBackendApi(
                     status,
                     createdAt: new Date(diagnosis.createdAt || Date.now()),
                     updatedAt: new Date(diagnosis.updatedAt || Date.now()),
-                    clientLink: `/carretera/c/${diagnosis._id}`,
-                    workshopLink: `/carretera/t/${diagnosis._id}`,
+                    clientLink,
+                    workshopLink,
                 };
-            });
+            })
+        );
 
         // Sort by creation date (newest first)
         operatorCases.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());

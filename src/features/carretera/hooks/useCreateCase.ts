@@ -81,6 +81,8 @@ export function useCreateCase(): UseCreateCaseReturn {
 
                 // JSON estructurado para datos de carretera (persistido en MongoDB via notes)
                 // caseNumber ya está calculado arriba
+                // NOTE: clientLink and workshopLink will be added AFTER diagnosis creation
+                // because we need the real diagnosisId for the tokens
                 const carreteraData = {
                     carretera: {
                         caseNumber,
