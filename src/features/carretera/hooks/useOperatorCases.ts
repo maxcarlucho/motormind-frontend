@@ -190,8 +190,10 @@ async function fetchCasesFromBackendApi(
     fetchDiagnoses: (data?: any, params?: any) => Promise<any>
 ): Promise<OperatorCase[]> {
     try {
-        // Fetch all diagnoses from backend
-        const response = await fetchDiagnoses(undefined, { limit: '100' });
+        // Fetch diagnoses from backend
+        const response = await fetchDiagnoses(undefined, {
+            limit: '100'
+        });
 
         if (!response?.data?.data) {
             console.log('No diagnoses found in backend, falling back to localStorage');

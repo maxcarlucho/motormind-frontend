@@ -83,8 +83,10 @@ async function fetchGruistaCasesFromBackend(
     gruistaName: string
 ): Promise<GruistaCaseDetailed[]> {
     try {
-        // Fetch all diagnoses from backend (same endpoint as Diagnoses page)
-        const response = await fetchDiagnoses(undefined, { limit: '100' });
+        // Fetch diagnoses from backend
+        const response = await fetchDiagnoses(undefined, {
+            limit: '100'
+        });
 
         if (!response?.data?.data) {
             console.log('No diagnoses found in backend');
